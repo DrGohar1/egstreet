@@ -6,10 +6,9 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import type { Database } from "@/integrations/supabase/types";
 
@@ -55,7 +54,6 @@ const UserManagement = () => {
     if (profRes.data) setProfiles(profRes.data);
     if (rolesRes.data) setRoles(rolesRes.data);
 
-    // Check if current user is super_admin
     if (user) {
       const { data } = await supabase.rpc("has_role", { _user_id: user.id, _role: "super_admin" as AppRole });
       setIsSuperAdmin(!!data);
@@ -63,38 +61,23 @@ const UserManagement = () => {
     setLoading(false);
   }, [user]);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
-  const getUserRole = (userId: string): AppRole | null => {
-    const r = roles.find((r) => r.user_id === userId);
-    return r ? r.role : null;
+  const getUserRoles = (userId: string): AppRole[] => {
+    return roles.filter((r) => r.user_id === userId).map((r) => r.role);
   };
 
-  const handleRoleChange = async (userId: string, newRole: AppRole) => {
-    const existingRole = roles.find((r) => r.user_id === userId);
-
-    if (existingRole) {
-      const { error } = await supabase
-        .from("user_roles")
-        .update({ role: newRole })
-        .eq("user_id", userId);
-      if (error) {
-        toast({ title: t("خطأ", "Error"), description: error.message, variant: "destructive" });
-        return;
-      }
+  const toggleRole = async (userId: string, role: AppRole, hasRole: boolean) => {
+    if (hasRole) {
+      // Remove role
+      const { error } = await supabase.from("user_roles").delete().eq("user_id", userId).eq("role", role);
+      if (error) { toast({ title: t("خطأ", "Error"), description: error.message, variant: "destructive" }); return; }
     } else {
-      const { error } = await supabase
-        .from("user_roles")
-        .insert({ user_id: userId, role: newRole });
-      if (error) {
-        toast({ title: t("خطأ", "Error"), description: error.message, variant: "destructive" });
-        return;
-      }
+      // Add role
+      const { error } = await supabase.from("user_roles").insert({ user_id: userId, role });
+      if (error) { toast({ title: t("خطأ", "Error"), description: error.message, variant: "destructive" }); return; }
     }
-
-    toast({ title: t("تم التحديث", "Updated"), description: t("تم تغيير الدور بنجاح", "Role updated successfully") });
+    toast({ title: t("تم التحديث", "Updated") });
     fetchData();
   };
 
@@ -112,28 +95,29 @@ const UserManagement = () => {
     <div>
       <div className="flex items-center justify-between mb-6">
         <h2 className="text-2xl font-bold text-foreground">
-          {t("إدارة المستخدمين والأدوار", "User & Roles Management")}
+          {t("إدارة المستخدمين والصلاحيات", "User & Permissions Management")}
         </h2>
         <Badge variant="outline" className="text-xs">
           {profiles.length} {t("مستخدم", "Users")}
         </Badge>
       </div>
 
-      <div className="rounded-lg border border-border bg-card overflow-hidden">
+      <div className="rounded-lg border border-border bg-card overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="bg-muted/50">
               <TableHead>{t("المستخدم", "User")}</TableHead>
-              <TableHead>{t("الدور", "Role")}</TableHead>
               <TableHead className="hidden md:table-cell">{t("تاريخ الانضمام", "Joined")}</TableHead>
-              {isSuperAdmin && <TableHead>{t("تغيير الدور", "Change Role")}</TableHead>}
+              {ALL_ROLES.map((role) => (
+                <TableHead key={role} className="text-center text-xs">
+                  {language === "ar" ? ROLE_CONFIG[role].label_ar : ROLE_CONFIG[role].label_en}
+                </TableHead>
+              ))}
             </TableRow>
           </TableHeader>
           <TableBody>
             {profiles.map((profile) => {
-              const role = getUserRole(profile.user_id);
-              const roleConfig = role ? ROLE_CONFIG[role] : null;
-
+              const userRoles = getUserRoles(profile.user_id);
               return (
                 <TableRow key={profile.id}>
                   <TableCell>
@@ -147,46 +131,30 @@ const UserManagement = () => {
                       <div>
                         <p className="font-medium text-foreground text-sm">{profile.display_name}</p>
                         {profile.user_id === user?.id && (
-                          <span className="text-[10px] text-muted-foreground">
-                            {t("(أنت)", "(You)")}
-                          </span>
+                          <span className="text-[10px] text-muted-foreground">{t("(أنت)", "(You)")}</span>
                         )}
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell>
-                    {roleConfig ? (
-                      <Badge className={`${roleConfig.color} text-[11px] border-0`}>
-                        {language === "ar" ? roleConfig.label_ar : roleConfig.label_en}
-                      </Badge>
-                    ) : (
-                      <Badge variant="outline" className="text-[11px] text-muted-foreground">
-                        {t("بدون دور", "No Role")}
-                      </Badge>
-                    )}
-                  </TableCell>
                   <TableCell className="hidden md:table-cell text-sm text-muted-foreground">
                     {new Date(profile.created_at).toLocaleDateString(language === "ar" ? "ar-EG" : "en-US")}
                   </TableCell>
-                  {isSuperAdmin && (
-                    <TableCell>
-                      <Select
-                        value={role || ""}
-                        onValueChange={(val) => handleRoleChange(profile.user_id, val as AppRole)}
-                      >
-                        <SelectTrigger className="w-[160px] h-8 text-xs">
-                          <SelectValue placeholder={t("اختر دور", "Select Role")} />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {ALL_ROLES.map((r) => (
-                            <SelectItem key={r} value={r} className="text-xs">
-                              {language === "ar" ? ROLE_CONFIG[r].label_ar : ROLE_CONFIG[r].label_en}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                  )}
+                  {ALL_ROLES.map((role) => {
+                    const has = userRoles.includes(role);
+                    return (
+                      <TableCell key={role} className="text-center">
+                        {isSuperAdmin ? (
+                          <Checkbox
+                            checked={has}
+                            onCheckedChange={() => toggleRole(profile.user_id, role, has)}
+                            className="mx-auto"
+                          />
+                        ) : (
+                          has ? <Check className="h-4 w-4 text-emerald-600 mx-auto" /> : <X className="h-4 w-4 text-muted-foreground/30 mx-auto" />
+                        )}
+                      </TableCell>
+                    );
+                  })}
                 </TableRow>
               );
             })}
@@ -196,5 +164,8 @@ const UserManagement = () => {
     </div>
   );
 };
+
+// Need these icons for non-admin view
+import { Check, X } from "lucide-react";
 
 export default UserManagement;
