@@ -14,7 +14,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Check, X, Edit, Trash2 } from "lucide-react";
+import { Plus, Check, X, Edit, Trash2, Eye, ArrowLeft } from "lucide-react";
 import type { Database } from "@/integrations/supabase/types";
 
 type ArticleStatus = Database["public"]["Enums"]["article_status"];
@@ -65,6 +65,7 @@ const ArticleManagement = () => {
   const [newExcerpt, setNewExcerpt] = useState("");
   const [newCategory, setNewCategory] = useState("");
   const [newImage, setNewImage] = useState("");
+  const [showPreview, setShowPreview] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -165,32 +166,71 @@ const ArticleManagement = () => {
               {t("مقال جديد", "New Article")}
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-lg">
+           <DialogContent className="max-w-2xl">
             <DialogHeader>
-              <DialogTitle>{t("إنشاء مقال جديد", "Create New Article")}</DialogTitle>
+              <DialogTitle>
+                {showPreview ? t("معاينة المقال", "Article Preview") : t("إنشاء مقال جديد", "Create New Article")}
+              </DialogTitle>
             </DialogHeader>
-            <div className="space-y-3 pt-2">
-              <Input placeholder={t("العنوان", "Title")} value={newTitle} onChange={(e) => setNewTitle(e.target.value)} />
-              <textarea
-                className="w-full min-h-[120px] rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                placeholder={t("المحتوى", "Content")}
-                value={newContent}
-                onChange={(e) => setNewContent(e.target.value)}
-              />
-              <Input placeholder={t("الملخص", "Excerpt")} value={newExcerpt} onChange={(e) => setNewExcerpt(e.target.value)} />
-              <Select value={newCategory} onValueChange={setNewCategory}>
-                <SelectTrigger><SelectValue placeholder={t("القسم", "Category")} /></SelectTrigger>
-                <SelectContent>
-                  {categories.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>
-                      {language === "ar" ? c.name_ar : c.name_en}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Input placeholder={t("رابط الصورة الرئيسية", "Featured Image URL")} value={newImage} onChange={(e) => setNewImage(e.target.value)} />
-              <Button onClick={handleCreate} className="w-full">{t("إنشاء", "Create")}</Button>
-            </div>
+
+            {showPreview ? (
+              <div className="space-y-4 pt-2">
+                <Button variant="ghost" size="sm" className="gap-1" onClick={() => setShowPreview(false)}>
+                  <ArrowLeft className="h-4 w-4" />
+                  {t("العودة للتحرير", "Back to Editor")}
+                </Button>
+                <article className="rounded-lg border border-border bg-card p-6 space-y-4">
+                  {newImage && (
+                    <img src={newImage} alt={newTitle} className="w-full h-48 object-cover rounded-md" />
+                  )}
+                  <h1 className="text-2xl font-bold text-foreground leading-tight">{newTitle || t("بدون عنوان", "Untitled")}</h1>
+                  {newCategory && (
+                    <Badge variant="secondary" className="text-xs">
+                      {getCatName(newCategory)}
+                    </Badge>
+                  )}
+                  {newExcerpt && (
+                    <p className="text-sm text-muted-foreground italic border-s-2 border-primary ps-3">{newExcerpt}</p>
+                  )}
+                  <div className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+                    {newContent || t("لا يوجد محتوى", "No content yet")}
+                  </div>
+                  <div className="text-xs text-muted-foreground pt-2 border-t border-border">
+                    {new Date().toLocaleDateString(language === "ar" ? "ar-EG" : "en-US", { year: "numeric", month: "long", day: "numeric" })}
+                  </div>
+                </article>
+                <Button onClick={handleCreate} className="w-full">{t("إنشاء", "Create")}</Button>
+              </div>
+            ) : (
+              <div className="space-y-3 pt-2">
+                <Input placeholder={t("العنوان", "Title")} value={newTitle} onChange={(e) => setNewTitle(e.target.value)} />
+                <textarea
+                  className="w-full min-h-[120px] rounded-md border border-input bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  placeholder={t("المحتوى", "Content")}
+                  value={newContent}
+                  onChange={(e) => setNewContent(e.target.value)}
+                />
+                <Input placeholder={t("الملخص", "Excerpt")} value={newExcerpt} onChange={(e) => setNewExcerpt(e.target.value)} />
+                <Select value={newCategory} onValueChange={setNewCategory}>
+                  <SelectTrigger><SelectValue placeholder={t("القسم", "Category")} /></SelectTrigger>
+                  <SelectContent>
+                    {categories.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>
+                        {language === "ar" ? c.name_ar : c.name_en}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input placeholder={t("رابط الصورة الرئيسية", "Featured Image URL")} value={newImage} onChange={(e) => setNewImage(e.target.value)} />
+                <div className="flex gap-2">
+                  <Button variant="outline" className="flex-1 gap-1" onClick={() => setShowPreview(true)} disabled={!newTitle.trim()}>
+                    <Eye className="h-4 w-4" />
+                    {t("معاينة حية", "Live Preview")}
+                  </Button>
+                  <Button onClick={handleCreate} className="flex-1">{t("إنشاء", "Create")}</Button>
+                </div>
+              </div>
+            )}
           </DialogContent>
         </Dialog>
       </div>
