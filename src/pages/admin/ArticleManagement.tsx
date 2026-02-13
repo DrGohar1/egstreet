@@ -67,14 +67,15 @@ const ArticleManagement = () => {
   const [formTitle, setFormTitle] = useState("");
   const [formContent, setFormContent] = useState("");
   const [formExcerpt, setFormExcerpt] = useState("");
-  const [formCategory, setFormCategory] = useState("");
+  const [formCategories, setFormCategories] = useState<string[]>([]);
   const [formImage, setFormImage] = useState("");
   const [formBreaking, setFormBreaking] = useState(false);
   const [formFeatured, setFormFeatured] = useState(false);
+  const [articleCategoriesMap, setArticleCategoriesMap] = useState<Record<string, string[]>>({});
 
   const resetForm = () => {
     setFormTitle(""); setFormContent(""); setFormExcerpt("");
-    setFormCategory(""); setFormImage("");
+    setFormCategories([]); setFormImage("");
     setFormBreaking(false); setFormFeatured(false);
     setEditingArticle(null); setShowPreview(false);
   };
@@ -86,7 +87,7 @@ const ArticleManagement = () => {
     setFormTitle(article.title);
     setFormContent(article.content || "");
     setFormExcerpt(article.excerpt || "");
-    setFormCategory(article.category_id || "");
+    setFormCategories(articleCategoriesMap[article.id] || (article.category_id ? [article.category_id] : []));
     setFormImage(article.featured_image || "");
     setFormBreaking(article.is_breaking || false);
     setFormFeatured(article.is_featured || false);
@@ -96,12 +97,21 @@ const ArticleManagement = () => {
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const [artRes, catRes] = await Promise.all([
+    const [artRes, catRes, acRes] = await Promise.all([
       supabase.from("articles").select("*").order("created_at", { ascending: false }),
       supabase.from("categories").select("id, name_ar, name_en"),
+      supabase.from("article_categories").select("article_id, category_id"),
     ]);
     if (artRes.data) setArticles(artRes.data);
     if (catRes.data) setCategories(catRes.data);
+    if (acRes.data) {
+      const map: Record<string, string[]> = {};
+      acRes.data.forEach((ac: { article_id: string; category_id: string }) => {
+        if (!map[ac.article_id]) map[ac.article_id] = [];
+        map[ac.article_id].push(ac.category_id);
+      });
+      setArticleCategoriesMap(map);
+    }
 
     if (user) {
       for (const role of ["super_admin", "editor_in_chief", "journalist"] as AppRole[]) {
@@ -125,28 +135,41 @@ const ArticleManagement = () => {
       title: formTitle,
       content: formContent || null,
       excerpt: formExcerpt || null,
-      category_id: formCategory || null,
+      category_id: formCategories[0] || null,
       featured_image: formImage || null,
       is_breaking: formBreaking,
       is_featured: formFeatured,
     };
+
+    let articleId = editingArticle?.id;
 
     if (editingArticle) {
       const update: Record<string, unknown> = { ...payload };
       if (submitForReview) update.status = "pending_review";
       const { error } = await supabase.from("articles").update(update).eq("id", editingArticle.id);
       if (error) { toast({ title: t("خطأ", "Error"), description: error.message, variant: "destructive" }); return; }
-      toast({ title: t("تم الحفظ", "Saved") });
     } else {
-      const { error } = await supabase.from("articles").insert({
+      const { data, error } = await supabase.from("articles").insert({
         ...payload,
         slug: generateSlug(formTitle),
         author_id: user.id,
         status: submitForReview ? "pending_review" : "draft",
-      });
+      }).select("id").single();
       if (error) { toast({ title: t("خطأ", "Error"), description: error.message, variant: "destructive" }); return; }
-      toast({ title: t("تم الإنشاء", "Created") });
+      articleId = data.id;
     }
+
+    // Sync article_categories
+    if (articleId) {
+      await supabase.from("article_categories").delete().eq("article_id", articleId);
+      if (formCategories.length > 0) {
+        await supabase.from("article_categories").insert(
+          formCategories.map((catId) => ({ article_id: articleId!, category_id: catId }))
+        );
+      }
+    }
+
+    toast({ title: editingArticle ? t("تم الحفظ", "Saved") : t("تم الإنشاء", "Created") });
     setDialogOpen(false);
     resetForm();
     fetchData();
@@ -224,7 +247,7 @@ const ArticleManagement = () => {
                   {formTitle || t("بدون عنوان", "Untitled")}
                 </h1>
                 <div className="flex gap-2 flex-wrap">
-                  {formCategory && <Badge variant="secondary" className="text-xs">{getCatName(formCategory)}</Badge>}
+                  {formCategories.map((cId) => <Badge key={cId} variant="secondary" className="text-xs">{getCatName(cId)}</Badge>)}
                   {formBreaking && <Badge className="bg-primary text-primary-foreground text-xs">{t("عاجل", "Breaking")}</Badge>}
                   {formFeatured && <Badge className="bg-amber-500 text-white text-xs">{t("مميز", "Featured")}</Badge>}
                 </div>
@@ -262,17 +285,27 @@ const ArticleManagement = () => {
                 value={formExcerpt}
                 onChange={(e) => setFormExcerpt(e.target.value)}
               />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Select value={formCategory} onValueChange={setFormCategory}>
-                  <SelectTrigger><SelectValue placeholder={t("القسم", "Category")} /></SelectTrigger>
-                  <SelectContent>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-sm font-medium text-foreground mb-2 block">
+                    {t("الأقسام (يمكن اختيار أكثر من قسم)", "Categories (select multiple)")}
+                  </label>
+                  <div className="flex flex-wrap gap-2 p-3 border border-border rounded-md bg-background">
                     {categories.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>
+                      <label key={c.id} className="flex items-center gap-1.5 text-sm cursor-pointer">
+                        <Checkbox
+                          checked={formCategories.includes(c.id)}
+                          onCheckedChange={(checked) => {
+                            setFormCategories((prev) =>
+                              checked ? [...prev, c.id] : prev.filter((id) => id !== c.id)
+                            );
+                          }}
+                        />
                         {language === "ar" ? c.name_ar : c.name_en}
-                      </SelectItem>
+                      </label>
                     ))}
-                  </SelectContent>
-                </Select>
+                  </div>
+                </div>
                 <Input
                   placeholder={t("رابط الصورة الرئيسية", "Featured Image URL")}
                   value={formImage}
@@ -322,16 +355,16 @@ const ArticleManagement = () => {
         </TabsList>
 
         <TabsContent value="my">
-          <ArticleList articles={myArticles} getCatName={getCatName} onStatusChange={handleStatusChange} onDelete={handleDelete} onEdit={openEditDialog} isEditor={isEditor} language={language} t={t} />
+          <ArticleList articles={myArticles} getCatName={getCatName} articleCategoriesMap={articleCategoriesMap} onStatusChange={handleStatusChange} onDelete={handleDelete} onEdit={openEditDialog} isEditor={isEditor} language={language} t={t} />
         </TabsContent>
         {isEditor && (
           <TabsContent value="review">
-            <ArticleList articles={pendingArticles} getCatName={getCatName} onStatusChange={handleStatusChange} onDelete={handleDelete} onEdit={openEditDialog} isEditor={isEditor} language={language} t={t} showActions />
+            <ArticleList articles={pendingArticles} getCatName={getCatName} articleCategoriesMap={articleCategoriesMap} onStatusChange={handleStatusChange} onDelete={handleDelete} onEdit={openEditDialog} isEditor={isEditor} language={language} t={t} showActions />
           </TabsContent>
         )}
         {isEditor && (
           <TabsContent value="all">
-            <ArticleList articles={articles} getCatName={getCatName} onStatusChange={handleStatusChange} onDelete={handleDelete} onEdit={openEditDialog} isEditor={isEditor} language={language} t={t} />
+            <ArticleList articles={articles} getCatName={getCatName} articleCategoriesMap={articleCategoriesMap} onStatusChange={handleStatusChange} onDelete={handleDelete} onEdit={openEditDialog} isEditor={isEditor} language={language} t={t} />
           </TabsContent>
         )}
       </Tabs>
@@ -340,10 +373,11 @@ const ArticleManagement = () => {
 };
 
 function ArticleList({
-  articles, getCatName, onStatusChange, onDelete, onEdit, isEditor, language, t, showActions,
+  articles, getCatName, articleCategoriesMap, onStatusChange, onDelete, onEdit, isEditor, language, t, showActions,
 }: {
   articles: Article[];
   getCatName: (id: string | null) => string;
+  articleCategoriesMap: Record<string, string[]>;
   onStatusChange: (id: string, status: ArticleStatus) => void;
   onDelete: (id: string) => void;
   onEdit: (article: Article) => void;
@@ -369,7 +403,9 @@ function ArticleList({
                   <Badge className={`${statusCfg.color} text-[10px] border-0`}>
                     {language === "ar" ? statusCfg.label_ar : statusCfg.label_en}
                   </Badge>
-                  <span className="text-[11px] text-muted-foreground">{getCatName(article.category_id)}</span>
+                  {(articleCategoriesMap[article.id] || (article.category_id ? [article.category_id] : [])).map((cId) => (
+                    <span key={cId} className="text-[11px] text-muted-foreground">{getCatName(cId)}</span>
+                  ))}
                   <span className="text-[11px] text-muted-foreground">
                     {new Date(article.created_at).toLocaleDateString(language === "ar" ? "ar-EG" : "en-US")}
                   </span>

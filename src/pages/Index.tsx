@@ -33,15 +33,25 @@ const Index = () => {
   const { t, language } = useLanguage();
   const [categories, setCategories] = useState<Category[]>([]);
   const [articles, setArticles] = useState<Article[]>([]);
+  const [articleCatsMap, setArticleCatsMap] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
     const fetchData = async () => {
-      const [catRes, artRes] = await Promise.all([
+      const [catRes, artRes, acRes] = await Promise.all([
         supabase.from("categories").select("*").order("sort_order"),
         supabase.from("articles").select("*").eq("status", "published").order("published_at", { ascending: false }).limit(40),
+        supabase.from("article_categories").select("article_id, category_id"),
       ]);
       if (catRes.data) setCategories(catRes.data);
       if (artRes.data) setArticles(artRes.data);
+      if (acRes.data) {
+        const map: Record<string, string[]> = {};
+        acRes.data.forEach((ac: { article_id: string; category_id: string }) => {
+          if (!map[ac.article_id]) map[ac.article_id] = [];
+          map[ac.article_id].push(ac.category_id);
+        });
+        setArticleCatsMap(map);
+      }
     };
     fetchData();
   }, []);
@@ -62,13 +72,16 @@ const Index = () => {
     return cat?.slug || "";
   };
 
-  // Group articles by category for section display
+  // Group articles by category using junction table
   const articlesByCategory: Record<string, Article[]> = {};
   articles.forEach((a) => {
-    if (a.category_id) {
-      if (!articlesByCategory[a.category_id]) articlesByCategory[a.category_id] = [];
-      articlesByCategory[a.category_id].push(a);
-    }
+    const catIds = articleCatsMap[a.id] || (a.category_id ? [a.category_id] : []);
+    catIds.forEach((catId) => {
+      if (!articlesByCategory[catId]) articlesByCategory[catId] = [];
+      if (!articlesByCategory[catId].find((x) => x.id === a.id)) {
+        articlesByCategory[catId].push(a);
+      }
+    });
   });
 
   const hasContent = articles.length > 0;
