@@ -19,25 +19,31 @@ import ArticleManagement from "./pages/admin/ArticleManagement";
 import CategoryManagement from "./pages/admin/CategoryManagement";
 import BreakingNewsManagement from "./pages/admin/BreakingNewsManagement";
 import SiteSettings from "./pages/admin/SiteSettings";
+import SubscriberManagement from "./pages/admin/SubscriberManagement";
+import NewsletterPopup from "./components/NewsletterPopup";
 
 const queryClient = new QueryClient();
 
 const AppContent = () => {
   useContentProtection();
   return (
-    <Routes>
-      <Route path="/" element={<Index />} />
-      <Route path="/article/:slug" element={<ArticlePage />} />
-      <Route path="/category/:slug" element={<CategoryPage />} />
-      <Route path="/auth" element={<Auth />} />
-      <Route path="/dashboard" element={<AdminLayout><DashboardOverview /></AdminLayout>} />
-      <Route path="/dashboard/users" element={<AdminLayout><UserManagement /></AdminLayout>} />
-      <Route path="/dashboard/articles" element={<AdminLayout><ArticleManagement /></AdminLayout>} />
-      <Route path="/dashboard/categories" element={<AdminLayout><CategoryManagement /></AdminLayout>} />
-      <Route path="/dashboard/breaking" element={<AdminLayout><BreakingNewsManagement /></AdminLayout>} />
-      <Route path="/dashboard/settings" element={<AdminLayout><SiteSettings /></AdminLayout>} />
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+    <>
+      <Routes>
+        <Route path="/" element={<Index />} />
+        <Route path="/article/:slug" element={<ArticlePage />} />
+        <Route path="/category/:slug" element={<CategoryPage />} />
+        <Route path="/auth" element={<Auth />} />
+        <Route path="/dashboard" element={<AdminLayout><DashboardOverview /></AdminLayout>} />
+        <Route path="/dashboard/users" element={<AdminLayout><UserManagement /></AdminLayout>} />
+        <Route path="/dashboard/articles" element={<AdminLayout><ArticleManagement /></AdminLayout>} />
+        <Route path="/dashboard/categories" element={<AdminLayout><CategoryManagement /></AdminLayout>} />
+        <Route path="/dashboard/breaking" element={<AdminLayout><BreakingNewsManagement /></AdminLayout>} />
+        <Route path="/dashboard/settings" element={<AdminLayout><SiteSettings /></AdminLayout>} />
+        <Route path="/dashboard/subscribers" element={<AdminLayout><SubscriberManagement /></AdminLayout>} />
+        <Route path="*" element={<NotFound />} />
+      </Routes>
+      <NewsletterPopup />
+    </>
   );
 };
 
