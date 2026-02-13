@@ -10,7 +10,8 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Save, Globe, Palette, Mail, Share2, FileText } from "lucide-react";
+import { Save, Globe, Palette, Mail, Share2, FileText, Image } from "lucide-react";
+import LogoUploader from "@/components/admin/LogoUploader";
 
 const FONT_OPTIONS = [
   { value: "'Cairo', sans-serif", label: "Cairo" },
@@ -90,22 +91,47 @@ const SiteSettings = () => {
               <Label className="text-xs">{t("اسم الموقع (إنجليزي)", "Site Name (English)")}</Label>
               <Input value={settings.site_name_en || ""} onChange={(e) => u("site_name_en", e.target.value)} placeholder="EgStreet News" />
             </div>
-            <div>
-              <Label className="text-xs">{t("رابط الشعار", "Logo URL")}</Label>
-              <Input value={settings.logo_url || ""} onChange={(e) => u("logo_url", e.target.value)} placeholder="https://..." />
-              {settings.logo_url && (
-                <div className="mt-2 p-2 bg-muted rounded flex justify-center">
-                  <img src={settings.logo_url} alt="Logo" className="max-h-16 object-contain" />
-                </div>
-              )}
-            </div>
-            <div>
-              <Label className="text-xs">{t("أيقونة الموقع (Favicon)", "Favicon URL")}</Label>
-              <Input value={settings.favicon_url || ""} onChange={(e) => u("favicon_url", e.target.value)} placeholder="https://..." />
-            </div>
+            <LogoUploader
+              label={t("الشعار الرئيسي", "Main Logo")}
+              currentUrl={settings.logo_url || ""}
+              settingKey="main-logo"
+              onUploaded={(url) => u("logo_url", url)}
+            />
+            <LogoUploader
+              label={t("أيقونة الموقع (Favicon)", "Favicon")}
+              currentUrl={settings.favicon_url || ""}
+              settingKey="favicon"
+              onUploaded={(url) => u("favicon_url", url)}
+            />
             <div>
               <Label className="text-xs">{t("وصف الموقع (SEO)", "Site Description (SEO)")}</Label>
               <Textarea value={settings.site_description || ""} onChange={(e) => u("site_description", e.target.value)} rows={2} placeholder={t("وصف مختصر للموقع...", "Brief site description...")} />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Partner Logo */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Image className="h-4 w-4" />
+              {t("لوجو الشريك / الراعي", "Partner / Sponsor Logo")}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <LogoUploader
+              label={t("لوجو الشريك", "Partner Logo")}
+              currentUrl={settings.partner_logo_url || ""}
+              settingKey="partner-logo"
+              onUploaded={(url) => u("partner_logo_url", url)}
+            />
+            <div>
+              <Label className="text-xs">{t("رابط الشريك", "Partner Link")}</Label>
+              <Input value={settings.partner_link || ""} onChange={(e) => u("partner_link", e.target.value)} placeholder="https://..." />
+            </div>
+            <div>
+              <Label className="text-xs">{t("اسم الشريك", "Partner Name")}</Label>
+              <Input value={settings.partner_credit || ""} onChange={(e) => u("partner_credit", e.target.value)} placeholder={t("شركة الكينج للإنتاج الفني", "King Production Company")} />
             </div>
           </CardContent>
         </Card>

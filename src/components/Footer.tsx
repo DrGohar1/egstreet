@@ -1,6 +1,7 @@
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Link } from "react-router-dom";
 import { Facebook, Twitter, Mail, Phone } from "lucide-react";
+import NewsletterFooter from "./NewsletterFooter";
 
 const Footer = () => {
   const { t } = useLanguage();
@@ -8,7 +9,7 @@ const Footer = () => {
   return (
     <footer className="bg-secondary text-secondary-foreground mt-12">
       <div className="container py-10">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand */}
           <div>
             <h3 className="text-xl font-black mb-2">{t("جريدة الشارع المصري", "EgStreet News")}</h3>
@@ -40,6 +41,11 @@ const Footer = () => {
                 <Mail className="w-4 h-4" />
               </a>
             </div>
+          </div>
+
+          {/* Newsletter */}
+          <div>
+            <NewsletterFooter />
           </div>
         </div>
 
