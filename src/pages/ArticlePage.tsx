@@ -164,9 +164,10 @@ const ArticlePage = () => {
             )}
 
             {/* Content */}
-            <div className="prose prose-lg max-w-none text-foreground/90 leading-loose whitespace-pre-wrap">
-              {article.content}
-            </div>
+            <div
+              className="prose prose-lg max-w-none text-foreground/90 leading-loose"
+              dangerouslySetInnerHTML={{ __html: article.content || "" }}
+            />
           </article>
 
           {/* Sidebar */}
