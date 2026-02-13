@@ -45,14 +45,32 @@ const CategoryPage = () => {
         setCategories(cats);
         const cat = cats.find((c) => c.slug === slug);
         if (cat) {
-          const { data: arts } = await supabase
-            .from("articles")
-            .select("*")
-            .eq("status", "published")
-            .eq("category_id", cat.id)
-            .order("published_at", { ascending: false })
-            .limit(30);
-          if (arts) setArticles(arts);
+          // Fetch articles linked to this category via junction table
+          const { data: acRows } = await supabase
+            .from("article_categories")
+            .select("article_id")
+            .eq("category_id", cat.id);
+          const articleIds = acRows?.map((r: { article_id: string }) => r.article_id) || [];
+          if (articleIds.length > 0) {
+            const { data: arts } = await supabase
+              .from("articles")
+              .select("*")
+              .eq("status", "published")
+              .in("id", articleIds)
+              .order("published_at", { ascending: false })
+              .limit(30);
+            if (arts) setArticles(arts);
+          } else {
+            // Fallback: also check legacy category_id
+            const { data: arts } = await supabase
+              .from("articles")
+              .select("*")
+              .eq("status", "published")
+              .eq("category_id", cat.id)
+              .order("published_at", { ascending: false })
+              .limit(30);
+            if (arts) setArticles(arts);
+          }
         }
       }
       setLoading(false);

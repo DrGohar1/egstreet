@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      article_categories: {
+        Row: {
+          article_id: string
+          category_id: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          article_id: string
+          category_id: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          article_id?: string
+          category_id?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "article_categories_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "articles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "article_categories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       articles: {
         Row: {
           author_id: string | null

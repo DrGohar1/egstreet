@@ -35,6 +35,8 @@ const ArticlePage = () => {
   const [relatedArticles, setRelatedArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
 
+  const [articleCategories, setArticleCategories] = useState<string[]>([]);
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -45,6 +47,13 @@ const ArticlePage = () => {
       if (catRes.data) setCategories(catRes.data);
       if (artRes.data) {
         setArticle(artRes.data);
+        // Fetch article categories from junction table
+        const { data: acData } = await supabase
+          .from("article_categories")
+          .select("category_id")
+          .eq("article_id", artRes.data.id);
+        const catIds = acData?.map((r: { category_id: string }) => r.category_id) || [];
+        setArticleCategories(catIds.length > 0 ? catIds : (artRes.data.category_id ? [artRes.data.category_id] : []));
         // Fetch related
         const { data: related } = await supabase
           .from("articles")
@@ -103,7 +112,7 @@ const ArticlePage = () => {
     <div className="min-h-screen bg-background content-protected">
       <SEOHead title={article.title} description={article.excerpt || article.title} />
       <Header />
-      <CategoryNav categories={categories} activeSlug={getCategorySlug(article.category_id)} />
+      <CategoryNav categories={categories} activeSlug={articleCategories.length > 0 ? getCategorySlug(articleCategories[0]) : ""} />
 
       <main className="container py-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -113,10 +122,10 @@ const ArticlePage = () => {
             <nav className="flex items-center gap-2 text-xs text-muted-foreground mb-4">
               <Link to="/" className="hover:text-primary">{t("الرئيسية", "Home")}</Link>
               <ArrowRight className="w-3 h-3 rtl:rotate-180" />
-              {article.category_id && (
+              {articleCategories.length > 0 && (
                 <>
-                  <Link to={`/category/${getCategorySlug(article.category_id)}`} className="hover:text-primary">
-                    {getCategoryName(article.category_id)}
+                  <Link to={`/category/${getCategorySlug(articleCategories[0])}`} className="hover:text-primary">
+                    {getCategoryName(articleCategories[0])}
                   </Link>
                   <ArrowRight className="w-3 h-3 rtl:rotate-180" />
                 </>
@@ -124,13 +133,15 @@ const ArticlePage = () => {
               <span className="text-foreground line-clamp-1">{article.title}</span>
             </nav>
 
-            {/* Category Badge */}
-            {article.category_id && (
-              <Link to={`/category/${getCategorySlug(article.category_id)}`}
-                className="inline-block bg-primary text-primary-foreground text-xs font-bold px-3 py-1 rounded mb-3">
-                {getCategoryName(article.category_id)}
-              </Link>
-            )}
+            {/* Category Badges */}
+            <div className="flex gap-2 flex-wrap mb-3">
+              {articleCategories.map((catId) => (
+                <Link key={catId} to={`/category/${getCategorySlug(catId)}`}
+                  className="inline-block bg-primary text-primary-foreground text-xs font-bold px-3 py-1 rounded">
+                  {getCategoryName(catId)}
+                </Link>
+              ))}
+            </div>
 
             <h1 className="text-2xl md:text-3xl lg:text-4xl font-black text-foreground leading-tight mb-4">
               {article.title}
