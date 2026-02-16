@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, FileText, Settings, BarChart3, Zap, Layers, Mail } from "lucide-react";
+import { LayoutDashboard, Users, FileText, Settings, BarChart3, Zap, Layers, Mail, MessageSquare, TrendingUp, FileCode, Tag } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLanguage } from "@/contexts/LanguageContext";
 import {
@@ -20,11 +20,15 @@ const AdminSidebar = () => {
 
   const menuItems = [
     { title: t("الإحصائيات", "Overview"), url: "/dashboard", icon: BarChart3 },
+    { title: t("التحليلات", "Analytics"), url: "/dashboard/analytics", icon: TrendingUp },
     { title: t("المستخدمون", "Users"), url: "/dashboard/users", icon: Users },
     { title: t("المقالات", "Articles"), url: "/dashboard/articles", icon: FileText },
     { title: t("الأقسام", "Categories"), url: "/dashboard/categories", icon: Layers },
+    { title: t("الوسوم", "Tags"), url: "/dashboard/tags", icon: Tag },
     { title: t("أخبار عاجلة", "Breaking News"), url: "/dashboard/breaking", icon: Zap },
+    { title: t("التعليقات", "Comments"), url: "/dashboard/comments", icon: MessageSquare },
     { title: t("المشتركون", "Subscribers"), url: "/dashboard/subscribers", icon: Mail },
+    { title: t("الصفحات", "Pages"), url: "/dashboard/pages", icon: FileCode },
     { title: t("الإعدادات", "Settings"), url: "/dashboard/settings", icon: Settings },
   ];
 

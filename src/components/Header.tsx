@@ -54,13 +54,16 @@ const Header = () => {
           {/* Search */}
           <div className="flex items-center gap-2">
             {searchOpen && (
-              <input
-                type="text"
-                placeholder={t("ابحث...", "Search...")}
-                className="border border-border rounded-md px-3 py-1.5 text-sm bg-background text-foreground w-48 focus:outline-none focus:ring-2 focus:ring-primary"
-                autoFocus
-                onBlur={() => setSearchOpen(false)}
-              />
+              <form onSubmit={(e) => { e.preventDefault(); const q = (e.currentTarget.elements.namedItem("q") as HTMLInputElement).value; window.location.href = `/search?q=${encodeURIComponent(q)}`; }}>
+                <input
+                  name="q"
+                  type="text"
+                  placeholder={t("ابحث...", "Search...")}
+                  className="border border-border rounded-md px-3 py-1.5 text-sm bg-background text-foreground w-48 focus:outline-none focus:ring-2 focus:ring-primary"
+                  autoFocus
+                  onBlur={() => setTimeout(() => setSearchOpen(false), 200)}
+                />
+              </form>
             )}
             <button
               onClick={() => setSearchOpen(!searchOpen)}

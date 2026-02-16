@@ -1,10 +1,11 @@
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Link } from "react-router-dom";
-import { Facebook, Twitter, Mail, Phone } from "lucide-react";
+import { Facebook, Twitter, Mail, Rss } from "lucide-react";
 import NewsletterFooter from "./NewsletterFooter";
 
 const Footer = () => {
   const { t } = useLanguage();
+  const rssUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/rss`;
 
   return (
     <footer className="bg-secondary text-secondary-foreground mt-12">
@@ -23,7 +24,15 @@ const Footer = () => {
             <h4 className="font-bold mb-3 text-sm uppercase tracking-wider opacity-80">{t("روابط سريعة", "Quick Links")}</h4>
             <ul className="space-y-2 text-sm opacity-70">
               <li><Link to="/" className="hover:text-primary transition-colors">{t("الرئيسية", "Home")}</Link></li>
-              <li><Link to="/auth" className="hover:text-primary transition-colors">{t("تسجيل الدخول", "Sign In")}</Link></li>
+              <li><Link to="/page/about" className="hover:text-primary transition-colors">{t("من نحن", "About Us")}</Link></li>
+              <li><Link to="/page/privacy" className="hover:text-primary transition-colors">{t("سياسة الخصوصية", "Privacy Policy")}</Link></li>
+              <li><Link to="/page/contact" className="hover:text-primary transition-colors">{t("اتصل بنا", "Contact Us")}</Link></li>
+              <li><Link to="/search" className="hover:text-primary transition-colors">{t("بحث", "Search")}</Link></li>
+              <li>
+                <a href={rssUrl} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors flex items-center gap-1">
+                  <Rss className="w-3 h-3" /> RSS
+                </a>
+              </li>
             </ul>
           </div>
 
