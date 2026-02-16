@@ -6,7 +6,8 @@ import Header from "@/components/Header";
 import CategoryNav from "@/components/CategoryNav";
 import Footer from "@/components/Footer";
 import SEOHead from "@/components/SEOHead";
-import { Clock, ArrowRight, Share2, Facebook, Twitter, Eye } from "lucide-react";
+import CommentSection from "@/components/CommentSection";
+import { Clock, ArrowRight, Share2, Facebook, Twitter, Eye, Tag } from "lucide-react";
 import MostReadWidget from "@/components/MostReadWidget";
 
 interface Article {
@@ -48,8 +49,9 @@ const ArticlePage = () => {
       if (catRes.data) setCategories(catRes.data);
       if (artRes.data) {
         setArticle(artRes.data);
-        // Increment views
+        // Increment views + daily tracking
         supabase.rpc("increment_article_views", { article_id: artRes.data.id });
+        supabase.rpc("track_daily_view", { p_article_id: artRes.data.id });
         // Fetch article categories from junction table
         const { data: acData } = await supabase
           .from("article_categories")
@@ -182,6 +184,9 @@ const ArticlePage = () => {
               className="prose prose-lg max-w-none text-foreground/90 leading-loose"
               dangerouslySetInnerHTML={{ __html: article.content || "" }}
             />
+
+            {/* Comments */}
+            <CommentSection articleId={article.id} />
           </article>
 
           {/* Sidebar */}
