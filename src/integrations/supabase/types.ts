@@ -50,6 +50,42 @@ export type Database = {
           },
         ]
       }
+      article_tags: {
+        Row: {
+          article_id: string
+          created_at: string
+          id: string
+          tag_id: string
+        }
+        Insert: {
+          article_id: string
+          created_at?: string
+          id?: string
+          tag_id: string
+        }
+        Update: {
+          article_id?: string
+          created_at?: string
+          id?: string
+          tag_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "article_tags_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "articles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "article_tags_tag_id_fkey"
+            columns: ["tag_id"]
+            isOneToOne: false
+            referencedRelation: "tags"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       articles: {
         Row: {
           author_id: string | null
@@ -139,6 +175,80 @@ export type Database = {
         }
         Relationships: []
       }
+      comments: {
+        Row: {
+          article_id: string
+          content: string
+          created_at: string
+          id: string
+          parent_id: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          article_id: string
+          content: string
+          created_at?: string
+          id?: string
+          parent_id?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          article_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          parent_id?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comments_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "articles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "comments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_views: {
+        Row: {
+          article_id: string
+          id: string
+          view_count: number
+          view_date: string
+        }
+        Insert: {
+          article_id: string
+          id?: string
+          view_count?: number
+          view_date?: string
+        }
+        Update: {
+          article_id?: string
+          id?: string
+          view_count?: number
+          view_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_views_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "articles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       newsletter_subscribers: {
         Row: {
           created_at: string
@@ -163,6 +273,45 @@ export type Database = {
           is_active?: boolean
           name?: string | null
           unsubscribed_at?: string | null
+        }
+        Relationships: []
+      }
+      pages: {
+        Row: {
+          content_ar: string | null
+          content_en: string | null
+          created_at: string
+          id: string
+          is_published: boolean | null
+          slug: string
+          sort_order: number | null
+          title_ar: string
+          title_en: string
+          updated_at: string
+        }
+        Insert: {
+          content_ar?: string | null
+          content_en?: string | null
+          created_at?: string
+          id?: string
+          is_published?: boolean | null
+          slug: string
+          sort_order?: number | null
+          title_ar: string
+          title_en: string
+          updated_at?: string
+        }
+        Update: {
+          content_ar?: string | null
+          content_en?: string | null
+          created_at?: string
+          id?: string
+          is_published?: boolean | null
+          slug?: string
+          sort_order?: number | null
+          title_ar?: string
+          title_en?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -217,6 +366,30 @@ export type Database = {
         }
         Relationships: []
       }
+      tags: {
+        Row: {
+          created_at: string
+          id: string
+          name_ar: string
+          name_en: string
+          slug: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name_ar: string
+          name_en: string
+          slug: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name_ar?: string
+          name_en?: string
+          slug?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           id: string
@@ -251,6 +424,7 @@ export type Database = {
         Args: { article_id: string }
         Returns: undefined
       }
+      track_daily_view: { Args: { p_article_id: string }; Returns: undefined }
     }
     Enums: {
       app_role: "super_admin" | "editor_in_chief" | "journalist" | "ads_manager"
