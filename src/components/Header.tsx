@@ -1,6 +1,7 @@
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import LanguageToggle from "./LanguageToggle";
+import ThemeToggle from "./ThemeToggle";
 import { Link } from "react-router-dom";
 import { User, LogOut, Search } from "lucide-react";
 import { useState } from "react";
@@ -17,6 +18,7 @@ const Header = () => {
         <div className="container flex items-center justify-between py-1.5 text-xs">
           <span>{new Date().toLocaleDateString("ar-EG", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</span>
           <div className="flex items-center gap-3">
+            <ThemeToggle />
             <LanguageToggle />
             {user ? (
               <div className="flex items-center gap-2">

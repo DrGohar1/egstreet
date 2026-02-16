@@ -6,7 +6,8 @@ import Header from "@/components/Header";
 import CategoryNav from "@/components/CategoryNav";
 import Footer from "@/components/Footer";
 import SEOHead from "@/components/SEOHead";
-import { Clock, ArrowRight, Share2, Facebook, Twitter } from "lucide-react";
+import { Clock, ArrowRight, Share2, Facebook, Twitter, Eye } from "lucide-react";
+import MostReadWidget from "@/components/MostReadWidget";
 
 interface Article {
   id: string;
@@ -47,6 +48,8 @@ const ArticlePage = () => {
       if (catRes.data) setCategories(catRes.data);
       if (artRes.data) {
         setArticle(artRes.data);
+        // Increment views
+        supabase.rpc("increment_article_views", { article_id: artRes.data.id });
         // Fetch article categories from junction table
         const { data: acData } = await supabase
           .from("article_categories")
@@ -209,6 +212,7 @@ const ArticlePage = () => {
                 ))}
               </div>
             </div>
+            <MostReadWidget />
           </aside>
         </div>
       </main>
