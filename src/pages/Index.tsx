@@ -4,11 +4,13 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import Header from "@/components/Header";
 import CategoryNav from "@/components/CategoryNav";
 import BreakingTicker from "@/components/BreakingTicker";
+import StickyHeader from "@/components/StickyHeader";
 import ArticleCard from "@/components/ArticleCard";
+import MostReadWidget from "@/components/MostReadWidget";
 import Footer from "@/components/Footer";
 import SEOHead from "@/components/SEOHead";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Clock, TrendingUp } from "lucide-react";
+import { ArrowLeft, TrendingUp } from "lucide-react";
 
 interface Category {
   id: string;
@@ -66,13 +68,7 @@ const Index = () => {
     return cat ? (language === "ar" ? cat.name_ar : cat.name_en) : undefined;
   };
 
-  const getCategorySlug = (catId: string | null) => {
-    if (!catId) return "";
-    const cat = categories.find((c) => c.id === catId);
-    return cat?.slug || "";
-  };
-
-  // Group articles by category using junction table
+  // Group articles by category
   const articlesByCategory: Record<string, Article[]> = {};
   articles.forEach((a) => {
     const catIds = articleCatsMap[a.id] || (a.category_id ? [a.category_id] : []);
@@ -86,6 +82,12 @@ const Index = () => {
 
   const hasContent = articles.length > 0;
 
+  const tickerEl = breakingArticles.length > 0 ? (
+    <BreakingTicker headlines={breakingArticles.map((a) => a.title)} />
+  ) : null;
+
+  const categoryNavEl = <CategoryNav categories={categories} />;
+
   return (
     <div className="min-h-screen bg-background content-protected">
       <SEOHead
@@ -98,18 +100,13 @@ const Index = () => {
 
       <Header />
 
-      {breakingArticles.length > 0 && (
-        <BreakingTicker headlines={breakingArticles.map((a) => a.title)} />
-      )}
-
-      <CategoryNav categories={categories} />
+      <StickyHeader ticker={tickerEl} categoryNav={categoryNavEl} />
 
       <main className="container py-6">
         {hasContent ? (
           <div className="space-y-10">
-            {/* Hero Section - youm7 style: big hero + side list */}
+            {/* Hero Section */}
             <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Main Hero */}
               <div className="lg:col-span-2 space-y-4">
                 {featuredArticles[0] && (
                   <ArticleCard
@@ -122,7 +119,6 @@ const Index = () => {
                     publishedAt={featuredArticles[0].published_at || undefined}
                   />
                 )}
-                {/* Sub-featured row */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   {featuredArticles.slice(1, 3).map((article) => (
                     <ArticleCard
@@ -138,24 +134,27 @@ const Index = () => {
                 </div>
               </div>
 
-              {/* Sidebar - Latest News */}
-              <aside className="bg-card rounded-lg border border-border p-4">
-                <div className="flex items-center gap-2 mb-4">
-                  <TrendingUp className="w-5 h-5 text-primary" />
-                  <h3 className="text-lg font-black text-foreground">{t("آخر الأخبار", "Latest News")}</h3>
+              {/* Sidebar */}
+              <aside className="space-y-6">
+                <div className="bg-card rounded-lg border border-border p-4">
+                  <div className="flex items-center gap-2 mb-4">
+                    <TrendingUp className="w-5 h-5 text-primary" />
+                    <h3 className="text-lg font-black text-foreground">{t("آخر الأخبار", "Latest News")}</h3>
+                  </div>
+                  <div className="divide-y divide-border">
+                    {latestArticles.slice(0, 6).map((article) => (
+                      <ArticleCard
+                        key={article.id}
+                        variant="compact"
+                        title={article.title}
+                        slug={article.slug}
+                        featuredImage={article.featured_image || undefined}
+                        publishedAt={article.published_at || undefined}
+                      />
+                    ))}
+                  </div>
                 </div>
-                <div className="divide-y divide-border">
-                  {latestArticles.slice(0, 8).map((article) => (
-                    <ArticleCard
-                      key={article.id}
-                      variant="compact"
-                      title={article.title}
-                      slug={article.slug}
-                      featuredImage={article.featured_image || undefined}
-                      publishedAt={article.published_at || undefined}
-                    />
-                  ))}
-                </div>
+                <MostReadWidget />
               </aside>
             </section>
 
@@ -178,7 +177,7 @@ const Index = () => {
               </section>
             )}
 
-            {/* Category Sections - youm7 style */}
+            {/* Category Sections */}
             {categories.map((cat) => {
               const catArticles = articlesByCategory[cat.id];
               if (!catArticles || catArticles.length === 0) return null;
@@ -211,7 +210,6 @@ const Index = () => {
             })}
           </div>
         ) : (
-          /* Empty state */
           <div className="text-center py-20">
             <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 mb-6">
               <span className="text-3xl">📰</span>

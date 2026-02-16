@@ -2,22 +2,24 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { FileText, Clock, Users, CheckCircle, AlertTriangle, Zap } from "lucide-react";
+import { FileText, Clock, Users, CheckCircle, AlertTriangle, Zap, Eye } from "lucide-react";
 
 const DashboardOverview = () => {
   const { t } = useLanguage();
-  const [stats, setStats] = useState({ articles: 0, pending: 0, users: 0, published: 0, drafts: 0, breaking: 0 });
+  const [stats, setStats] = useState({ articles: 0, pending: 0, users: 0, published: 0, drafts: 0, breaking: 0, totalViews: 0 });
 
   useEffect(() => {
     const fetchStats = async () => {
-      const [artRes, pendRes, profRes, pubRes, draftRes, breakRes] = await Promise.all([
+      const [artRes, pendRes, profRes, pubRes, draftRes, breakRes, viewsRes] = await Promise.all([
         supabase.from("articles").select("id", { count: "exact", head: true }),
         supabase.from("articles").select("id", { count: "exact", head: true }).eq("status", "pending_review"),
         supabase.from("profiles").select("id", { count: "exact", head: true }),
         supabase.from("articles").select("id", { count: "exact", head: true }).eq("status", "published"),
         supabase.from("articles").select("id", { count: "exact", head: true }).eq("status", "draft"),
         supabase.from("articles").select("id", { count: "exact", head: true }).eq("is_breaking", true),
+        supabase.from("articles").select("views").eq("status", "published"),
       ]);
+      const totalViews = viewsRes.data?.reduce((sum: number, a: { views: number }) => sum + (a.views || 0), 0) ?? 0;
       setStats({
         articles: artRes.count ?? 0,
         pending: pendRes.count ?? 0,
@@ -25,6 +27,7 @@ const DashboardOverview = () => {
         published: pubRes.count ?? 0,
         drafts: draftRes.count ?? 0,
         breaking: breakRes.count ?? 0,
+        totalViews,
       });
     };
     fetchStats();
@@ -37,6 +40,7 @@ const DashboardOverview = () => {
     { label: t("مراجعة معلقة", "Pending Review"), value: stats.pending, icon: Clock, color: "text-yellow-500" },
     { label: t("أخبار عاجلة", "Breaking News"), value: stats.breaking, icon: Zap, color: "text-destructive" },
     { label: t("المستخدمون", "Total Users"), value: stats.users, icon: Users, color: "text-blue-500" },
+    { label: t("إجمالي المشاهدات", "Total Views"), value: stats.totalViews.toLocaleString(), icon: Eye, color: "text-purple-500" },
   ];
 
   return (

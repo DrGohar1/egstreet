@@ -17,7 +17,7 @@ const CategoryNav = ({ categories, activeSlug }: CategoryNavProps) => {
   const { language } = useLanguage();
 
   return (
-    <nav className="nav-gradient sticky top-0 z-40">
+    <nav className="nav-gradient z-40">
       <div className="container">
         <ul className="flex items-center gap-0 overflow-x-auto scrollbar-hide">
           {categories.map((cat) => (
