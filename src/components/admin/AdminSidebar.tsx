@@ -1,4 +1,4 @@
-import { LayoutDashboard, Users, FileText, Settings, BarChart3, Zap, Layers, Mail, MessageSquare, TrendingUp, FileCode, Tag } from "lucide-react";
+import { LayoutDashboard, Users, FileText, Settings, BarChart3, Zap, Layers, Mail, MessageSquare, TrendingUp, FileCode, Tag, Megaphone } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLanguage } from "@/contexts/LanguageContext";
 import {
@@ -30,6 +30,7 @@ const AdminSidebar = () => {
     { title: t("المشتركون", "Subscribers"), url: "/dashboard/subscribers", icon: Mail },
     { title: t("الصفحات", "Pages"), url: "/dashboard/pages", icon: FileCode },
     { title: t("الإعدادات", "Settings"), url: "/dashboard/settings", icon: Settings },
+    { title: t("الإعلانات", "Advertisements"), url: "/dashboard/advertisements", icon: Megaphone },
   ];
 
   return (

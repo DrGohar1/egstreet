@@ -12,3 +12,12 @@ Allow: /
 
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /dashboard
+Disallow: /auth
+Disallow: /api/private
+
+Crawl-delay: 1
+
+Sitemap: https://egstreet.news/sitemap.xml
+Sitemap: https://egstreet.news/sitemap-news.xml

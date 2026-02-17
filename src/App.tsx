@@ -29,6 +29,8 @@ import CommentManagement from "./pages/admin/CommentManagement";
 import AnalyticsDashboard from "./pages/admin/AnalyticsDashboard";
 import PageManagement from "./pages/admin/PageManagement";
 import TagManagement from "./pages/admin/TagManagement";
+import AdvertisementManagement from "./pages/admin/AdvertisementManagement";
+import SavedArticlesPage from "./pages/SavedArticlesPage";
 import NewsletterPopup from "./components/NewsletterPopup";
 
 const queryClient = new QueryClient();
@@ -57,6 +59,8 @@ const AppContent = () => {
         <Route path="/dashboard/analytics" element={<AdminLayout><AnalyticsDashboard /></AdminLayout>} />
         <Route path="/dashboard/pages" element={<AdminLayout><PageManagement /></AdminLayout>} />
         <Route path="/dashboard/tags" element={<AdminLayout><TagManagement /></AdminLayout>} />
+        <Route path="/dashboard/advertisements" element={<AdminLayout><AdvertisementManagement /></AdminLayout>} />
+        <Route path="/saved" element={<SavedArticlesPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       <NewsletterPopup />
