@@ -5,9 +5,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Switch } from "@/components/ui/switch";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -15,7 +18,7 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Check, X, Trash2, Eye, ArrowLeft, Pencil, Send, Search, Filter, FileText, Calendar } from "lucide-react";
+import { Plus, Check, X, Trash2, Eye, ArrowLeft, Pencil, Send, Search, Filter, FileText, Calendar, ImageIcon, Tag, Zap, Star, Layers } from "lucide-react";
 import RichTextEditor from "@/components/admin/RichTextEditor";
 import type { Database } from "@/integrations/supabase/types";
 import { motion } from "framer-motion";
@@ -31,6 +34,7 @@ interface Article {
 }
 
 interface Category { id: string; name_ar: string; name_en: string; }
+interface TagItem { id: string; name_ar: string; name_en: string; }
 
 const STATUS_CONFIG: Record<ArticleStatus, { label_ar: string; label_en: string; color: string }> = {
   draft: { label_ar: "مسودة", label_en: "Draft", color: "bg-muted text-muted-foreground" },
@@ -45,6 +49,7 @@ const ArticleManagement = () => {
   const { toast } = useToast();
   const [articles, setArticles] = useState<Article[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [tags, setTags] = useState<TagItem[]>([]);
   const [userRole, setUserRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -52,21 +57,24 @@ const ArticleManagement = () => {
   const [showPreview, setShowPreview] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
+  const [editorStep, setEditorStep] = useState(0); // 0=basic info, 1=content, 2=settings
 
   const [formTitle, setFormTitle] = useState("");
   const [formContent, setFormContent] = useState("");
   const [formExcerpt, setFormExcerpt] = useState("");
   const [formCategories, setFormCategories] = useState<string[]>([]);
+  const [formTags, setFormTags] = useState<string[]>([]);
   const [formImage, setFormImage] = useState("");
   const [formBreaking, setFormBreaking] = useState(false);
   const [formFeatured, setFormFeatured] = useState(false);
   const [articleCategoriesMap, setArticleCategoriesMap] = useState<Record<string, string[]>>({});
+  const [articleTagsMap, setArticleTagsMap] = useState<Record<string, string[]>>({});
 
   const resetForm = () => {
     setFormTitle(""); setFormContent(""); setFormExcerpt("");
-    setFormCategories([]); setFormImage("");
+    setFormCategories([]); setFormTags([]); setFormImage("");
     setFormBreaking(false); setFormFeatured(false);
-    setEditingArticle(null); setShowPreview(false);
+    setEditingArticle(null); setShowPreview(false); setEditorStep(0);
   };
 
   const openCreateDialog = () => { resetForm(); setDialogOpen(true); };
@@ -77,22 +85,27 @@ const ArticleManagement = () => {
     setFormContent(article.content || "");
     setFormExcerpt(article.excerpt || "");
     setFormCategories(articleCategoriesMap[article.id] || (article.category_id ? [article.category_id] : []));
+    setFormTags(articleTagsMap[article.id] || []);
     setFormImage(article.featured_image || "");
     setFormBreaking(article.is_breaking || false);
     setFormFeatured(article.is_featured || false);
     setShowPreview(false);
+    setEditorStep(0);
     setDialogOpen(true);
   };
 
   const fetchData = useCallback(async () => {
     setLoading(true);
-    const [artRes, catRes, acRes] = await Promise.all([
+    const [artRes, catRes, acRes, tagRes, atRes] = await Promise.all([
       supabase.from("articles").select("*").order("created_at", { ascending: false }),
       supabase.from("categories").select("id, name_ar, name_en"),
       supabase.from("article_categories").select("article_id, category_id"),
+      supabase.from("tags").select("id, name_ar, name_en"),
+      supabase.from("article_tags").select("article_id, tag_id"),
     ]);
     if (artRes.data) setArticles(artRes.data);
     if (catRes.data) setCategories(catRes.data);
+    if (tagRes.data) setTags(tagRes.data);
     if (acRes.data) {
       const map: Record<string, string[]> = {};
       acRes.data.forEach((ac: { article_id: string; category_id: string }) => {
@@ -100,6 +113,14 @@ const ArticleManagement = () => {
         map[ac.article_id].push(ac.category_id);
       });
       setArticleCategoriesMap(map);
+    }
+    if (atRes.data) {
+      const map: Record<string, string[]> = {};
+      atRes.data.forEach((at: { article_id: string; tag_id: string }) => {
+        if (!map[at.article_id]) map[at.article_id] = [];
+        map[at.article_id].push(at.tag_id);
+      });
+      setArticleTagsMap(map);
     }
     if (user) {
       for (const role of ["super_admin", "editor_in_chief", "journalist"] as AppRole[]) {
@@ -139,10 +160,18 @@ const ArticleManagement = () => {
       articleId = data.id;
     }
     if (articleId) {
+      // Save categories
       await supabase.from("article_categories").delete().eq("article_id", articleId);
       if (formCategories.length > 0) {
         await supabase.from("article_categories").insert(
           formCategories.map((catId) => ({ article_id: articleId!, category_id: catId }))
+        );
+      }
+      // Save tags
+      await supabase.from("article_tags").delete().eq("article_id", articleId);
+      if (formTags.length > 0) {
+        await supabase.from("article_tags").insert(
+          formTags.map((tagId) => ({ article_id: articleId!, tag_id: tagId }))
         );
       }
     }
@@ -170,6 +199,11 @@ const ArticleManagement = () => {
     return c ? (language === "ar" ? c.name_ar : c.name_en) : "—";
   };
 
+  const getTagName = (id: string) => {
+    const tg = tags.find((t) => t.id === id);
+    return tg ? (language === "ar" ? tg.name_ar : tg.name_en) : "—";
+  };
+
   const filterArticles = (list: Article[]) => {
     let filtered = list;
     if (searchQuery) {
@@ -183,6 +217,12 @@ const ArticleManagement = () => {
 
   const myArticles = articles.filter((a) => a.author_id === user?.id);
   const pendingArticles = articles.filter((a) => a.status === "pending_review");
+
+  const STEPS = [
+    { label: t("المعلومات الأساسية", "Basic Info"), icon: FileText },
+    { label: t("المحتوى", "Content"), icon: Pencil },
+    { label: t("الإعدادات", "Settings"), icon: Layers },
+  ];
 
   if (loading) {
     return (
@@ -248,19 +288,23 @@ const ArticleManagement = () => {
         </CardContent>
       </Card>
 
-      {/* Article Editor Dialog */}
+      {/* Article Editor Dialog - Card Style */}
       <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) resetForm(); setDialogOpen(open); }}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>
-              {showPreview ? t("معاينة المقال", "Article Preview")
-                : editingArticle ? t("تعديل المقال", "Edit Article")
-                : t("إنشاء مقال جديد", "Create New Article")}
+        <DialogContent className="max-w-5xl max-h-[92vh] overflow-y-auto p-0">
+          <DialogHeader className="px-6 pt-6 pb-0">
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              {showPreview ? (
+                <>{t("معاينة المقال", "Article Preview")}</>
+              ) : editingArticle ? (
+                <><Pencil className="h-5 w-5 text-primary" />{t("تعديل المقال", "Edit Article")}</>
+              ) : (
+                <><Plus className="h-5 w-5 text-primary" />{t("إنشاء مقال جديد", "Create New Article")}</>
+              )}
             </DialogTitle>
           </DialogHeader>
 
           {showPreview ? (
-            <div className="space-y-4 pt-2">
+            <div className="p-6 space-y-4">
               <Button variant="ghost" size="sm" className="gap-1" onClick={() => setShowPreview(false)}>
                 <ArrowLeft className="h-4 w-4" />{t("العودة للتحرير", "Back to Editor")}
               </Button>
@@ -269,6 +313,7 @@ const ArticleManagement = () => {
                 <h1 className="text-2xl font-bold text-foreground leading-tight">{formTitle || t("بدون عنوان", "Untitled")}</h1>
                 <div className="flex gap-2 flex-wrap">
                   {formCategories.map((cId) => <Badge key={cId} variant="secondary" className="text-xs">{getCatName(cId)}</Badge>)}
+                  {formTags.map((tId) => <Badge key={tId} variant="outline" className="text-xs">{getTagName(tId)}</Badge>)}
                   {formBreaking && <Badge className="bg-primary text-primary-foreground text-xs">{t("عاجل", "Breaking")}</Badge>}
                   {formFeatured && <Badge className="bg-amber-500 text-white text-xs">{t("مميز", "Featured")}</Badge>}
                 </div>
@@ -281,37 +326,214 @@ const ArticleManagement = () => {
               </div>
             </div>
           ) : (
-            <div className="space-y-4 pt-2">
-              <Input placeholder={t("عنوان المقال", "Article Title")} value={formTitle} onChange={(e) => setFormTitle(e.target.value)} className="text-lg font-semibold rounded-xl" />
-              <Input placeholder={t("الملخص", "Excerpt")} value={formExcerpt} onChange={(e) => setFormExcerpt(e.target.value)} className="rounded-xl" />
-              <div className="space-y-3">
-                <div>
-                  <label className="text-sm font-medium text-foreground mb-2 block">{t("الأقسام", "Categories")}</label>
-                  <div className="flex flex-wrap gap-2 p-3 border border-border rounded-xl bg-background">
-                    {categories.map((c) => (
-                      <label key={c.id} className="flex items-center gap-1.5 text-sm cursor-pointer">
-                        <Checkbox checked={formCategories.includes(c.id)} onCheckedChange={(checked) => {
-                          setFormCategories((prev) => checked ? [...prev, c.id] : prev.filter((id) => id !== c.id));
-                        }} />
-                        {language === "ar" ? c.name_ar : c.name_en}
-                      </label>
-                    ))}
+            <div className="px-6 pb-6 pt-4">
+              {/* Step Indicator */}
+              <div className="flex items-center gap-2 mb-6 p-1 bg-muted/50 rounded-xl">
+                {STEPS.map((step, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setEditorStep(i)}
+                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                      editorStep === i
+                        ? "bg-primary text-primary-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    <step.icon className="h-4 w-4" />
+                    <span className="hidden sm:inline">{step.label}</span>
+                    <span className="sm:hidden">{i + 1}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Step 0: Basic Info - Card Style */}
+              {editorStep === 0 && (
+                <div className="space-y-5">
+                  {/* Image Card */}
+                  <div className="rounded-xl border-2 border-dashed border-border p-6 text-center bg-muted/20 hover:border-primary/50 transition-colors">
+                    {formImage ? (
+                      <div className="relative">
+                        <img src={formImage} alt="" className="w-full h-48 object-cover rounded-lg" />
+                        <button onClick={() => setFormImage("")} className="absolute top-2 end-2 p-1.5 bg-destructive text-destructive-foreground rounded-full">
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="py-4">
+                        <ImageIcon className="h-10 w-10 mx-auto text-muted-foreground/50 mb-2" />
+                        <p className="text-sm text-muted-foreground">{t("أضف صورة رئيسية للمقال", "Add a featured image")}</p>
+                      </div>
+                    )}
+                    <Input
+                      placeholder={t("رابط الصورة الرئيسية", "Featured Image URL")}
+                      value={formImage}
+                      onChange={(e) => setFormImage(e.target.value)}
+                      className="mt-3 rounded-xl"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-semibold">{t("عنوان المقال", "Article Title")} *</Label>
+                    <Input
+                      placeholder={t("اكتب عنوان جذاب للمقال...", "Write a catchy title...")}
+                      value={formTitle}
+                      onChange={(e) => setFormTitle(e.target.value)}
+                      className="mt-1.5 text-lg font-semibold rounded-xl h-12"
+                    />
+                  </div>
+
+                  <div>
+                    <Label className="text-sm font-semibold">{t("الملخص", "Excerpt")}</Label>
+                    <Textarea
+                      placeholder={t("ملخص قصير يظهر في بطاقة المقال...", "Short excerpt shown on article card...")}
+                      value={formExcerpt}
+                      onChange={(e) => setFormExcerpt(e.target.value)}
+                      className="mt-1.5 rounded-xl"
+                      rows={3}
+                    />
+                  </div>
+
+                  <div className="flex justify-end">
+                    <Button onClick={() => setEditorStep(1)} disabled={!formTitle.trim()} className="gap-1.5 rounded-xl">
+                      {t("التالي: المحتوى", "Next: Content")}
+                      <ArrowLeft className="h-4 w-4 rtl:rotate-180 ltr:rotate-180" />
+                    </Button>
                   </div>
                 </div>
-                <Input placeholder={t("رابط الصورة الرئيسية", "Featured Image URL")} value={formImage} onChange={(e) => setFormImage(e.target.value)} className="rounded-xl" />
-              </div>
-              <div className="flex gap-6">
-                <label className="flex items-center gap-2 text-sm"><Checkbox checked={formBreaking} onCheckedChange={(v) => setFormBreaking(!!v)} />{t("خبر عاجل", "Breaking News")}</label>
-                <label className="flex items-center gap-2 text-sm"><Checkbox checked={formFeatured} onCheckedChange={(v) => setFormFeatured(!!v)} />{t("مقال مميز", "Featured")}</label>
-              </div>
-              <RichTextEditor content={formContent} onChange={setFormContent} placeholder={t("اكتب محتوى المقال هنا...", "Write article content here...")} />
-              <div className="flex gap-2">
-                <Button variant="outline" className="gap-1 rounded-xl" onClick={() => setShowPreview(true)} disabled={!formTitle.trim()}>
-                  <Eye className="h-4 w-4" />{t("معاينة", "Preview")}
-                </Button>
-                <Button onClick={() => handleSave(false)} variant="secondary" className="flex-1 rounded-xl">{t("حفظ كمسودة", "Save Draft")}</Button>
-                <Button onClick={() => handleSave(true)} className="flex-1 gap-1 rounded-xl"><Send className="h-4 w-4" />{t("إرسال للمراجعة", "Submit")}</Button>
-              </div>
+              )}
+
+              {/* Step 1: Content */}
+              {editorStep === 1 && (
+                <div className="space-y-4">
+                  <RichTextEditor content={formContent} onChange={setFormContent} placeholder={t("اكتب محتوى المقال هنا...", "Write article content here...")} />
+                  <div className="flex justify-between">
+                    <Button variant="outline" onClick={() => setEditorStep(0)} className="rounded-xl">
+                      {t("السابق", "Previous")}
+                    </Button>
+                    <Button onClick={() => setEditorStep(2)} className="gap-1.5 rounded-xl">
+                      {t("التالي: الإعدادات", "Next: Settings")}
+                      <ArrowLeft className="h-4 w-4 rtl:rotate-180 ltr:rotate-180" />
+                    </Button>
+                  </div>
+                </div>
+              )}
+
+              {/* Step 2: Settings - Card Grid */}
+              {editorStep === 2 && (
+                <div className="space-y-5">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Categories Card */}
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Layers className="h-4 w-4 text-primary" />
+                          <Label className="text-sm font-semibold">{t("الأقسام", "Categories")}</Label>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {categories.map((c) => {
+                            const selected = formCategories.includes(c.id);
+                            return (
+                              <button
+                                key={c.id}
+                                type="button"
+                                onClick={() => {
+                                  setFormCategories((prev) => selected ? prev.filter((id) => id !== c.id) : [...prev, c.id]);
+                                }}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                                  selected
+                                    ? "bg-primary text-primary-foreground border-primary"
+                                    : "bg-muted/50 text-muted-foreground border-border hover:border-primary/50"
+                                }`}
+                              >
+                                {language === "ar" ? c.name_ar : c.name_en}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Tags Card */}
+                    <Card>
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Tag className="h-4 w-4 text-primary" />
+                          <Label className="text-sm font-semibold">{t("الوسوم", "Tags")}</Label>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {tags.map((tg) => {
+                            const selected = formTags.includes(tg.id);
+                            return (
+                              <button
+                                key={tg.id}
+                                type="button"
+                                onClick={() => {
+                                  setFormTags((prev) => selected ? prev.filter((id) => id !== tg.id) : [...prev, tg.id]);
+                                }}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                                  selected
+                                    ? "bg-primary text-primary-foreground border-primary"
+                                    : "bg-muted/50 text-muted-foreground border-border hover:border-primary/50"
+                                }`}
+                              >
+                                {language === "ar" ? tg.name_ar : tg.name_en}
+                              </button>
+                            );
+                          })}
+                          {tags.length === 0 && (
+                            <p className="text-xs text-muted-foreground">{t("لا توجد وسوم. أنشئها من صفحة الوسوم.", "No tags. Create them from tags page.")}</p>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* Flags Card */}
+                  <Card>
+                    <CardContent className="p-4">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Zap className="h-4 w-4 text-primary" />
+                        <Label className="text-sm font-semibold">{t("خيارات النشر", "Publishing Options")}</Label>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="flex items-center justify-between p-3 rounded-xl border border-border bg-muted/20">
+                          <div className="flex items-center gap-2">
+                            <Zap className="h-4 w-4 text-primary" />
+                            <div>
+                              <p className="text-sm font-medium">{t("خبر عاجل", "Breaking News")}</p>
+                              <p className="text-[10px] text-muted-foreground">{t("يظهر في شريط الأخبار العاجلة", "Shows in breaking ticker")}</p>
+                            </div>
+                          </div>
+                          <Switch checked={formBreaking} onCheckedChange={setFormBreaking} />
+                        </div>
+                        <div className="flex items-center justify-between p-3 rounded-xl border border-border bg-muted/20">
+                          <div className="flex items-center gap-2">
+                            <Star className="h-4 w-4 text-amber-500" />
+                            <div>
+                              <p className="text-sm font-medium">{t("مقال مميز", "Featured Article")}</p>
+                              <p className="text-[10px] text-muted-foreground">{t("يظهر في القسم الرئيسي", "Shows in hero section")}</p>
+                            </div>
+                          </div>
+                          <Switch checked={formFeatured} onCheckedChange={setFormFeatured} />
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  {/* Action buttons */}
+                  <div className="flex flex-wrap gap-2 pt-2">
+                    <Button variant="outline" onClick={() => setEditorStep(1)} className="rounded-xl">
+                      {t("السابق", "Previous")}
+                    </Button>
+                    <Button variant="outline" className="gap-1 rounded-xl" onClick={() => setShowPreview(true)} disabled={!formTitle.trim()}>
+                      <Eye className="h-4 w-4" />{t("معاينة", "Preview")}
+                    </Button>
+                    <div className="flex-1" />
+                    <Button onClick={() => handleSave(false)} variant="secondary" className="rounded-xl">{t("حفظ كمسودة", "Save Draft")}</Button>
+                    <Button onClick={() => handleSave(true)} className="gap-1 rounded-xl"><Send className="h-4 w-4" />{t("إرسال للمراجعة", "Submit")}</Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </DialogContent>
@@ -364,10 +586,10 @@ function ArticleTable({
 
   return (
     <Card className="overflow-hidden">
-      {/* Table Header */}
       <div className="hidden md:grid grid-cols-12 gap-2 px-4 py-3 bg-secondary text-secondary-foreground text-xs font-bold">
         <div className="col-span-1 text-center">#</div>
-        <div className="col-span-4">{t("العنوان", "Title")}</div>
+        <div className="col-span-1">{t("صورة", "Image")}</div>
+        <div className="col-span-3">{t("العنوان", "Title")}</div>
         <div className="col-span-2">{t("القسم", "Category")}</div>
         <div className="col-span-2">{t("التاريخ", "Date")}</div>
         <div className="col-span-1 text-center">{t("الحالة", "Status")}</div>
@@ -385,19 +607,23 @@ function ArticleTable({
               transition={{ delay: idx * 0.02 }}
               className="grid grid-cols-1 md:grid-cols-12 gap-2 px-4 py-3 items-center hover:bg-muted/30 transition-colors group"
             >
-              {/* # */}
               <div className="hidden md:block col-span-1 text-center text-sm font-bold text-muted-foreground">{idx + 1}</div>
-
-              {/* Title */}
-              <div className="col-span-4 cursor-pointer" onClick={() => onEdit(article)}>
+              <div className="hidden md:block col-span-1">
+                {article.featured_image ? (
+                  <img src={article.featured_image} alt="" className="w-10 h-10 rounded-lg object-cover" />
+                ) : (
+                  <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
+                    <ImageIcon className="h-4 w-4 text-muted-foreground/50" />
+                  </div>
+                )}
+              </div>
+              <div className="col-span-3 cursor-pointer" onClick={() => onEdit(article)}>
                 <p className="text-sm font-semibold text-foreground truncate group-hover:text-primary transition-colors">{article.title}</p>
                 <div className="flex items-center gap-2 mt-0.5">
                   {article.is_breaking && <Badge className="bg-primary text-primary-foreground text-[9px] px-1.5 py-0 border-0">{t("عاجل", "Breaking")}</Badge>}
                   {article.is_featured && <Badge className="bg-amber-500 text-white text-[9px] px-1.5 py-0 border-0">{t("مميز", "Featured")}</Badge>}
                 </div>
               </div>
-
-              {/* Category */}
               <div className="hidden md:block col-span-2">
                 {cats.length > 0 ? (
                   <div className="flex flex-wrap gap-1">
@@ -408,21 +634,15 @@ function ArticleTable({
                   </div>
                 ) : <span className="text-xs text-muted-foreground">—</span>}
               </div>
-
-              {/* Date */}
               <div className="hidden md:flex col-span-2 items-center gap-1.5 text-xs text-muted-foreground">
                 <Calendar className="h-3 w-3" />
                 {new Date(article.created_at).toLocaleDateString(language === "ar" ? "ar-EG" : "en-US", { year: "numeric", month: "short", day: "numeric" })}
               </div>
-
-              {/* Status */}
               <div className="col-span-1 flex justify-center">
                 <Badge className={`${statusCfg.color} text-[10px] border-0 rounded-lg px-2`}>
                   {language === "ar" ? statusCfg.label_ar : statusCfg.label_en}
                 </Badge>
               </div>
-
-              {/* Actions */}
               <div className="col-span-2 flex items-center justify-center gap-1">
                 <Button size="sm" variant="ghost" className="h-8 w-8 p-0 rounded-lg" onClick={() => onEdit(article)}>
                   <Pencil className="h-3.5 w-3.5" />

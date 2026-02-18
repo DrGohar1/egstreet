@@ -1,5 +1,6 @@
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 import LanguageToggle from "./LanguageToggle";
 import ThemeToggle from "./ThemeToggle";
 import { Link } from "react-router-dom";
@@ -7,16 +8,23 @@ import { User, LogOut, Search } from "lucide-react";
 import { useState } from "react";
 
 const Header = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { user, signOut } = useAuth();
+  const { settings } = useSiteSettings();
   const [searchOpen, setSearchOpen] = useState(false);
+
+  const siteName = language === "ar"
+    ? (settings.site_name_ar || "جريدة الشارع المصري")
+    : (settings.site_name_en || "EgStreet News");
+
+  const siteDesc = settings.site_description || t("أخبار مصر والعالم", "Egypt & World News");
 
   return (
     <header className="bg-card border-b border-border">
-      {/* Top bar - red accent like youm7 */}
-      <div className="bg-primary text-primary-foreground">
+      {/* Top bar */}
+      <div className="bg-primary text-primary-foreground" style={settings.topbar_color ? { background: `hsl(${settings.topbar_color})` } : undefined}>
         <div className="container flex items-center justify-between py-1.5 text-xs">
-          <span>{new Date().toLocaleDateString("ar-EG", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</span>
+          <span>{new Date().toLocaleDateString(language === "ar" ? "ar-EG" : "en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</span>
           <div className="flex items-center gap-3">
             <ThemeToggle />
             <LanguageToggle />
@@ -39,20 +47,30 @@ const Header = () => {
         </div>
       </div>
 
-      {/* Logo & Search - youm7 style */}
-      <div className="container py-5">
+      {/* Logo & Search */}
+      <div className="container py-5" style={settings.font_family ? { fontFamily: settings.font_family } : undefined}>
         <div className="flex items-center justify-between">
           <Link to="/" className="inline-block">
-            <h1 className="text-3xl md:text-4xl font-black text-foreground tracking-tight">
-              {t("جريدة الشارع المصري", "EgStreet News")}
-            </h1>
-            <p className="text-xs text-muted-foreground mt-0.5 tracking-widest uppercase">
-              {t("أخبار مصر والعالم", "Egypt & World News")}
-            </p>
+            {settings.logo_url ? (
+              <img src={settings.logo_url} alt={siteName} className="h-12 md:h-16 object-contain" />
+            ) : (
+              <>
+                <h1 className="text-3xl md:text-4xl font-black text-foreground tracking-tight">
+                  {siteName}
+                </h1>
+                <p className="text-xs text-muted-foreground mt-0.5 tracking-widest uppercase">
+                  {siteDesc}
+                </p>
+              </>
+            )}
           </Link>
 
-          {/* Search */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
+            {settings.partner_logo_url && (
+              <a href={settings.partner_link || "#"} target="_blank" rel="noopener noreferrer">
+                <img src={settings.partner_logo_url} alt={settings.partner_credit || ""} className="h-8 md:h-10 object-contain opacity-70 hover:opacity-100 transition-opacity" />
+              </a>
+            )}
             {searchOpen && (
               <form onSubmit={(e) => { e.preventDefault(); const q = (e.currentTarget.elements.namedItem("q") as HTMLInputElement).value; window.location.href = `/search?q=${encodeURIComponent(q)}`; }}>
                 <input

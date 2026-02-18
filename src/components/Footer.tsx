@@ -1,21 +1,45 @@
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { Link } from "react-router-dom";
-import { Facebook, Twitter, Mail, Rss } from "lucide-react";
+import { Facebook, Twitter, Mail, Rss, Youtube, Instagram, Send, MessageCircle } from "lucide-react";
 import NewsletterFooter from "./NewsletterFooter";
 
 const Footer = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
+  const { settings } = useSiteSettings();
   const rssUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/rss`;
 
+  const siteName = language === "ar"
+    ? (settings.site_name_ar || "جريدة الشارع المصري")
+    : (settings.site_name_en || "EgStreet News");
+
+  const copyright = settings.copyright_text || t("جميع الحقوق محفوظة © 2026 جريدة الشارع المصري", "All Rights Reserved © 2026 EgStreet News");
+  const partnerCredit = settings.partner_credit || t("بالتعاون مع شركة الكينج للانتاج الفني", "In partnership with King Production Company");
+
+  const socials = [
+    { key: "social_facebook", icon: Facebook, label: "Facebook" },
+    { key: "social_twitter", icon: Twitter, label: "Twitter" },
+    { key: "social_youtube", icon: Youtube, label: "YouTube" },
+    { key: "social_instagram", icon: Instagram, label: "Instagram" },
+    { key: "social_telegram", icon: Send, label: "Telegram" },
+    { key: "social_whatsapp", icon: MessageCircle, label: "WhatsApp" },
+  ];
+
+  const activeSocials = socials.filter(s => settings[s.key]);
+
   return (
-    <footer className="bg-secondary text-secondary-foreground mt-12">
+    <footer className="bg-secondary text-secondary-foreground mt-12" style={settings.font_family ? { fontFamily: settings.font_family } : undefined}>
       <div className="container py-10">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           {/* Brand */}
           <div>
-            <h3 className="text-xl font-black mb-2">{t("جريدة الشارع المصري", "EgStreet News")}</h3>
+            {settings.logo_url ? (
+              <img src={settings.logo_url} alt={siteName} className="h-10 object-contain mb-3 brightness-0 invert opacity-80" />
+            ) : (
+              <h3 className="text-xl font-black mb-2">{siteName}</h3>
+            )}
             <p className="text-sm opacity-70 leading-relaxed">
-              {t("أخبار مصر والعالم العربي لحظة بلحظة", "Egypt & Arab world news, moment by moment")}
+              {settings.site_description || t("أخبار مصر والعالم العربي لحظة بلحظة", "Egypt & Arab world news, moment by moment")}
             </p>
           </div>
 
@@ -36,19 +60,31 @@ const Footer = () => {
             </ul>
           </div>
 
-          {/* Contact */}
+          {/* Contact + Social */}
           <div>
             <h4 className="font-bold mb-3 text-sm uppercase tracking-wider opacity-80">{t("تواصل معنا", "Contact Us")}</h4>
-            <div className="flex items-center gap-3 mt-2">
-              <a href="#" className="p-2 rounded-full bg-secondary-foreground/10 hover:bg-primary hover:text-primary-foreground transition-colors">
-                <Facebook className="w-4 h-4" />
-              </a>
-              <a href="#" className="p-2 rounded-full bg-secondary-foreground/10 hover:bg-primary hover:text-primary-foreground transition-colors">
-                <Twitter className="w-4 h-4" />
-              </a>
-              <a href="#" className="p-2 rounded-full bg-secondary-foreground/10 hover:bg-primary hover:text-primary-foreground transition-colors">
-                <Mail className="w-4 h-4" />
-              </a>
+            {settings.contact_email && (
+              <p className="text-sm opacity-70 mb-1">📧 {settings.contact_email}</p>
+            )}
+            {settings.contact_phone && (
+              <p className="text-sm opacity-70 mb-1">📱 {settings.contact_phone}</p>
+            )}
+            {settings.contact_address && (
+              <p className="text-sm opacity-70 mb-3">📍 {settings.contact_address}</p>
+            )}
+            <div className="flex items-center gap-2 mt-3">
+              {activeSocials.map(s => (
+                <a key={s.key} href={settings[s.key]} target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-secondary-foreground/10 hover:bg-primary hover:text-primary-foreground transition-colors" title={s.label}>
+                  <s.icon className="w-4 h-4" />
+                </a>
+              ))}
+              {activeSocials.length === 0 && (
+                <>
+                  <a href="#" className="p-2 rounded-full bg-secondary-foreground/10 hover:bg-primary hover:text-primary-foreground transition-colors"><Facebook className="w-4 h-4" /></a>
+                  <a href="#" className="p-2 rounded-full bg-secondary-foreground/10 hover:bg-primary hover:text-primary-foreground transition-colors"><Twitter className="w-4 h-4" /></a>
+                  <a href="#" className="p-2 rounded-full bg-secondary-foreground/10 hover:bg-primary hover:text-primary-foreground transition-colors"><Mail className="w-4 h-4" /></a>
+                </>
+              )}
             </div>
           </div>
 
@@ -58,10 +94,22 @@ const Footer = () => {
           </div>
         </div>
 
+        {/* Partner Logo */}
+        {settings.partner_logo_url && (
+          <div className="flex justify-center mt-6">
+            <a href={settings.partner_link || "#"} target="_blank" rel="noopener noreferrer">
+              <img src={settings.partner_logo_url} alt={settings.partner_credit || ""} className="h-12 object-contain opacity-50 hover:opacity-80 transition-opacity brightness-0 invert" />
+            </a>
+          </div>
+        )}
+
         {/* Bottom bar */}
         <div className="border-t border-secondary-foreground/20 mt-8 pt-6 text-center text-xs opacity-60 space-y-1">
-          <p>{t("جميع الحقوق محفوظة © 2026 جريدة الشارع المصري", "All Rights Reserved © 2026 EgStreet News")}</p>
-          <p>{t("بالتعاون مع شركة الكينج للانتاج الفني", "In partnership with King Production Company")}</p>
+          <p>{copyright}</p>
+          <p>{partnerCredit}</p>
+          {settings.footer_message && (
+            <div className="mt-2" dangerouslySetInnerHTML={{ __html: settings.footer_message }} />
+          )}
         </div>
       </div>
     </footer>
