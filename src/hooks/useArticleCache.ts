@@ -103,7 +103,7 @@ export const useMostReadArticles = () => {
 export const useInfiniteArticles = (pageSize = 20) => {
   return useInfiniteQuery({
     queryKey: ["articles-infinite"],
-    queryFn: async ({ pageParam = 0 }) => {
+    queryFn: async ({ pageParam = 0 }: { pageParam: number }) => {
       const { data } = await supabase
         .from("articles")
         .select("*")
@@ -112,7 +112,8 @@ export const useInfiniteArticles = (pageSize = 20) => {
         .range(pageParam, pageParam + pageSize - 1);
       return data || [];
     },
-    getNextPageParam: (lastPage, pages) => {
+    initialPageParam: 0,
+    getNextPageParam: (lastPage: any[], pages: any[][]) => {
       if (lastPage.length < pageSize) return undefined;
       return pages.length * pageSize;
     },

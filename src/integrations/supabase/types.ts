@@ -14,6 +14,95 @@ export type Database = {
   }
   public: {
     Tables: {
+      ad_analytics: {
+        Row: {
+          ad_id: string | null
+          created_at: string
+          event_type: string
+          id: string
+          user_agent: string | null
+          user_ip: string | null
+        }
+        Insert: {
+          ad_id?: string | null
+          created_at?: string
+          event_type: string
+          id?: string
+          user_agent?: string | null
+          user_ip?: string | null
+        }
+        Update: {
+          ad_id?: string | null
+          created_at?: string
+          event_type?: string
+          id?: string
+          user_agent?: string | null
+          user_ip?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ad_analytics_ad_id_fkey"
+            columns: ["ad_id"]
+            isOneToOne: false
+            referencedRelation: "advertisements"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      advertisements: {
+        Row: {
+          clicks: number
+          created_at: string
+          description_ar: string | null
+          description_en: string | null
+          end_date: string | null
+          id: string
+          image_url: string
+          impressions: number
+          is_active: boolean
+          link_url: string | null
+          placement_order: number
+          position: string
+          start_date: string | null
+          title_ar: string
+          title_en: string
+        }
+        Insert: {
+          clicks?: number
+          created_at?: string
+          description_ar?: string | null
+          description_en?: string | null
+          end_date?: string | null
+          id?: string
+          image_url: string
+          impressions?: number
+          is_active?: boolean
+          link_url?: string | null
+          placement_order?: number
+          position?: string
+          start_date?: string | null
+          title_ar: string
+          title_en: string
+        }
+        Update: {
+          clicks?: number
+          created_at?: string
+          description_ar?: string | null
+          description_en?: string | null
+          end_date?: string | null
+          id?: string
+          image_url?: string
+          impressions?: number
+          is_active?: boolean
+          link_url?: string | null
+          placement_order?: number
+          position?: string
+          start_date?: string | null
+          title_ar?: string
+          title_en?: string
+        }
+        Relationships: []
+      }
       article_categories: {
         Row: {
           article_id: string
@@ -174,6 +263,35 @@ export type Database = {
           sort_order?: number | null
         }
         Relationships: []
+      }
+      comment_likes: {
+        Row: {
+          comment_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          comment_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          comment_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "comment_likes_comment_id_fkey"
+            columns: ["comment_id"]
+            isOneToOne: false
+            referencedRelation: "comments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       comments: {
         Row: {
@@ -345,6 +463,56 @@ export type Database = {
         }
         Relationships: []
       }
+      saved_articles: {
+        Row: {
+          article_id: string
+          id: string
+          saved_at: string
+          user_id: string
+        }
+        Insert: {
+          article_id: string
+          id?: string
+          saved_at?: string
+          user_id: string
+        }
+        Update: {
+          article_id?: string
+          id?: string
+          saved_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "saved_articles_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "articles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      share_tracking: {
+        Row: {
+          article_id: string
+          created_at: string
+          id: string
+          platform: string
+        }
+        Insert: {
+          article_id: string
+          created_at?: string
+          id?: string
+          platform: string
+        }
+        Update: {
+          article_id?: string
+          created_at?: string
+          id?: string
+          platform?: string
+        }
+        Relationships: []
+      }
       site_settings: {
         Row: {
           id: string
@@ -390,6 +558,35 @@ export type Database = {
         }
         Relationships: []
       }
+      trending_articles: {
+        Row: {
+          article_id: string
+          id: string
+          score: number
+          updated_at: string
+        }
+        Insert: {
+          article_id: string
+          id?: string
+          score?: number
+          updated_at?: string
+        }
+        Update: {
+          article_id?: string
+          id?: string
+          score?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trending_articles_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "articles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           id: string
@@ -420,6 +617,8 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_ad_clicks: { Args: { ad_id: string }; Returns: undefined }
+      increment_ad_impressions: { Args: { ad_id: string }; Returns: undefined }
       increment_article_views: {
         Args: { article_id: string }
         Returns: undefined

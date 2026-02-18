@@ -51,10 +51,10 @@ serve(async (req) => {
         headers: { "Content-Type": "application/json", ...corsHeaders },
       }
     )
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error optimizing image:", error)
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
       {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },
