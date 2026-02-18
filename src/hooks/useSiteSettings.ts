@@ -12,6 +12,8 @@ export const useSiteSettings = () => {
         const map: Record<string, string> = {};
         data.forEach((s) => (map[s.key] = s.value));
         setSettings(map);
+        // Apply global CSS variables
+        applySettings(map);
       }
       setLoading(false);
     };
@@ -20,3 +22,20 @@ export const useSiteSettings = () => {
 
   return { settings, loading };
 };
+
+function applySettings(settings: Record<string, string>) {
+  const root = document.documentElement;
+
+  // Apply primary color
+  if (settings.primary_color) {
+    root.style.setProperty("--primary", settings.primary_color);
+  }
+
+  // Apply font family
+  if (settings.font_family) {
+    root.style.setProperty("--font-family-primary", settings.font_family);
+    root.style.fontFamily = settings.font_family;
+  }
+
+  // Apply topbar color (used by Header inline style, no CSS var needed)
+}
