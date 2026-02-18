@@ -20,6 +20,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { Plus, Check, X, Trash2, Eye, ArrowLeft, Pencil, Send, Search, Filter, FileText, Calendar, ImageIcon, Tag, Zap, Star, Layers } from "lucide-react";
 import RichTextEditor from "@/components/admin/RichTextEditor";
+import ImageUploader from "@/components/admin/ImageUploader";
 import type { Database } from "@/integrations/supabase/types";
 import { motion } from "framer-motion";
 
@@ -349,28 +350,8 @@ const ArticleManagement = () => {
               {/* Step 0: Basic Info - Card Style */}
               {editorStep === 0 && (
                 <div className="space-y-5">
-                  {/* Image Card */}
-                  <div className="rounded-xl border-2 border-dashed border-border p-6 text-center bg-muted/20 hover:border-primary/50 transition-colors">
-                    {formImage ? (
-                      <div className="relative">
-                        <img src={formImage} alt="" className="w-full h-48 object-cover rounded-lg" />
-                        <button onClick={() => setFormImage("")} className="absolute top-2 end-2 p-1.5 bg-destructive text-destructive-foreground rounded-full">
-                          <X className="h-3.5 w-3.5" />
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="py-4">
-                        <ImageIcon className="h-10 w-10 mx-auto text-muted-foreground/50 mb-2" />
-                        <p className="text-sm text-muted-foreground">{t("أضف صورة رئيسية للمقال", "Add a featured image")}</p>
-                      </div>
-                    )}
-                    <Input
-                      placeholder={t("رابط الصورة الرئيسية", "Featured Image URL")}
-                      value={formImage}
-                      onChange={(e) => setFormImage(e.target.value)}
-                      className="mt-3 rounded-xl"
-                    />
-                  </div>
+                  {/* Image Upload */}
+                  <ImageUploader value={formImage} onChange={setFormImage} />
 
                   <div>
                     <Label className="text-sm font-semibold">{t("عنوان المقال", "Article Title")} *</Label>

@@ -6,6 +6,7 @@ import TextAlign from "@tiptap/extension-text-align";
 import Underline from "@tiptap/extension-underline";
 import Placeholder from "@tiptap/extension-placeholder";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -14,9 +15,10 @@ import {
   Bold, Italic, Underline as UnderlineIcon, Strikethrough,
   Heading1, Heading2, Heading3, List, ListOrdered,
   AlignLeft, AlignCenter, AlignRight,
-  ImageIcon, Link as LinkIcon, Quote, Undo, Redo, Code, Minus,
+  ImageIcon, Link as LinkIcon, Quote, Undo, Redo, Code, Minus, Upload,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useToast } from "@/hooks/use-toast";
 
 interface RichTextEditorProps {
   content: string;
@@ -42,8 +44,10 @@ const ToolbarButton = ({
 
 const RichTextEditor = ({ content, onChange, placeholder }: RichTextEditorProps) => {
   const { t } = useLanguage();
+  const { toast } = useToast();
   const [imageUrl, setImageUrl] = useState("");
   const [linkUrl, setLinkUrl] = useState("");
+  const [uploading, setUploading] = useState(false);
 
   const editor = useEditor({
     extensions: [
@@ -70,6 +74,24 @@ const RichTextEditor = ({ content, onChange, placeholder }: RichTextEditorProps)
       editor.chain().focus().setImage({ src: imageUrl }).run();
       setImageUrl("");
     }
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) return;
+    setUploading(true);
+    const ext = file.name.split(".").pop();
+    const filePath = `editor/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+    const { error } = await supabase.storage.from("site-assets").upload(filePath, file);
+    if (error) {
+      toast({ title: t("فشل الرفع", "Upload failed"), variant: "destructive" });
+      setUploading(false);
+      return;
+    }
+    const { data: urlData } = supabase.storage.from("site-assets").getPublicUrl(filePath);
+    editor.chain().focus().setImage({ src: urlData.publicUrl }).run();
+    setUploading(false);
   };
 
   const addLink = () => {
@@ -151,7 +173,11 @@ const RichTextEditor = ({ content, onChange, placeholder }: RichTextEditorProps)
           </PopoverTrigger>
           <PopoverContent className="w-72 p-3 space-y-2">
             <Input placeholder={t("رابط الصورة", "Image URL")} value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} />
-            <Button size="sm" onClick={addImage} className="w-full">{t("إدراج", "Insert")}</Button>
+            <Button size="sm" onClick={addImage} className="w-full">{t("إدراج رابط", "Insert URL")}</Button>
+            <div className="relative">
+              <Input type="file" accept="image/*" onChange={handleImageUpload} disabled={uploading} className="text-xs" />
+              {uploading && <div className="absolute inset-0 flex items-center justify-center bg-background/50"><div className="animate-spin rounded-full h-4 w-4 border-b-2 border-primary" /></div>}
+            </div>
           </PopoverContent>
         </Popover>
 
