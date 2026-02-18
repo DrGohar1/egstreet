@@ -7,6 +7,7 @@ import BreakingTicker from "@/components/BreakingTicker";
 import StickyHeader from "@/components/StickyHeader";
 import ArticleCard from "@/components/ArticleCard";
 import MostReadWidget from "@/components/MostReadWidget";
+import AdBanner from "@/components/AdBanner";
 import Footer from "@/components/Footer";
 import SEOHead from "@/components/SEOHead";
 import { Link } from "react-router-dom";
@@ -132,17 +133,16 @@ const Index = () => {
       <StickyHeader ticker={tickerEl} categoryNav={categoryNavEl} />
 
       <main className="container py-6">
+        {/* Top Ad Banner */}
+        <AdBanner position="top" />
+
         {hasContent ? (
           <div className="space-y-10">
             {/* Hero Section */}
             <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 space-y-4">
                 {featuredArticles[0] && (
-                  <motion.div
-                    variants={scaleIn}
-                    initial="hidden"
-                    animate="visible"
-                  >
+                  <motion.div variants={scaleIn} initial="hidden" animate="visible">
                     <ArticleCard
                       variant="hero"
                       title={featuredArticles[0].title}
@@ -200,9 +200,14 @@ const Index = () => {
                     ))}
                   </div>
                 </div>
+                {/* Sidebar Ads */}
+                <AdBanner position="sidebar" limit={2} />
                 <MostReadWidget />
               </motion.aside>
             </section>
+
+            {/* Inline Ad after hero */}
+            <AdBanner position="inline" />
 
             {/* More featured */}
             {featuredArticles.length > 3 && (
@@ -270,9 +275,14 @@ const Index = () => {
                       </motion.div>
                     ))}
                   </div>
+                  {/* Inline ad every 2 categories */}
+                  {catIndex % 2 === 1 && <AdBanner position="inline" />}
                 </motion.section>
               );
             })}
+
+            {/* Bottom Ad */}
+            <AdBanner position="bottom" />
           </div>
         ) : (
           <motion.div
