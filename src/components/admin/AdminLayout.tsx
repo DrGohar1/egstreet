@@ -6,8 +6,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import AdminSidebar from "./AdminSidebar";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
-import { Bell, Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { Bell } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const AdminLayout = ({ children }: { children: ReactNode }) => {
@@ -38,38 +37,26 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
 
   return (
     <SidebarProvider>
-      <div className="min-h-screen flex w-full bg-muted/30">
+      <div className="min-h-screen flex w-full bg-muted/30" dir={language === "ar" ? "rtl" : "ltr"}>
         <AdminSidebar />
         <div className="flex-1 flex flex-col min-w-0">
-          {/* Top Header Bar */}
-          <header className="h-16 border-b border-border bg-card flex items-center justify-between px-4 md:px-6 shrink-0 sticky top-0 z-10">
-            <div className="flex items-center gap-3">
-              <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
-              <div className="hidden md:block">
-                <p className="text-xs text-muted-foreground">{today}</p>
-              </div>
-            </div>
-
-            <div className="hidden lg:flex items-center max-w-md flex-1 mx-8">
-              <div className="relative w-full">
-                <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder={t("بحث في لوحة التحكم...", "Search dashboard...")}
-                  className="ps-10 h-9 bg-muted/50 border-0 focus-visible:ring-1 rounded-xl text-sm"
-                />
-              </div>
-            </div>
-
+          {/* Top Bar */}
+          <header className="h-14 border-b border-border bg-card flex items-center justify-between px-4 shrink-0 sticky top-0 z-10">
             <div className="flex items-center gap-2">
+              <SidebarTrigger className="text-muted-foreground hover:text-foreground" />
+              <p className="text-xs text-muted-foreground hidden md:block">{today}</p>
+            </div>
+
+            <div className="flex items-center gap-1.5">
               <ThemeToggle />
               <LanguageToggle />
-              <button className="relative p-2 rounded-xl hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
+              <button className="relative p-2 rounded-lg hover:bg-muted transition-colors text-muted-foreground hover:text-foreground">
                 <Bell className="h-4 w-4" />
-                <span className="absolute top-1.5 end-1.5 w-2 h-2 bg-primary rounded-full" />
+                <span className="absolute top-1.5 end-1.5 w-1.5 h-1.5 bg-primary rounded-full" />
               </button>
-              <div className="flex items-center gap-2 ps-2 ms-2 border-s border-border">
-                <Avatar className="h-8 w-8">
-                  <AvatarFallback className="bg-primary/10 text-primary text-xs font-bold">
+              <div className="flex items-center gap-2 ps-2 ms-1 border-s border-border">
+                <Avatar className="h-7 w-7">
+                  <AvatarFallback className="bg-primary/10 text-primary text-[10px] font-bold">
                     {user.email?.charAt(0).toUpperCase() || "A"}
                   </AvatarFallback>
                 </Avatar>
@@ -81,7 +68,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
             </div>
           </header>
 
-          {/* Main Content */}
+          {/* Content */}
           <main className="flex-1 p-4 md:p-6 overflow-auto">{children}</main>
         </div>
       </div>

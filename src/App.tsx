@@ -30,6 +30,9 @@ import AnalyticsDashboard from "./pages/admin/AnalyticsDashboard";
 import PageManagement from "./pages/admin/PageManagement";
 import TagManagement from "./pages/admin/TagManagement";
 import AdvertisementManagement from "./pages/admin/AdvertisementManagement";
+import PermissionManagement from "./pages/admin/PermissionManagement";
+import NewsScraperPage from "./pages/admin/NewsScraperPage";
+import AIToolsPage from "./pages/admin/AIToolsPage";
 import SavedArticlesPage from "./pages/SavedArticlesPage";
 import NewsletterPopup from "./components/NewsletterPopup";
 
@@ -60,6 +63,9 @@ const AppContent = () => {
         <Route path="/dashboard/pages" element={<AdminLayout><PageManagement /></AdminLayout>} />
         <Route path="/dashboard/tags" element={<AdminLayout><TagManagement /></AdminLayout>} />
         <Route path="/dashboard/advertisements" element={<AdminLayout><AdvertisementManagement /></AdminLayout>} />
+        <Route path="/dashboard/permissions" element={<AdminLayout><PermissionManagement /></AdminLayout>} />
+        <Route path="/dashboard/ai/scraper" element={<AdminLayout><NewsScraperPage /></AdminLayout>} />
+        <Route path="/dashboard/ai/tools" element={<AdminLayout><AIToolsPage /></AdminLayout>} />
         <Route path="/saved" element={<SavedArticlesPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
