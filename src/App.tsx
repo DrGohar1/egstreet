@@ -63,6 +63,9 @@ const AppContent = () => {
         <Route path="/dashboard/pages" element={<AdminLayout><PageManagement /></AdminLayout>} />
         <Route path="/dashboard/tags" element={<AdminLayout><TagManagement /></AdminLayout>} />
         <Route path="/dashboard/advertisements" element={<AdminLayout><AdvertisementManagement /></AdminLayout>} />
+        <Route path="/dashboard/permissions" element={<AdminLayout><PermissionManagement /></AdminLayout>} />
+        <Route path="/dashboard/ai/scraper" element={<AdminLayout><NewsScraperPage /></AdminLayout>} />
+        <Route path="/dashboard/ai/tools" element={<AdminLayout><AIToolsPage /></AdminLayout>} />
         <Route path="/saved" element={<SavedArticlesPage />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
