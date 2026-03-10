@@ -30,6 +30,9 @@ import AnalyticsDashboard from "./pages/admin/AnalyticsDashboard";
 import PageManagement from "./pages/admin/PageManagement";
 import TagManagement from "./pages/admin/TagManagement";
 import AdvertisementManagement from "./pages/admin/AdvertisementManagement";
+import PermissionManagement from "./pages/admin/PermissionManagement";
+import NewsScraperPage from "./pages/admin/NewsScraperPage";
+import AIToolsPage from "./pages/admin/AIToolsPage";
 import SavedArticlesPage from "./pages/SavedArticlesPage";
 import NewsletterPopup from "./components/NewsletterPopup";
 
