@@ -10,6 +10,8 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { useContentProtection } from "@/hooks/useContentProtection";
 import Index from "./pages/Index";
 import Auth from "./pages/Auth";
+import ResetPassword from "./pages/ResetPassword";
+import UserProfile from "./pages/UserProfile";
 import ArticlePage from "./pages/ArticlePage";
 import CategoryPage from "./pages/CategoryPage";
 import SearchPage from "./pages/SearchPage";
@@ -33,6 +35,7 @@ import AdvertisementManagement from "./pages/admin/AdvertisementManagement";
 import PermissionManagement from "./pages/admin/PermissionManagement";
 import NewsScraperPage from "./pages/admin/NewsScraperPage";
 import AIToolsPage from "./pages/admin/AIToolsPage";
+import BackupRestore from "./pages/admin/BackupRestore";
 import SavedArticlesPage from "./pages/SavedArticlesPage";
 import NewsletterPopup from "./components/NewsletterPopup";
 
@@ -51,6 +54,9 @@ const AppContent = () => {
         <Route path="/author/:userId" element={<AuthorPage />} />
         <Route path="/tag/:slug" element={<TagPage />} />
         <Route path="/auth" element={<Auth />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
+        <Route path="/profile" element={<UserProfile />} />
+        <Route path="/saved" element={<SavedArticlesPage />} />
         <Route path="/dashboard" element={<AdminLayout><DashboardOverview /></AdminLayout>} />
         <Route path="/dashboard/users" element={<AdminLayout><UserManagement /></AdminLayout>} />
         <Route path="/dashboard/articles" element={<AdminLayout><ArticleManagement /></AdminLayout>} />
@@ -66,7 +72,7 @@ const AppContent = () => {
         <Route path="/dashboard/permissions" element={<AdminLayout><PermissionManagement /></AdminLayout>} />
         <Route path="/dashboard/ai/scraper" element={<AdminLayout><NewsScraperPage /></AdminLayout>} />
         <Route path="/dashboard/ai/tools" element={<AdminLayout><AIToolsPage /></AdminLayout>} />
-        <Route path="/saved" element={<SavedArticlesPage />} />
+        <Route path="/dashboard/backup" element={<AdminLayout><BackupRestore /></AdminLayout>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       <NewsletterPopup />
