@@ -1,14 +1,33 @@
 import { useEffect } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
+import { useState } from "react";
 
 export const useContentProtection = () => {
+  const { user } = useAuth();
+  const [isStaff, setIsStaff] = useState(false);
+
   useEffect(() => {
+    const checkRole = async () => {
+      if (!user) { setIsStaff(false); return; }
+      const { data } = await supabase.from("user_roles").select("role").eq("user_id", user.id);
+      if (data && data.length > 0) {
+        setIsStaff(true);
+      }
+    };
+    checkRole();
+  }, [user]);
+
+  useEffect(() => {
+    // Staff (admins/journalists) can copy freely
+    if (isStaff) return;
+
     const handleContextMenu = (e: MouseEvent) => {
       e.preventDefault();
       return false;
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ctrl+C, Ctrl+V, Ctrl+U, Ctrl+S, F12
       if (
         (e.ctrlKey && (e.key === "c" || e.key === "v" || e.key === "u" || e.key === "s")) ||
         e.key === "F12" ||
@@ -34,5 +53,5 @@ export const useContentProtection = () => {
       document.removeEventListener("keydown", handleKeyDown);
       document.removeEventListener("dragstart", handleDragStart);
     };
-  }, []);
+  }, [isStaff]);
 };
