@@ -14,7 +14,7 @@ const Footer = () => {
     : (settings.site_name_en || "EgStreet News");
 
   const copyright = settings.copyright_text || t("جميع الحقوق محفوظة © 2026 جريدة الشارع المصري", "All Rights Reserved © 2026 EgStreet News");
-  const partnerCredit = settings.partner_credit || t("بالتعاون مع شركة الكينج للانتاج الفني", "In partnership with King Production Company");
+  const partnerCredit = settings.partner_credit || t("تحت رعاية شركة الكينج للانتاج الفني", "Under the Patronage of Al-King for Art Production");
 
   const socials = [
     { key: "social_facebook", icon: Facebook, label: "Facebook" },
@@ -63,15 +63,9 @@ const Footer = () => {
           {/* Contact + Social */}
           <div>
             <h4 className="font-bold mb-3 text-sm uppercase tracking-wider opacity-80">{t("تواصل معنا", "Contact Us")}</h4>
-            {settings.contact_email && (
-              <p className="text-sm opacity-70 mb-1">📧 {settings.contact_email}</p>
-            )}
-            {settings.contact_phone && (
-              <p className="text-sm opacity-70 mb-1">📱 {settings.contact_phone}</p>
-            )}
-            {settings.contact_address && (
-              <p className="text-sm opacity-70 mb-3">📍 {settings.contact_address}</p>
-            )}
+            {settings.contact_email && <p className="text-sm opacity-70 mb-1">📧 {settings.contact_email}</p>}
+            {settings.contact_phone && <p className="text-sm opacity-70 mb-1">📱 {settings.contact_phone}</p>}
+            {settings.contact_address && <p className="text-sm opacity-70 mb-3">📍 {settings.contact_address}</p>}
             <div className="flex items-center gap-2 mt-3">
               {activeSocials.map(s => (
                 <a key={s.key} href={settings[s.key]} target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-secondary-foreground/10 hover:bg-primary hover:text-primary-foreground transition-colors" title={s.label}>
@@ -94,19 +88,24 @@ const Footer = () => {
           </div>
         </div>
 
-        {/* Partner Logo */}
-        {settings.partner_logo_url && (
-          <div className="flex justify-center mt-6">
-            <a href={settings.partner_link || "#"} target="_blank" rel="noopener noreferrer">
-              <img src={settings.partner_logo_url} alt={settings.partner_credit || ""} className="h-12 object-contain opacity-50 hover:opacity-80 transition-opacity brightness-0 invert" />
-            </a>
+        {/* Our Network Section */}
+        <div className="border-t border-secondary-foreground/20 mt-8 pt-6">
+          <h4 className="text-center text-xs font-bold uppercase tracking-wider opacity-60 mb-4">
+            {t("شبكتنا", "Our Network")}
+          </h4>
+          <div className="flex justify-center items-center gap-6 flex-wrap">
+            {settings.partner_logo_url && (
+              <a href={settings.partner_link || "#"} target="_blank" rel="noopener noreferrer">
+                <img src={settings.partner_logo_url} alt={settings.partner_credit || ""} className="h-10 object-contain opacity-40 hover:opacity-80 transition-opacity brightness-0 invert" />
+              </a>
+            )}
           </div>
-        )}
+        </div>
 
         {/* Bottom bar */}
-        <div className="border-t border-secondary-foreground/20 mt-8 pt-6 text-center text-xs opacity-60 space-y-1">
+        <div className="border-t border-secondary-foreground/20 mt-6 pt-6 text-center text-xs opacity-60 space-y-1">
           <p>{copyright}</p>
-          <p>{partnerCredit}</p>
+          <p className="font-semibold">{partnerCredit}</p>
           {settings.footer_message && (
             <div className="mt-2" dangerouslySetInnerHTML={{ __html: settings.footer_message }} />
           )}
