@@ -151,7 +151,7 @@
   100% { transform: translateX(-100%); }
 }
 
-[dir="rtl"] @keyframes ticker-scroll {
+@keyframes ticker-scroll-rtl {
   0% { transform: translateX(-100%); }
   100% { transform: translateX(100%); }
 }
@@ -160,12 +160,22 @@
   animation: ticker-scroll 30s linear infinite;
 }
 
-/* Content protection */
+.animate-ticker-rtl {
+  animation: ticker-scroll-rtl 30s linear infinite;
+}
+
+/* Content protection - applied conditionally by useContentProtection */
 .content-protected {
   -webkit-user-select: none;
   -moz-user-select: none;
   -ms-user-select: none;
   user-select: none;
+}
+
+/* Staff override */
+.content-unprotected {
+  user-select: auto !important;
+  -webkit-user-select: auto !important;
 }
 
 .image-protected {
