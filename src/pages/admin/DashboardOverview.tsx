@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useRealtimeStats } from "@/hooks/useRealtimeStats";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -36,11 +37,7 @@ interface RecentComment {
 
 const DashboardOverview = () => {
   const { t, language } = useLanguage();
-  const [stats, setStats] = useState({
-    articles: 0, pending: 0, users: 0, published: 0,
-    drafts: 0, breaking: 0, totalViews: 0, subscribers: 0,
-    comments: 0, pendingComments: 0, categories: 0, tags: 0,
-  });
+  const { stats, loading: statsLoading } = useRealtimeStats();
   const [recentArticles, setRecentArticles] = useState<RecentArticle[]>([]);
   const [recentComments, setRecentComments] = useState<RecentComment[]>([]);
   const [dailyViews, setDailyViews] = useState<any[]>([]);
@@ -48,46 +45,11 @@ const DashboardOverview = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchAll = async () => {
-      const [
-        artRes, pendRes, profRes, pubRes, draftRes, breakRes, viewsRes,
-        subsRes, commRes, pendCommRes, catRes, tagRes,
-        recentArtRes, recentCommRes, dailyRes
-      ] = await Promise.all([
-        supabase.from("articles").select("id", { count: "exact", head: true }),
-        supabase.from("articles").select("id", { count: "exact", head: true }).eq("status", "pending_review"),
-        supabase.from("profiles").select("id", { count: "exact", head: true }),
-        supabase.from("articles").select("id", { count: "exact", head: true }).eq("status", "published"),
-        supabase.from("articles").select("id", { count: "exact", head: true }).eq("status", "draft"),
-        supabase.from("articles").select("id", { count: "exact", head: true }).eq("is_breaking", true),
-        supabase.from("articles").select("views").eq("status", "published"),
-        supabase.from("newsletter_subscribers").select("id", { count: "exact", head: true }).eq("is_active", true),
-        supabase.from("comments").select("id", { count: "exact", head: true }),
-        supabase.from("comments").select("id", { count: "exact", head: true }).eq("status", "pending"),
-        supabase.from("categories").select("id", { count: "exact", head: true }),
-        supabase.from("tags").select("id", { count: "exact", head: true }),
+    const fetchRecent = async () => {
+      const [recentArtRes, recentCommRes, dailyRes] = await Promise.all([
         supabase.from("articles").select("id, title, slug, status, views, created_at, author_id").order("created_at", { ascending: false }).limit(5),
         supabase.from("comments").select("id, content, status, created_at, article_id").order("created_at", { ascending: false }).limit(5),
         supabase.from("daily_views").select("view_date, view_count").order("view_date", { ascending: false }).limit(14),
-      ]);
-
-      const totalViews = viewsRes.data?.reduce((sum: number, a: { views: number }) => sum + (a.views || 0), 0) ?? 0;
-      const published = pubRes.count ?? 0;
-      const drafts = draftRes.count ?? 0;
-      const pending = pendRes.count ?? 0;
-
-      setStats({
-        articles: artRes.count ?? 0, pending, users: profRes.count ?? 0,
-        published, drafts, breaking: breakRes.count ?? 0, totalViews,
-        subscribers: subsRes.count ?? 0, comments: commRes.count ?? 0,
-        pendingComments: pendCommRes.count ?? 0, categories: catRes.count ?? 0,
-        tags: tagRes.count ?? 0,
-      });
-
-      setStatusData([
-        { name: t("منشورة", "Published"), value: published, color: "hsl(142, 76%, 36%)" },
-        { name: t("مسودات", "Drafts"), value: drafts, color: "hsl(220, 10%, 60%)" },
-        { name: t("مراجعة", "Pending"), value: pending, color: "hsl(45, 93%, 47%)" },
       ]);
 
       if (recentArtRes.data) setRecentArticles(recentArtRes.data);
@@ -102,8 +64,16 @@ const DashboardOverview = () => {
       }
       setLoading(false);
     };
-    fetchAll();
-  }, [t, language]);
+    fetchRecent();
+  }, [language]);
+
+  useEffect(() => {
+    setStatusData([
+      { name: t("منشورة", "Published"), value: stats.published, color: "hsl(142, 76%, 36%)" },
+      { name: t("مسودات", "Drafts"), value: stats.drafts, color: "hsl(220, 10%, 60%)" },
+      { name: t("مراجعة", "Pending"), value: stats.pending, color: "hsl(45, 93%, 47%)" },
+    ]);
+  }, [stats, t]);
 
   if (loading) {
     return (
