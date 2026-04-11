@@ -42,7 +42,7 @@ const fadeIn = {
 };
 
 const SiteSettings = () => {
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
   const { toast } = useToast();
   const [settings, setSettings] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(true);
