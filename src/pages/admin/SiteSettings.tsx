@@ -15,7 +15,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import {
   Save, Globe, Palette, Mail, Share2, FileText, Image, Shield,
-  Layout, Bell, Code, Eye, ChevronRight, Sparkles, Check
+  Layout, Bell, Code, Eye, ChevronRight, Sparkles, Check, ToggleLeft, Power
 } from "lucide-react";
 import LogoUploader from "@/components/admin/LogoUploader";
 import { motion } from "framer-motion";
@@ -115,7 +115,7 @@ const SiteSettings = () => {
 
       <Tabs defaultValue="branding" className="space-y-6">
         <motion.div variants={fadeIn}>
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-6 h-auto p-1 bg-muted/50">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 h-auto p-1 bg-muted/50">
             <TabsTrigger value="branding" className="gap-1.5 text-xs">
               <Globe className="h-3.5 w-3.5" />
               {t("الهوية", "Branding")}
@@ -139,6 +139,10 @@ const SiteSettings = () => {
             <TabsTrigger value="footer" className="gap-1.5 text-xs">
               <FileText className="h-3.5 w-3.5" />
               {t("التذييل", "Footer")}
+            </TabsTrigger>
+            <TabsTrigger value="killswitch" className="gap-1.5 text-xs">
+              <Power className="h-3.5 w-3.5" />
+              {t("التحكم", "Kill Switch")}
             </TabsTrigger>
           </TabsList>
         </motion.div>
@@ -426,6 +430,47 @@ const SiteSettings = () => {
                   <Label className="text-xs font-medium">{t("رسالة أسفل الموقع (HTML)", "Footer Message (HTML)")}</Label>
                   <Textarea value={settings.footer_message || ""} onChange={(e) => u("footer_message", e.target.value)} rows={3} className="mt-1" />
                 </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </TabsContent>
+        {/* Kill Switch Tab */}
+        <TabsContent value="killswitch">
+          <motion.div variants={fadeIn}>
+            <Card className="max-w-2xl">
+              <CardHeader>
+                <CardTitle className="text-base flex items-center gap-2">
+                  <Power className="h-4 w-4 text-primary" />
+                  {t("التحكم في الميزات (Kill Switch)", "Feature Kill Switch")}
+                </CardTitle>
+                <CardDescription>{t("تشغيل أو إيقاف ميزات الموقع فوريًا", "Toggle site features on/off instantly")}</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {[
+                  { key: "feature_ai_tools", ar: "أدوات الذكاء الاصطناعي", en: "AI Tools", desc_ar: "إعادة كتابة المقالات وفحص الحقوق", desc_en: "Article rewriting & copyright check" },
+                  { key: "feature_news_scraper", ar: "سحب الأخبار", en: "News Scraper", desc_ar: "سحب الأخبار من المصادر الخارجية", desc_en: "Fetch news from external sources" },
+                  { key: "feature_comments", ar: "التعليقات", en: "Comments", desc_ar: "السماح للمستخدمين بالتعليق على المقالات", desc_en: "Allow users to comment on articles" },
+                  { key: "feature_newsletter", ar: "النشرة البريدية", en: "Newsletter", desc_ar: "نافذة الاشتراك في النشرة", desc_en: "Newsletter subscription popup" },
+                  { key: "feature_breaking_ticker", ar: "شريط الأخبار العاجلة", en: "Breaking Ticker", desc_ar: "عرض الأخبار العاجلة في شريط متحرك", desc_en: "Display breaking news ticker" },
+                  { key: "feature_ads", ar: "الإعلانات", en: "Advertisements", desc_ar: "عرض الإعلانات في الموقع", desc_en: "Show ads on the site" },
+                  { key: "feature_saved_articles", ar: "حفظ المقالات", en: "Save Articles", desc_ar: "السماح للمستخدمين بحفظ المقالات", desc_en: "Allow users to save articles" },
+                  { key: "feature_social_share", ar: "المشاركة الاجتماعية", en: "Social Share", desc_ar: "أزرار المشاركة على وسائل التواصل", desc_en: "Social media share buttons" },
+                  { key: "feature_copy_protection", ar: "حماية النسخ", en: "Copy Protection", desc_ar: "منع نسخ المحتوى للزوار", desc_en: "Prevent content copying for guests" },
+                ].map((feature) => (
+                  <div key={feature.key} className="flex items-center justify-between p-4 rounded-xl border border-border bg-muted/20 hover:bg-muted/40 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <div className={`w-2 h-8 rounded-full ${settings[feature.key] === "false" ? "bg-destructive/50" : "bg-emerald-500"}`} />
+                      <div>
+                        <p className="text-sm font-semibold text-foreground">{language === "ar" ? feature.ar : feature.en}</p>
+                        <p className="text-[11px] text-muted-foreground">{language === "ar" ? feature.desc_ar : feature.desc_en}</p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={settings[feature.key] !== "false"}
+                      onCheckedChange={(checked) => u(feature.key, checked ? "true" : "false")}
+                    />
+                  </div>
+                ))}
               </CardContent>
             </Card>
           </motion.div>
