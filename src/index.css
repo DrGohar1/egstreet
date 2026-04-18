@@ -1,213 +1,203 @@
-@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900;1000&family=Amiri:ital,wght@0,400;0,700;1,400&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/*
+  جريدة الشارع المصري — Brand Identity
+  Red  : hsl(217 92% 44%) → #D90221 (Dynamic Press Red)
+  Black: hsl(0 0% 10%)    → #1A1A1A (Deep Printers' Black)
+  Cream: hsl(40 30% 93%)  → #F5F0E8 (Off-White Newsprint)
+*/
+
 @layer base {
   :root {
     --font-family-primary: 'Cairo', sans-serif;
-    
-    --background: 0 0% 97%;
-    --foreground: 220 30% 12%;
+    --font-family-display: 'Amiri', serif;
 
-    --card: 0 0% 100%;
-    --card-foreground: 220 30% 12%;
-
-    --popover: 0 0% 100%;
-    --popover-foreground: 220 30% 12%;
-
-    --primary: 358 80% 48%;
+    /* Brand Red: #D90221 */
+    --background:       40 20% 96%;
+    --foreground:       0 0% 10%;
+    --card:             0 0% 100%;
+    --card-foreground:  0 0% 10%;
+    --popover:          0 0% 100%;
+    --popover-foreground: 0 0% 10%;
+    --primary:          3 95% 42%;
     --primary-foreground: 0 0% 100%;
-
-    --secondary: 220 25% 14%;
-    --secondary-foreground: 0 0% 98%;
-
-    --muted: 220 14% 92%;
-    --muted-foreground: 220 10% 46%;
-
-    --accent: 358 80% 48%;
+    --primary-hover:    3 95% 34%;
+    --secondary:        0 0% 10%;
+    --secondary-foreground: 40 30% 93%;
+    --muted:            40 15% 90%;
+    --muted-foreground: 0 0% 45%;
+    --accent:           3 95% 42%;
     --accent-foreground: 0 0% 100%;
-
-    --destructive: 0 84% 60%;
+    --destructive:      0 84% 60%;
     --destructive-foreground: 0 0% 100%;
+    --border:           40 10% 84%;
+    --input:            40 10% 84%;
+    --ring:             3 95% 42%;
+    --radius:           0.4rem;
 
-    --border: 220 13% 88%;
-    --input: 220 13% 88%;
-    --ring: 358 80% 48%;
-
-    --radius: 0.375rem;
-
-    --ticker-bg: 358 80% 48%;
+    --ticker-bg:        3 95% 42%;
     --ticker-foreground: 0 0% 100%;
-    
-    --nav-bg: 220 25% 14%;
-    --nav-foreground: 0 0% 98%;
-    --nav-accent: 358 80% 48%;
+    --nav-bg:           0 0% 10%;
+    --nav-foreground:   40 30% 93%;
+    --nav-accent:       3 95% 55%;
 
-    --sidebar-background: 0 0% 98%;
-    --sidebar-foreground: 240 5.3% 26.1%;
-    --sidebar-primary: 240 5.9% 10%;
-    --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
-    --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
-    --sidebar-ring: 358 80% 48%;
+    --sidebar-background: 40 20% 96%;
+    --sidebar-foreground: 0 0% 10%;
+    --sidebar-primary:  3 95% 42%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent:   40 15% 90%;
+    --sidebar-accent-foreground: 0 0% 10%;
+    --sidebar-border:   40 10% 84%;
+    --sidebar-ring:     3 95% 42%;
+
+    --section-line: 3px solid hsl(3 95% 42%);
   }
 
   .dark {
-    --background: 220 25% 8%;
-    --foreground: 0 0% 95%;
-
-    --card: 220 25% 11%;
-    --card-foreground: 0 0% 95%;
-
-    --popover: 220 25% 11%;
-    --popover-foreground: 0 0% 95%;
-
-    --primary: 358 80% 52%;
+    --background:       0 0% 8%;
+    --foreground:       40 20% 90%;
+    --card:             0 0% 11%;
+    --card-foreground:  40 20% 90%;
+    --popover:          0 0% 11%;
+    --popover-foreground: 40 20% 90%;
+    --primary:          3 95% 52%;
     --primary-foreground: 0 0% 100%;
-
-    --secondary: 220 20% 18%;
-    --secondary-foreground: 0 0% 95%;
-
-    --muted: 220 15% 18%;
-    --muted-foreground: 220 10% 60%;
-
-    --accent: 358 80% 52%;
+    --primary-hover:    3 95% 42%;
+    --secondary:        0 0% 16%;
+    --secondary-foreground: 40 20% 90%;
+    --muted:            0 0% 16%;
+    --muted-foreground: 40 10% 55%;
+    --accent:           3 95% 52%;
     --accent-foreground: 0 0% 100%;
-
-    --destructive: 0 62.8% 30.6%;
+    --destructive:      0 62% 45%;
     --destructive-foreground: 0 0% 100%;
-
-    --border: 220 15% 20%;
-    --input: 220 15% 20%;
-    --ring: 358 80% 52%;
-
-    --ticker-bg: 358 80% 52%;
+    --border:           0 0% 18%;
+    --input:            0 0% 18%;
+    --ring:             3 95% 52%;
+    --ticker-bg:        3 95% 42%;
     --ticker-foreground: 0 0% 100%;
-
-    --nav-bg: 220 25% 6%;
-    --nav-foreground: 0 0% 95%;
-    --nav-accent: 358 80% 52%;
-
-    --sidebar-background: 220 25% 10%;
-    --sidebar-foreground: 0 0% 95%;
-    --sidebar-primary: 358 80% 52%;
+    --nav-bg:           0 0% 6%;
+    --nav-foreground:   40 20% 90%;
+    --nav-accent:       3 95% 60%;
+    --sidebar-background: 0 0% 10%;
+    --sidebar-foreground: 40 20% 90%;
+    --sidebar-primary:  3 95% 52%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 15% 15%;
-    --sidebar-accent-foreground: 0 0% 95%;
-    --sidebar-border: 220 15% 18%;
-    --sidebar-ring: 358 80% 52%;
+    --sidebar-accent:   0 0% 15%;
+    --sidebar-accent-foreground: 40 20% 90%;
+    --sidebar-border:   0 0% 18%;
+    --sidebar-ring:     3 95% 52%;
+    --shadow-sm: 0 1px 2px oklch(0 0 0 / 0.25);
+    --shadow-md: 0 4px 12px oklch(0 0 0 / 0.35);
+    --shadow-lg: 0 12px 32px oklch(0 0 0 / 0.45);
   }
 }
 
 @layer base {
-  * {
-    @apply border-border;
-  }
-
+  *, *::before, *::after { box-sizing: border-box; }
   html {
     font-family: var(--font-family-primary);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
   }
-
-  body {
-    @apply bg-background text-foreground;
-    font-family: var(--font-family-primary);
-  }
+  body { @apply bg-background text-foreground; font-family: var(--font-family-primary); }
+  h1,h2,h3,h4,h5,h6 { font-family: var(--font-family-primary); font-weight: 800; line-height: 1.25; }
+  img, video { max-width: 100%; height: auto; display: block; }
 }
 
 @layer utilities {
-  .ticker-gradient {
-    background: linear-gradient(90deg, hsl(var(--ticker-bg)) 0%, hsl(358 70% 42%) 100%);
+  /* ── Brand stripe ── */
+  .topbar-stripe { height: 3px; width: 100%; background: hsl(var(--primary)); }
+
+  /* ── Nav ── */
+  .nav-gradient { background: hsl(var(--nav-bg)); border-bottom: 2px solid hsl(var(--primary) / 0.4); }
+
+  /* ── Section heading with red rule ── */
+  .section-heading {
+    display: flex; align-items: center; gap: 0.5rem;
+    border-bottom: var(--section-line); padding-bottom: 0.5rem; margin-bottom: 1rem;
   }
 
-  .nav-gradient {
-    background: linear-gradient(180deg, hsl(var(--nav-bg)) 0%, hsl(220 28% 10%) 100%);
+  /* ── Category / Breaking badges ── */
+  .badge-category {
+    display: inline-block; background: hsl(var(--primary)); color: hsl(var(--primary-foreground));
+    font-size: 0.62rem; font-weight: 900; padding: 0.18rem 0.55rem;
+    border-radius: 2px; letter-spacing: 0.04em; text-transform: uppercase;
+  }
+  .badge-breaking {
+    display: inline-block; background: hsl(var(--primary)); color: white;
+    font-size: 0.62rem; font-weight: 900; padding: 0.18rem 0.65rem;
+    border-radius: 2px; animation: pulse-badge 1.8s ease-in-out infinite;
+  }
+  @keyframes pulse-badge { 0%,100%{opacity:1} 50%{opacity:.7} }
+
+  /* ── Hero overlay ── */
+  .hero-gradient {
+    background: linear-gradient(to top, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.45) 50%, rgba(0,0,0,0.05) 100%);
   }
 
-  .glass {
-    backdrop-filter: blur(16px) saturate(180%);
-    -webkit-backdrop-filter: blur(16px) saturate(180%);
-    background: hsl(var(--card) / 0.75);
-    border: 1px solid hsl(var(--border) / 0.3);
+  /* ── Rank number (Most read) ── */
+  .rank-number {
+    font-family: var(--font-family-display);
+    font-size: 1.75rem; font-weight: 700;
+    color: hsl(var(--primary) / 0.20);
+    line-height: 1; min-width: 1.8rem; text-align: center;
   }
 
-  .news-card-hover {
-    @apply transition-all duration-300 ease-out;
+  /* ── Newsprint divider ── */
+  .divider-news {
+    width: 100%; height: 1px;
+    background: linear-gradient(90deg, transparent 0%, hsl(var(--border)) 25%, hsl(var(--border)) 75%, transparent 100%);
+    margin: 0.5rem 0;
   }
-  .news-card-hover:hover {
-    @apply shadow-lg -translate-y-0.5;
-  }
 
-  .text-balance {
-    text-wrap: balance;
-  }
-}
+  /* ── Card hover ── */
+  .news-card-hover { @apply transition-all duration-300 ease-out; }
+  .news-card-hover:hover { @apply shadow-xl -translate-y-0.5; border-color: hsl(var(--primary) / 0.4) !important; }
 
-/* Ticker animation */
-@keyframes ticker-scroll {
-  0% { transform: translateX(100%); }
-  100% { transform: translateX(-100%); }
-}
+  /* ── Utilities ── */
+  .text-balance { text-wrap: balance; }
+  .text-brand-red { color: hsl(var(--primary)); }
+  .bg-ink { background: hsl(var(--secondary)); }
+  .scrollbar-hide::-webkit-scrollbar { display: none; }
+  .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
 
-@keyframes ticker-scroll-rtl {
-  0% { transform: translateX(-100%); }
-  100% { transform: translateX(100%); }
+  /* ── Content protection ── */
+  .content-protected { -webkit-user-select: none; -moz-user-select: none; user-select: none; }
+  .content-unprotected { user-select: auto !important; -webkit-user-select: auto !important; }
+  .image-protected { pointer-events: none; -webkit-user-drag: none; }
 }
 
-.animate-ticker {
-  animation: ticker-scroll 30s linear infinite;
+/* ── Ticker ── */
+@keyframes ticker-rtl { 0%{transform:translateX(-100%)} 100%{transform:translateX(100%)} }
+@keyframes ticker-ltr { 0%{transform:translateX(100%)} 100%{transform:translateX(-100%)} }
+.animate-ticker-rtl { animation: ticker-rtl 32s linear infinite; }
+.animate-ticker-ltr { animation: ticker-ltr 32s linear infinite; }
+
+/* ── Skeleton shimmer ── */
+@keyframes shimmer { 0%{background-position:-200% 0} 100%{background-position:200% 0} }
+.skeleton-shimmer {
+  background: linear-gradient(90deg, hsl(var(--muted)) 25%, hsl(var(--muted-foreground) / 0.08) 50%, hsl(var(--muted)) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
 }
 
-.animate-ticker-rtl {
-  animation: ticker-scroll-rtl 30s linear infinite;
-}
-
-/* Content protection - applied conditionally by useContentProtection */
-.content-protected {
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-  user-select: none;
-}
-
-/* Staff override */
-.content-unprotected {
-  user-select: auto !important;
-  -webkit-user-select: auto !important;
-}
-
-.image-protected {
-  pointer-events: none;
-  -webkit-user-drag: none;
-}
-
-/* TipTap Editor Styles */
-.tiptap {
-  outline: none;
-}
-.tiptap p.is-editor-empty:first-child::before {
-  color: hsl(var(--muted-foreground));
-  content: attr(data-placeholder);
-  float: left;
-  height: 0;
-  pointer-events: none;
-}
-.tiptap h1 { font-size: 1.75rem; font-weight: 800; margin: 0.75rem 0; }
-.tiptap h2 { font-size: 1.375rem; font-weight: 700; margin: 0.5rem 0; }
-.tiptap h3 { font-size: 1.125rem; font-weight: 600; margin: 0.5rem 0; }
-.tiptap ul, .tiptap ol { padding-inline-start: 1.5rem; margin: 0.5rem 0; }
+/* ── TipTap / Rich text editor ── */
+.tiptap { outline: none; }
+.tiptap p.is-editor-empty:first-child::before { color: hsl(var(--muted-foreground)); content: attr(data-placeholder); float:left; height:0; pointer-events:none; }
+.tiptap h1 { font-size: 1.75rem; font-weight: 800; margin: .75rem 0; }
+.tiptap h2 { font-size: 1.4rem; font-weight: 700; margin: .6rem 0; }
+.tiptap h3 { font-size: 1.15rem; font-weight: 600; margin: .5rem 0; }
+.tiptap ul, .tiptap ol { padding-inline-start: 1.5rem; margin: .5rem 0; }
 .tiptap ul { list-style-type: disc; }
 .tiptap ol { list-style-type: decimal; }
-.tiptap blockquote {
-  border-inline-start: 3px solid hsl(var(--primary));
-  padding-inline-start: 1rem;
-  margin: 0.75rem 0;
-  color: hsl(var(--muted-foreground));
-  font-style: italic;
-}
-.tiptap img { max-width: 100%; height: auto; border-radius: 0.5rem; margin: 0.75rem 0; }
+.tiptap blockquote { border-inline-start: 3px solid hsl(var(--primary)); padding-inline-start:1rem; margin:.75rem 0; color:hsl(var(--muted-foreground)); font-style:italic; }
+.tiptap img { max-width: 100%; height: auto; border-radius: .5rem; margin: .75rem 0; }
 .tiptap a { color: hsl(var(--primary)); text-decoration: underline; }
 .tiptap hr { border-color: hsl(var(--border)); margin: 1rem 0; }
-.tiptap pre { background: hsl(var(--muted)); padding: 0.75rem; border-radius: 0.375rem; overflow-x: auto; }
+.tiptap pre { background: hsl(var(--muted)); padding: .75rem; border-radius: .375rem; overflow-x: auto; }

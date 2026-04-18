@@ -4,7 +4,7 @@ import { useSiteSettings } from "@/hooks/useSiteSettings";
 import LanguageToggle from "./LanguageToggle";
 import ThemeToggle from "./ThemeToggle";
 import { Link } from "react-router-dom";
-import { User, LogOut, Search, Bookmark, UserCircle } from "lucide-react";
+import { User, LogOut, Search, Bookmark, UserCircle, X } from "lucide-react";
 import { useState } from "react";
 
 const Header = () => {
@@ -17,33 +17,42 @@ const Header = () => {
     ? (settings.site_name_ar || "جريدة الشارع المصري")
     : (settings.site_name_en || "EgStreet News");
 
-  const siteDesc = settings.site_description || t("أخبار مصر والعالم", "Egypt & World News");
+  const tagline = language === "ar"
+    ? (settings.site_tagline_ar || "صحافة تضرم عقلك")
+    : (settings.site_tagline_en || "Journalism that ignites your mind");
+
+  const today = new Date().toLocaleDateString(
+    language === "ar" ? "ar-EG" : "en-US",
+    { weekday: "long", year: "numeric", month: "long", day: "numeric" }
+  );
 
   return (
     <header className="bg-card border-b border-border">
-      {/* Top bar */}
-      <div className="bg-primary text-primary-foreground" style={settings.topbar_color ? { background: `hsl(${settings.topbar_color})` } : undefined}>
+      <div className="topbar-stripe" />
+
+      {/* Utility bar */}
+      <div className="bg-ink text-[hsl(var(--nav-foreground))]">
         <div className="container flex items-center justify-between py-1.5 text-xs">
-          <span>{new Date().toLocaleDateString(language === "ar" ? "ar-EG" : "en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</span>
-          <div className="flex items-center gap-3">
+          <span className="opacity-60 hidden sm:block">{today}</span>
+          <div className="flex items-center gap-3 ms-auto">
             <ThemeToggle />
             <LanguageToggle />
             {user ? (
               <div className="flex items-center gap-2">
-                <Link to="/profile" className="flex items-center gap-1 hover:underline">
+                <Link to="/profile" className="flex items-center gap-1 hover:text-[hsl(var(--nav-accent))] transition-colors">
                   <UserCircle className="w-3.5 h-3.5" />
-                  {t("حسابي", "My Account")}
+                  <span className="hidden sm:inline">{t("حسابي", "Account")}</span>
                 </Link>
-                <Link to="/dashboard" className="flex items-center gap-1 hover:underline">
+                <Link to="/dashboard" className="flex items-center gap-1 hover:text-[hsl(var(--nav-accent))] transition-colors">
                   <User className="w-3.5 h-3.5" />
-                  {t("لوحة التحكم", "Dashboard")}
+                  <span className="hidden sm:inline">{t("لوحة التحكم", "Dashboard")}</span>
                 </Link>
-                <button onClick={signOut} className="flex items-center gap-1 hover:opacity-80 transition-opacity">
+                <button onClick={signOut} className="opacity-60 hover:opacity-100 hover:text-[hsl(var(--nav-accent))] transition-all">
                   <LogOut className="w-3.5 h-3.5" />
                 </button>
               </div>
             ) : (
-              <Link to="/auth" className="hover:underline font-medium">
+              <Link to="/auth" className="font-bold hover:text-[hsl(var(--nav-accent))] transition-colors">
                 {t("تسجيل الدخول", "Sign In")}
               </Link>
             )}
@@ -51,61 +60,73 @@ const Header = () => {
         </div>
       </div>
 
-      {/* Logo & Search — centered layout */}
-      <div className="container py-5" style={settings.font_family ? { fontFamily: settings.font_family } : undefined}>
-        <div className="flex items-center justify-between">
-          {/* Partner logo left */}
-          <div className="flex-1 flex items-center">
+      {/* Logo zone */}
+      <div className="container py-4 md:py-6">
+        <div className="flex items-center justify-between gap-4">
+
+          {/* Left space / partner */}
+          <div className="flex-1 flex items-start">
             {settings.partner_logo_url && (
               <a href={settings.partner_link || "#"} target="_blank" rel="noopener noreferrer">
-                <img src={settings.partner_logo_url} alt={settings.partner_credit || ""} className="h-8 md:h-10 object-contain opacity-70 hover:opacity-100 transition-opacity" />
+                <img src={settings.partner_logo_url} alt="" className="h-8 md:h-10 object-contain opacity-60 hover:opacity-100 transition-opacity" />
               </a>
             )}
           </div>
 
-          {/* Centered Logo */}
-          <Link to="/" className="inline-block text-center">
+          {/* Center logo */}
+          <Link to="/" className="inline-block text-center group">
             {settings.logo_url ? (
-              <img src={settings.logo_url} alt={siteName} className="h-12 md:h-16 object-contain mx-auto" />
+              <img
+                src={settings.logo_url} alt={siteName}
+                className="h-16 md:h-24 object-contain mx-auto transition-transform duration-300 group-hover:scale-[1.02]"
+              />
             ) : (
-              <>
-                <h1 className="text-3xl md:text-4xl font-black text-foreground tracking-tight">
-                  {siteName}
+              <div>
+                <p className="text-[10px] text-muted-foreground tracking-[.18em] uppercase mb-1">{t("جريدة", "newspaper")}</p>
+                <h1 className="text-4xl md:text-6xl font-black leading-none tracking-tight">
+                  <span className="text-[hsl(var(--primary))]">الشارع</span>
+                  <span className="text-foreground"> المصري</span>
                 </h1>
-                <p className="text-xs text-muted-foreground mt-0.5 tracking-widest uppercase">
-                  {siteDesc}
-                </p>
-              </>
+                <p className="text-[10px] md:text-xs text-muted-foreground mt-1.5 tracking-[.22em] font-medium uppercase">{tagline}</p>
+              </div>
             )}
           </Link>
 
-          {/* Search right */}
-          <div className="flex-1 flex items-center justify-end gap-3">
-            {user && (
-              <Link to="/saved" className="p-2 rounded-full hover:bg-muted transition-colors" title={t("المحفوظة", "Saved")}>
-                <Bookmark className="w-5 h-5 text-muted-foreground" />
-              </Link>
-            )}
-            {searchOpen && (
-              <form onSubmit={(e) => { e.preventDefault(); const q = (e.currentTarget.elements.namedItem("q") as HTMLInputElement).value; window.location.href = `/search?q=${encodeURIComponent(q)}`; }}>
-                <input
-                  name="q"
-                  type="text"
-                  placeholder={t("ابحث...", "Search...")}
-                  className="border border-border rounded-md px-3 py-1.5 text-sm bg-background text-foreground w-48 focus:outline-none focus:ring-2 focus:ring-primary"
-                  autoFocus
-                  onBlur={() => setTimeout(() => setSearchOpen(false), 200)}
-                />
-              </form>
-            )}
+          {/* Right: search + saved */}
+          <div className="flex-1 flex items-center justify-end gap-1.5">
             <button
               onClick={() => setSearchOpen(!searchOpen)}
-              className="p-2 rounded-full hover:bg-muted transition-colors"
+              className="p-2 rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+              aria-label={t("بحث", "Search")}
             >
-              <Search className="w-5 h-5 text-muted-foreground" />
+              <Search className="w-5 h-5" />
             </button>
+            {user && (
+              <Link to="/saved" className="p-2 rounded-full hover:bg-muted transition-colors text-muted-foreground hover:text-foreground" title={t("المحفوظات", "Saved")}>
+                <Bookmark className="w-5 h-5" />
+              </Link>
+            )}
           </div>
         </div>
+
+        {/* Search bar expand */}
+        {searchOpen && (
+          <div className="mt-4 flex items-center gap-2 animate-in slide-in-from-top-2 duration-200">
+            <input
+              type="search"
+              autoFocus
+              placeholder={t("ابحث في الأخبار...", "Search news...")}
+              className="flex-1 px-4 py-2.5 rounded-xl border border-border bg-muted/50 text-sm focus:outline-none focus:ring-2 focus:ring-[hsl(var(--primary)/0.3)] transition-all"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && e.currentTarget.value.trim())
+                  window.location.href = `/search?q=${encodeURIComponent(e.currentTarget.value.trim())}`;
+              }}
+            />
+            <button onClick={() => setSearchOpen(false)} className="p-2 rounded-full hover:bg-muted transition-colors text-muted-foreground">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        )}
       </div>
     </header>
   );
