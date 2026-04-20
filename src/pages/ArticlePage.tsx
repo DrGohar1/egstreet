@@ -7,8 +7,9 @@ import CategoryNav from "@/components/CategoryNav";
 import Footer from "@/components/Footer";
 import SEOHead from "@/components/SEOHead";
 import CommentSection from "@/components/CommentSection";
-import { Clock, ArrowRight, Share2, Facebook, Twitter, Eye, Tag } from "lucide-react";
+import { Clock, ArrowRight } from "lucide-react";
 import MostReadWidget from "@/components/MostReadWidget";
+import SocialShareButtons from "@/components/SocialShareButtons";
 
 interface Article {
   id: string;
@@ -20,6 +21,7 @@ interface Article {
   published_at: string | null;
   category_id: string | null;
   author_id: string | null;
+  custom_author_name: string | null;
 }
 
 interface Category {
@@ -36,7 +38,7 @@ const ArticlePage = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [relatedArticles, setRelatedArticles] = useState<Article[]>([]);
   const [loading, setLoading] = useState(true);
-
+  const [authorName, setAuthorName] = useState<string>("");
   const [articleCategories, setArticleCategories] = useState<string[]>([]);
 
   useEffect(() => {
@@ -46,27 +48,45 @@ const ArticlePage = () => {
         supabase.from("articles").select("*").eq("slug", slug!).eq("status", "published").maybeSingle(),
         supabase.from("categories").select("*").order("sort_order"),
       ]);
+      
       if (catRes.data) setCategories(catRes.data);
+      
       if (artRes.data) {
-        setArticle(artRes.data);
+        const artData = artRes.data as Article;
+        setArticle(artData);
+        
+        // Determine author name
+        if (artData.custom_author_name) {
+          setAuthorName(artData.custom_author_name);
+        } else if (artData.author_id) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("display_name")
+            .eq("user_id", artData.author_id)
+            .maybeSingle();
+          setAuthorName(profile?.display_name || "");
+        }
+
         // Increment views + daily tracking
-        supabase.rpc("increment_article_views", { article_id: artRes.data.id });
-        supabase.rpc("track_daily_view", { p_article_id: artRes.data.id });
+        supabase.rpc("increment_article_views", { article_id: artData.id });
+        supabase.rpc("track_daily_view", { p_article_id: artData.id });
+        
         // Fetch article categories from junction table
         const { data: acData } = await supabase
           .from("article_categories")
           .select("category_id")
-          .eq("article_id", artRes.data.id);
+          .eq("article_id", artData.id);
         const catIds = acData?.map((r: { category_id: string }) => r.category_id) || [];
-        setArticleCategories(catIds.length > 0 ? catIds : (artRes.data.category_id ? [artRes.data.category_id] : []));
+        setArticleCategories(catIds.length > 0 ? catIds : (artData.category_id ? [artData.category_id] : []));
+        
         // Fetch related
         const { data: related } = await supabase
           .from("articles")
           .select("*")
           .eq("status", "published")
-          .neq("id", artRes.data.id)
+          .neq("id", artData.id)
           .limit(5);
-        if (related) setRelatedArticles(related);
+        if (related) setRelatedArticles(related as Article[]);
       }
       setLoading(false);
     };
@@ -153,15 +173,25 @@ const ArticlePage = () => {
             </h1>
 
             {/* Meta */}
-            <div className="flex items-center gap-4 text-sm text-muted-foreground mb-6 pb-4 border-b border-border">
-              <span className="flex items-center gap-1">
-                <Clock className="w-4 h-4" />
-                {formatDate(article.published_at)}
-              </span>
-              <div className="flex items-center gap-2 ms-auto">
-                <button className="p-2 rounded-full hover:bg-muted transition-colors"><Share2 className="w-4 h-4" /></button>
-                <button className="p-2 rounded-full hover:bg-muted transition-colors text-[#1877f2]"><Facebook className="w-4 h-4" /></button>
-                <button className="p-2 rounded-full hover:bg-muted transition-colors text-foreground"><Twitter className="w-4 h-4" /></button>
+            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground mb-6 pb-4 border-b border-border">
+              <div className="flex items-center gap-4">
+                {authorName && (
+                  <span className="font-bold text-foreground border-e border-border pe-4">
+                    {t("بقلم", "By")}: {authorName}
+                  </span>
+                )}
+                <span className="flex items-center gap-1">
+                  <Clock className="w-4 h-4" />
+                  {formatDate(article.published_at)}
+                </span>
+              </div>
+              <div className="ms-auto">
+                <SocialShareButtons 
+                  articleTitle={article.title} 
+                  articleSlug={article.slug} 
+                  articleExcerpt={article.excerpt || ""} 
+                  articleId={article.id}
+                />
               </div>
             </div>
 

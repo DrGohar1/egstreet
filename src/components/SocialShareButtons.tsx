@@ -15,12 +15,14 @@ interface SocialShareButtonsProps {
   articleTitle: string;
   articleSlug: string;
   articleExcerpt?: string;
+  articleId?: string;
 }
 
 const SocialShareButtons = ({
   articleTitle,
   articleSlug,
   articleExcerpt,
+  articleId,
 }: SocialShareButtonsProps) => {
   const { t } = useLanguage();
   const { toast } = useToast();
@@ -29,9 +31,10 @@ const SocialShareButtons = ({
   const shareText = `${articleTitle} - ${t("جريدة الشارع المصري", "EgStreet News")}`;
 
   const trackShare = async (platform: string) => {
+    if (!articleId) return;
     try {
       await supabase.from("share_tracking").insert({
-        article_id: articleSlug, // Note: This should be the actual UUID, not slug
+        article_id: articleId,
         platform,
       });
     } catch (error) {
