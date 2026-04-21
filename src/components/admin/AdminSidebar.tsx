@@ -13,7 +13,7 @@ import {
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar,
 } from "@/components/ui/sidebar";
 
-const ADMIN = "/eg-control-2026";
+const ADMIN = "/Gadmin";
 
 const AdminSidebar = () => {
   const { t, language } = useLanguage();
