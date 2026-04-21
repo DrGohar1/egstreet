@@ -1,119 +1,152 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Upload, X, ImageIcon, Link as LinkIcon } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Upload, Link as LinkIcon, Loader2, ImageIcon, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 interface ImageUploaderProps {
   value: string;
   onChange: (url: string) => void;
-  placeholder?: string;
+  label?: string;
   className?: string;
 }
 
-const ImageUploader = ({ value, onChange, placeholder, className }: ImageUploaderProps) => {
+const ImageUploader = ({ value, onChange, label, className }: ImageUploaderProps) => {
   const { t } = useLanguage();
   const { toast } = useToast();
   const [uploading, setUploading] = useState(false);
-  const [mode, setMode] = useState<"upload" | "url">("upload");
+  const [urlInput, setUrlInput] = useState("");
+  const [dragOver, setDragOver] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const uploadFile = async (file: File) => {
     if (!file.type.startsWith("image/")) {
-      toast({ title: t("يجب رفع صورة", "Must upload an image"), variant: "destructive" });
+      toast({ title: t("الملف ليس صورة", "File is not an image"), variant: "destructive" });
       return;
     }
-
     if (file.size > 5 * 1024 * 1024) {
-      toast({ title: t("الحد الأقصى 5 ميجا", "Max 5MB"), variant: "destructive" });
+      toast({ title: t("الصورة أكبر من 5MB", "Image must be under 5MB"), variant: "destructive" });
       return;
     }
-
     setUploading(true);
     const ext = file.name.split(".").pop();
     const filePath = `articles/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-
-    const { error } = await supabase.storage.from("site-assets").upload(filePath, file);
-
+    const { error } = await supabase.storage.from("site-assets").upload(filePath, file, { upsert: false });
     if (error) {
       toast({ title: t("فشل الرفع", "Upload failed"), description: error.message, variant: "destructive" });
-      setUploading(false);
+    } else {
+      const { data } = supabase.storage.from("site-assets").getPublicUrl(filePath);
+      onChange(data.publicUrl);
+      toast({ title: t("✅ تم رفع الصورة", "✅ Image uploaded") });
+    }
+    setUploading(false);
+  };
+
+  const handleDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOver(false);
+    const file = e.dataTransfer.files[0];
+    if (file) await uploadFile(file);
+  };
+
+  const handleUrl = () => {
+    const url = urlInput.trim();
+    if (!url) return;
+    if (!url.startsWith("http")) {
+      toast({ title: t("رابط غير صالح", "Invalid URL"), variant: "destructive" });
       return;
     }
-
-    const { data: urlData } = supabase.storage.from("site-assets").getPublicUrl(filePath);
-    onChange(urlData.publicUrl);
-    setUploading(false);
-    toast({ title: t("تم الرفع بنجاح", "Uploaded successfully") });
+    onChange(url);
+    setUrlInput("");
   };
 
   return (
-    <div className={className}>
-      {value ? (
-        <div className="relative rounded-xl overflow-hidden border border-border">
-          <img src={value} alt="" className="w-full h-48 object-cover" />
-          <button
-            type="button"
-            onClick={() => onChange("")}
-            className="absolute top-2 end-2 p-1.5 bg-destructive text-destructive-foreground rounded-full shadow-md"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        </div>
-      ) : (
-        <div className="rounded-xl border-2 border-dashed border-border p-6 text-center bg-muted/20 hover:border-primary/50 transition-colors">
-          <ImageIcon className="h-10 w-10 mx-auto text-muted-foreground/50 mb-2" />
-          <p className="text-sm text-muted-foreground mb-3">{t("أضف صورة رئيسية للمقال", "Add a featured image")}</p>
+    <div className={cn("space-y-3", className)}>
+      {label && <Label className="text-sm font-bold">{label}</Label>}
 
-          <div className="flex items-center justify-center gap-2 mb-3">
-            <Button
-              type="button"
-              variant={mode === "upload" ? "default" : "outline"}
-              size="sm"
-              className="gap-1 text-xs rounded-lg"
-              onClick={() => setMode("upload")}
-            >
-              <Upload className="h-3 w-3" />
-              {t("رفع صورة", "Upload")}
+      {value ? (
+        <div className="relative group rounded-xl overflow-hidden border border-border">
+          <img src={value} alt="featured" className="w-full h-40 object-cover" />
+          <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+            <Button size="sm" variant="secondary" onClick={() => onChange("")} className="text-xs gap-1">
+              <X className="h-3 w-3" />
+              {t("إزالة", "Remove")}
             </Button>
-            <Button
-              type="button"
-              variant={mode === "url" ? "default" : "outline"}
-              size="sm"
-              className="gap-1 text-xs rounded-lg"
-              onClick={() => setMode("url")}
-            >
-              <LinkIcon className="h-3 w-3" />
-              {t("رابط", "URL")}
+            <Button size="sm" variant="secondary" onClick={() => inputRef.current?.click()} className="text-xs gap-1">
+              <Upload className="h-3 w-3" />
+              {t("تغيير", "Change")}
             </Button>
           </div>
-
-          {mode === "upload" ? (
-            <div className="flex items-center justify-center gap-2">
-              <Input
-                type="file"
-                accept="image/*"
-                onChange={handleFileUpload}
-                disabled={uploading}
-                className="max-w-xs text-xs"
-              />
-              {uploading && (
-                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary shrink-0" />
-              )}
-            </div>
-          ) : (
-            <Input
-              placeholder={placeholder || t("رابط الصورة", "Image URL")}
-              value={value}
-              onChange={(e) => onChange(e.target.value)}
-              className="max-w-md mx-auto text-sm rounded-xl"
-            />
-          )}
+          <input ref={inputRef} type="file" accept="image/*" className="hidden"
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadFile(f); }} />
         </div>
+      ) : (
+        <Tabs defaultValue="upload">
+          <TabsList className="h-8 text-xs w-full">
+            <TabsTrigger value="upload" className="flex-1 text-xs gap-1">
+              <Upload className="h-3 w-3" />{t("رفع صورة", "Upload")}
+            </TabsTrigger>
+            <TabsTrigger value="url" className="flex-1 text-xs gap-1">
+              <LinkIcon className="h-3 w-3" />{t("رابط", "URL")}
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="upload" className="mt-2">
+            <div
+              onDrop={handleDrop}
+              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+              onDragLeave={() => setDragOver(false)}
+              onClick={() => !uploading && inputRef.current?.click()}
+              className={cn(
+                "border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all",
+                dragOver ? "border-primary bg-primary/5" : "border-border hover:border-primary/50 hover:bg-muted/30"
+              )}
+            >
+              {uploading ? (
+                <div className="flex flex-col items-center gap-2">
+                  <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <p className="text-xs text-muted-foreground">{t("جارٍ الرفع...", "Uploading...")}</p>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center gap-2">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <ImageIcon className="h-5 w-5 text-primary" />
+                  </div>
+                  <p className="text-sm font-medium text-foreground">{t("اسحب الصورة هنا أو اضغط للاختيار", "Drag image here or click to select")}</p>
+                  <p className="text-xs text-muted-foreground">{t("PNG, JPG, WebP — أقل من 5MB", "PNG, JPG, WebP — under 5MB")}</p>
+                </div>
+              )}
+              <input ref={inputRef} type="file" accept="image/*" className="hidden"
+                onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadFile(f); }} />
+            </div>
+          </TabsContent>
+
+          <TabsContent value="url" className="mt-2">
+            <div className="flex gap-2">
+              <Input
+                value={urlInput}
+                onChange={(e) => setUrlInput(e.target.value)}
+                placeholder="https://example.com/image.jpg"
+                className="text-sm"
+                onKeyDown={(e) => e.key === "Enter" && handleUrl()}
+              />
+              <Button onClick={handleUrl} size="sm" className="shrink-0">
+                {t("إضافة", "Add")}
+              </Button>
+            </div>
+            {urlInput && (
+              <div className="mt-2 rounded-lg overflow-hidden border border-border">
+                <img src={urlInput} alt="preview" className="w-full h-32 object-cover"
+                  onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }} />
+              </div>
+            )}
+          </TabsContent>
+        </Tabs>
       )}
     </div>
   );
