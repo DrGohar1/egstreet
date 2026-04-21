@@ -128,7 +128,8 @@ const NewsScraperPage = () => {
 
   const importArticle = async (item: NewsItem) => {
     const content = editingContent[item.link] || rewrittenContent[item.link] || item.description;
-    const slug = item.title.toLowerCase().replace(/[^a-z0-9\u0600-\u06FF]+/g, "-").slice(0, 80) + "-" + Date.now();
+    const articleNum = Date.now().toString().slice(-6);
+    const slug = "article-" + articleNum;
 
     const { error } = await supabase.from("articles").insert({
       title: item.title,
