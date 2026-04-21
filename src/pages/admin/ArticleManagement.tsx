@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
@@ -7,536 +7,590 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Card, CardContent } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
-import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import {
-  Dialog, DialogContent, DialogHeader, DialogTitle,
-} from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Plus, Check, X, Trash2, Eye, ArrowLeft, Pencil, Send, Search, Filter, FileText, Calendar, ImageIcon, Tag, Zap, Star, Layers } from "lucide-react";
+import {
+  Plus, Trash2, Eye, Pencil, Send, Search, FileText,
+  Star, Zap, ArrowLeft, CheckCheck, Clock, Globe, Lock,
+  MoreVertical, Filter, ChevronDown, Loader2, ImageIcon,
+  AlignLeft, Settings2, Tag, X, Save, BarChart2,
+} from "lucide-react";
 import RichTextEditor from "@/components/admin/RichTextEditor";
 import ImageUploader from "@/components/admin/ImageUploader";
-import ArticleWorkflow from "@/components/admin/ArticleWorkflow";
+import { motion, AnimatePresence } from "framer-motion";
 import type { Database } from "@/integrations/supabase/types";
-import { motion } from "framer-motion";
 
 type ArticleStatus = Database["public"]["Enums"]["article_status"];
-type AppRole = Database["public"]["Enums"]["app_role"];
-
 interface Article {
   id: string; title: string; slug: string; excerpt: string | null;
   status: ArticleStatus; created_at: string; published_at: string | null;
   author_id: string | null; category_id: string | null; content: string | null;
   featured_image: string | null; is_breaking: boolean | null; is_featured: boolean | null;
-  custom_author_name: string | null;
+  custom_author_name: string | null; views: number; reading_time?: number | null;
 }
-
 interface Category { id: string; name_ar: string; name_en: string; }
-interface TagItem { id: string; name_ar: string; name_en: string; }
 
-const STATUS_CONFIG: Record<ArticleStatus, { label_ar: string; label_en: string; color: string }> = {
-  draft: { label_ar: "مسودة", label_en: "Draft", color: "bg-muted text-muted-foreground" },
-  pending_review: { label_ar: "قيد المراجعة", label_en: "Pending", color: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300" },
-  published: { label_ar: "منشور", label_en: "Published", color: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300" },
-  archived: { label_ar: "مؤرشف", label_en: "Archived", color: "bg-muted text-muted-foreground" },
+const STATUS = {
+  draft:          { ar: "مسودة",        en: "Draft",    color: "bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400", dot: "bg-zinc-400" },
+  pending_review: { ar: "قيد المراجعة", en: "Pending",  color: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300", dot: "bg-amber-400" },
+  published:      { ar: "منشور",        en: "Published",color: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-400", dot: "bg-emerald-500" },
+  archived:       { ar: "مؤرشف",        en: "Archived", color: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-400", dot: "bg-rose-400" },
 };
 
-const STEPS = [
-  { label: "المعلومات الأساسية", icon: FileText },
-  { label: "المحتوى", icon: Pencil },
-  { label: "الإعدادات", icon: Layers },
-];
-
-const ArticleManagement = () => {
-  const { t, language } = useLanguage();
-  const { user } = useAuth();
+// === ARTICLE EDITOR (full screen modal) ===
+const ArticleEditor = ({
+  article, categories, language, onSave, onClose,
+}: {
+  article: Partial<Article> | null;
+  categories: Category[];
+  language: string;
+  onSave: () => void;
+  onClose: () => void;
+}) => {
+  const { t } = useLanguage();
   const { toast } = useToast();
-  const [articles, setArticles] = useState<Article[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [tags, setTags] = useState<TagItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingArticle, setEditingArticle] = useState<Article | null>(null);
-  const [editorStep, setEditorStep] = useState(0);
-  const [showPreview, setShowPreview] = useState(false);
+  const { user } = useAuth();
+  const isNew = !article?.id;
 
-  // Form State
-  const [formTitle, setFormTitle] = useState("");
-  const [formContent, setFormContent] = useState("");
-  const [formExcerpt, setFormExcerpt] = useState("");
-  const [formCategories, setFormCategories] = useState<string[]>([]);
-  const [formTags, setFormTags] = useState<string[]>([]);
-  const [formImage, setFormImage] = useState("");
-  const [formBreaking, setFormBreaking] = useState(false);
-  const [formFeatured, setFormFeatured] = useState(false);
-  const [formCustomAuthor, setFormCustomAuthor] = useState("");
-  const [formCustomSlug, setFormCustomSlug] = useState("");
-  const [articleCategoriesMap, setArticleCategoriesMap] = useState<Record<string, string[]>>({});
+  const [tab, setTab] = useState<"content" | "settings" | "seo">("content");
+  const [saving, setSaving] = useState(false);
+  const [title, setTitle] = useState(article?.title || "");
+  const [slug, setSlug] = useState(article?.slug || "");
+  const [excerpt, setExcerpt] = useState(article?.excerpt || "");
+  const [content, setContent] = useState(article?.content || "");
+  const [categoryId, setCategoryId] = useState(article?.category_id || "");
+  const [status, setStatus] = useState<ArticleStatus>(article?.status || "draft");
+  const [featuredImage, setFeaturedImage] = useState(article?.featured_image || "");
+  const [isBreaking, setIsBreaking] = useState(article?.is_breaking || false);
+  const [isFeatured, setIsFeatured] = useState(article?.is_featured || false);
+  const [customAuthor, setCustomAuthor] = useState(article?.custom_author_name || "");
+  const [readingTime, setReadingTime] = useState(article?.reading_time || 5);
+  const [wordCount, setWordCount] = useState(0);
+  const autoSaveRef = useRef<ReturnType<typeof setTimeout>>();
 
+  // Auto-slug from title
   useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
-    setLoading(true);
-    const [artRes, catRes, tagRes, acRes] = await Promise.all([
-      supabase.from("articles").select("*").order("created_at", { ascending: false }),
-      supabase.from("categories").select("id, name_ar, name_en"),
-      supabase.from("tags").select("id, name_ar, name_en"),
-      supabase.from("article_categories").select("article_id, category_id"),
-    ]);
-
-    if (artRes.data) setArticles(artRes.data as Article[]);
-    if (catRes.data) setCategories(catRes.data);
-    if (tagRes.data) setTags(tagRes.data);
-    if (acRes.data) {
-      const map: Record<string, string[]> = {};
-      acRes.data.forEach((row) => {
-        if (!map[row.article_id]) map[row.article_id] = [];
-        map[row.article_id].push(row.category_id);
-      });
-      setArticleCategoriesMap(map);
+    if (isNew && title) {
+      const num = Date.now().toString().slice(-6);
+      setSlug("article-" + num);
     }
-    setLoading(false);
-  };
+  }, [title, isNew]);
 
-  const resetForm = () => {
-    setFormTitle(""); setFormContent(""); setFormExcerpt("");
-    setFormCategories([]); setFormTags([]); setFormImage("");
-    setFormBreaking(false); setFormFeatured(false);
-    setFormCustomAuthor("");
-    setEditingArticle(null); setShowPreview(false); setEditorStep(0);
-  };
+  // Word count + reading time
+  useEffect(() => {
+    const words = content.replace(/<[^>]+>/g, " ").split(/\s+/).filter(Boolean).length;
+    setWordCount(words);
+    setReadingTime(Math.max(1, Math.ceil(words / 200)));
+  }, [content]);
 
-  const handleEdit = (article: Article) => {
-    setEditingArticle(article);
-    setFormTitle(article.title);
-    setFormContent(article.content || "");
-    setFormExcerpt(article.excerpt || "");
-    setFormCategories(articleCategoriesMap[article.id] || (article.category_id ? [article.category_id] : []));
-    setFormImage(article.featured_image || "");
-    setFormBreaking(article.is_breaking || false);
-    setFormFeatured(article.is_featured || false);
-    setFormCustomAuthor(article.custom_author_name || "");
-    setFormCustomSlug(article.slug || "");
-    setShowPreview(false);
-    setEditorStep(0);
-    setIsDialogOpen(true);
-  };
+  // Auto-save draft every 30s
+  useEffect(() => {
+    if (!isNew || !title) return;
+    clearTimeout(autoSaveRef.current);
+    autoSaveRef.current = setTimeout(() => {
+      if (status === "draft") handleSave("draft", true);
+    }, 30000);
+    return () => clearTimeout(autoSaveRef.current);
+  }, [title, content, status]);
 
-  const handleSave = async (publish = false) => {
-    if (!formTitle.trim()) {
+  const handleSave = async (forcedStatus?: ArticleStatus, silent = false) => {
+    if (!title.trim()) {
       toast({ title: t("العنوان مطلوب", "Title is required"), variant: "destructive" });
       return;
     }
-
-    const articleNum = Date.now().toString().slice(-6);
-    const customSlugVal = (formCustomSlug || "").trim();
-    const slug = customSlugVal
-      ? customSlugVal.toLowerCase().replace(/[^a-z0-9\u0600-\u06FF-]+/g, "-").slice(0, 100)
-      : "article-" + articleNum;
-    const status: ArticleStatus = publish ? "published" : "draft";
-    
-    const payload = {
-      title: formTitle, content: formContent || null, excerpt: formExcerpt || null,
-      category_id: formCategories[0] || null, featured_image: formImage || null,
-      is_breaking: formBreaking, is_featured: formFeatured,
-      custom_author_name: formCustomAuthor || null,
-      status,
-      published_at: publish ? new Date().toISOString() : (editingArticle?.published_at || null),
+    setSaving(true);
+    const finalStatus = forcedStatus || status;
+    const payload: any = {
+      title: title.trim(),
+      slug: slug || "article-" + Date.now().toString().slice(-6),
+      excerpt: excerpt || null,
+      content: content || null,
+      category_id: categoryId || null,
+      status: finalStatus,
+      featured_image: featuredImage || null,
+      is_breaking: isBreaking,
+      is_featured: isFeatured,
+      custom_author_name: customAuthor || null,
+      reading_time: readingTime,
+      updated_at: new Date().toISOString(),
     };
+    if (finalStatus === "published" && !article?.published_at) {
+      payload.published_at = new Date().toISOString();
+    }
 
-    let articleId = editingArticle?.id;
-
-    if (editingArticle) {
-      const { error } = await supabase.from("articles").update(payload).eq("id", editingArticle.id);
-      if (error) {
-        toast({ title: t("خطأ في التحديث", "Update error"), description: error.message, variant: "destructive" });
-        return;
-      }
+    let error;
+    if (isNew) {
+      payload.author_id = user?.id;
+      payload.created_at = new Date().toISOString();
+      ({ error } = await supabase.from("articles").insert(payload));
     } else {
-      const { data, error } = await supabase.from("articles").insert({
-        ...payload,
-        slug,
-        author_id: user?.id,
-      }).select().single();
-      
-      if (error) {
-        toast({ title: t("خطأ في الإضافة", "Insert error"), description: error.message, variant: "destructive" });
-        return;
-      }
-      articleId = data.id;
+      ({ error } = await supabase.from("articles").update(payload).eq("id", article!.id));
     }
 
-    // Update categories
-    if (articleId) {
-      await supabase.from("article_categories").delete().eq("article_id", articleId);
-      if (formCategories.length > 0) {
-        await supabase.from("article_categories").insert(
-          formCategories.map(cId => ({ article_id: articleId, category_id: cId }))
-        );
-      }
-    }
-
-    toast({ title: publish ? t("تم النشر بنجاح", "Published successfully") : t("تم الحفظ كمسودة", "Saved as draft") });
-    setIsDialogOpen(false);
-    resetForm();
-    fetchData();
-  };
-
-  const handleDelete = async (id: string) => {
-    if (!confirm(t("هل أنت متأكد من حذف هذا المقال؟", "Are you sure you want to delete this article?"))) return;
-    const { error } = await supabase.from("articles").delete().eq("id", id);
+    setSaving(false);
     if (error) {
-      toast({ title: t("خطأ في الحذف", "Delete error"), variant: "destructive" });
-    } else {
-      toast({ title: t("تم الحذف بنجاح", "Deleted successfully") });
-      fetchData();
+      toast({ title: t("خطأ في الحفظ", "Save error"), description: error.message, variant: "destructive" });
+    } else if (!silent) {
+      toast({ title: finalStatus === "published" ? t("✅ تم النشر!", "✅ Published!") : t("✅ تم الحفظ", "✅ Saved") });
+      onSave();
     }
   };
 
-  const getCatName = (id: string) => {
-    const cat = categories.find(c => c.id === id);
-    return cat ? (language === "ar" ? cat.name_ar : cat.name_en) : "";
-  };
-
-  const getTagName = (id: string) => {
-    const tag = tags.find(t => t.id === id);
-    return tag ? (language === "ar" ? tag.name_ar : tag.name_en) : "";
-  };
-
-  const filteredArticles = articles.filter(a => {
-    const matchesSearch = a.title.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === "all" || a.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const tabs = [
+    { id: "content", icon: AlignLeft, ar: "المحتوى", en: "Content" },
+    { id: "settings", icon: Settings2, ar: "الإعدادات", en: "Settings" },
+    { id: "seo", icon: Globe, ar: "SEO", en: "SEO" },
+  ] as const;
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-black text-foreground flex items-center gap-2">
-            <FileText className="h-6 w-6 text-primary" />
-            {t("إدارة المقالات", "Article Management")}
-          </h2>
-          <p className="text-sm text-muted-foreground mt-1">{t("أنشئ وحرر وراقب جميع مقالات الموقع", "Create, edit and monitor all site articles")}</p>
+    <div className="fixed inset-0 z-50 bg-background flex flex-col" dir={language === "ar" ? "rtl" : "ltr"}>
+      {/* Top Bar */}
+      <div className="h-14 border-b border-border bg-card flex items-center justify-between px-4 shrink-0 gap-3">
+        <div className="flex items-center gap-3 min-w-0">
+          <Button variant="ghost" size="icon" onClick={onClose} className="shrink-0">
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div className="min-w-0">
+            <p className="text-sm font-bold text-foreground truncate">
+              {title || t("مقال جديد", "New Article")}
+            </p>
+            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+              <span>{wordCount.toLocaleString()} {t("كلمة", "words")}</span>
+              <span>·</span>
+              <span>{readingTime} {t("دقائق قراءة", "min read")}</span>
+              {saving && <><span>·</span><Loader2 className="h-2.5 w-2.5 animate-spin" /><span>{t("حفظ...","Saving...")}</span></>}
+            </div>
+          </div>
         </div>
-        <Button onClick={() => { resetForm(); setIsDialogOpen(true); }} className="gap-2 rounded-xl shadow-lg shadow-primary/20">
-          <Plus className="h-5 w-5" />
+
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Status selector */}
+          <Select value={status} onValueChange={(v) => setStatus(v as ArticleStatus)}>
+            <SelectTrigger className="h-8 text-xs w-36 gap-1.5">
+              <span className={`w-1.5 h-1.5 rounded-full ${STATUS[status]?.dot}`} />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {Object.entries(STATUS).map(([k, v]) => (
+                <SelectItem key={k} value={k} className="text-xs">
+                  <div className="flex items-center gap-2">
+                    <span className={`w-1.5 h-1.5 rounded-full ${v.dot}`} />
+                    {language === "ar" ? v.ar : v.en}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button size="sm" variant="outline" onClick={() => handleSave("draft")} disabled={saving} className="h-8 text-xs gap-1.5">
+            <Save className="h-3.5 w-3.5" />
+            {t("حفظ", "Save")}
+          </Button>
+          <Button size="sm" onClick={() => handleSave("published")} disabled={saving}
+            className="h-8 text-xs gap-1.5 bg-primary hover:bg-primary/90">
+            <Send className="h-3.5 w-3.5" />
+            {t("نشر", "Publish")}
+          </Button>
+        </div>
+      </div>
+
+      {/* Tab Bar */}
+      <div className="border-b border-border bg-card px-4 flex gap-1 shrink-0">
+        {tabs.map(tab_ => (
+          <button
+            key={tab_.id}
+            onClick={() => setTab(tab_.id)}
+            className={`flex items-center gap-1.5 px-3 py-2.5 text-xs font-semibold border-b-2 transition-colors ${
+              tab === tab_.id ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <tab_.icon className="h-3.5 w-3.5" />
+            {language === "ar" ? tab_.ar : tab_.en}
+          </button>
+        ))}
+      </div>
+
+      {/* Body */}
+      <div className="flex-1 overflow-auto">
+        {tab === "content" && (
+          <div className="max-w-4xl mx-auto px-4 py-6 space-y-5">
+            {/* Featured Image */}
+            <div className="rounded-xl border border-dashed border-border overflow-hidden bg-muted/20">
+              {featuredImage ? (
+                <div className="relative group">
+                  <img src={featuredImage} alt="" className="w-full h-52 object-cover" />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                    <Button size="sm" variant="secondary" onClick={() => setFeaturedImage("")} className="text-xs">
+                      <X className="h-3.5 w-3.5 me-1" />
+                      {t("إزالة", "Remove")}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4">
+                  <ImageUploader
+                    value={featuredImage}
+                    onChange={setFeaturedImage}
+                    label={t("صورة المقال الرئيسية", "Featured Image")}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Title */}
+            <div>
+              <Input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder={t("عنوان المقال...", "Article title...")}
+                className="text-2xl font-black border-0 border-b border-border rounded-none px-0 h-auto py-2 focus-visible:ring-0 bg-transparent placeholder:text-muted-foreground/40 focus-visible:border-primary"
+                dir={language === "ar" ? "rtl" : "ltr"}
+              />
+            </div>
+
+            {/* Excerpt */}
+            <div>
+              <Textarea
+                value={excerpt}
+                onChange={(e) => setExcerpt(e.target.value)}
+                placeholder={t("مقدمة قصيرة للمقال (اختياري)...", "Short excerpt (optional)...")}
+                rows={2}
+                className="resize-none border-0 border-b border-border rounded-none px-0 focus-visible:ring-0 bg-transparent placeholder:text-muted-foreground/40 text-sm focus-visible:border-primary"
+                dir={language === "ar" ? "rtl" : "ltr"}
+              />
+            </div>
+
+            {/* Rich Text Editor */}
+            <div className="min-h-[400px]">
+              <RichTextEditor
+                content={content}
+                onChange={setContent}
+                placeholder={t("ابدأ كتابة المقال هنا...", "Start writing your article...")}
+              />
+            </div>
+          </div>
+        )}
+
+        {tab === "settings" && (
+          <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+            {/* Category */}
+            <div className="space-y-2">
+              <Label className="text-sm font-bold">{t("القسم", "Category")}</Label>
+              <Select value={categoryId} onValueChange={setCategoryId}>
+                <SelectTrigger className="h-10">
+                  <SelectValue placeholder={t("اختر القسم", "Select category")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {language === "ar" ? c.name_ar : c.name_en}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* Author */}
+            <div className="space-y-2">
+              <Label className="text-sm font-bold">{t("اسم الكاتب (مخصص)", "Custom Author Name")}</Label>
+              <Input
+                value={customAuthor}
+                onChange={(e) => setCustomAuthor(e.target.value)}
+                placeholder={t("اتركه فارغاً لاستخدام اسمك", "Leave empty to use your name")}
+              />
+            </div>
+
+            {/* Flags */}
+            <div className="space-y-3">
+              <Label className="text-sm font-bold">{t("خيارات النشر", "Publishing Options")}</Label>
+              <div className="rounded-xl border border-border divide-y divide-border">
+                <div className="flex items-center justify-between p-4">
+                  <div>
+                    <p className="text-sm font-semibold flex items-center gap-1.5">
+                      <Zap className="h-4 w-4 text-red-500" />
+                      {t("خبر عاجل", "Breaking News")}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{t("يظهر في شريط الأخبار العاجلة", "Shows in breaking news ticker")}</p>
+                  </div>
+                  <Switch checked={isBreaking} onCheckedChange={setIsBreaking} />
+                </div>
+                <div className="flex items-center justify-between p-4">
+                  <div>
+                    <p className="text-sm font-semibold flex items-center gap-1.5">
+                      <Star className="h-4 w-4 text-amber-500" />
+                      {t("مقال مميز", "Featured Article")}
+                    </p>
+                    <p className="text-xs text-muted-foreground">{t("يظهر في واجهة الموقع الرئيسية", "Shows on homepage hero")}</p>
+                  </div>
+                  <Switch checked={isFeatured} onCheckedChange={setIsFeatured} />
+                </div>
+              </div>
+            </div>
+
+            {/* Reading time override */}
+            <div className="space-y-2">
+              <Label className="text-sm font-bold flex items-center gap-1.5">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                {t("وقت القراءة (دقائق)", "Reading Time (minutes)")}
+              </Label>
+              <Input
+                type="number" min={1} max={60}
+                value={readingTime}
+                onChange={(e) => setReadingTime(Number(e.target.value))}
+                className="w-32"
+              />
+              <p className="text-xs text-muted-foreground">{t("محسوب تلقائياً من عدد الكلمات", "Auto-calculated from word count")}</p>
+            </div>
+          </div>
+        )}
+
+        {tab === "seo" && (
+          <div className="max-w-2xl mx-auto px-4 py-6 space-y-6">
+            <div className="rounded-xl border border-border p-4 bg-muted/20 space-y-2">
+              <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{t("معاينة نتيجة Google", "Google Preview")}</p>
+              <div className="space-y-1">
+                <p className="text-blue-600 text-sm font-medium truncate">{title || t("عنوان المقال", "Article Title")}</p>
+                <p className="text-green-700 text-xs">egstreet.com/article/{slug}</p>
+                <p className="text-gray-600 text-xs line-clamp-2">{excerpt || t("مقدمة المقال ستظهر هنا", "Article excerpt will appear here")}</p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-bold">Slug (URL)</Label>
+              <div className="flex gap-2">
+                <span className="flex items-center px-3 bg-muted rounded-s-md text-xs text-muted-foreground border border-e-0 border-border">/article/</span>
+                <Input
+                  value={slug}
+                  onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))}
+                  className="rounded-s-none font-mono text-sm"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-sm font-bold">{t("المقدمة (Meta Description)", "Meta Description")}</Label>
+              <Textarea
+                value={excerpt}
+                onChange={(e) => setExcerpt(e.target.value)}
+                rows={3}
+                maxLength={160}
+                placeholder={t("اكتب وصفاً مختصراً للمقال (أقل من 160 حرف)", "Write a short description (under 160 chars)")}
+                className="resize-none text-sm"
+              />
+              <p className={`text-xs text-end ${excerpt.length > 150 ? "text-red-500" : "text-muted-foreground"}`}>
+                {excerpt.length}/160
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// === ARTICLE LIST (main page) ===
+const ArticleManagement = () => {
+  const { t, language } = useLanguage();
+  const { toast } = useToast();
+  const [articles, setArticles] = useState<Article[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [filterStatus, setFilterStatus] = useState<ArticleStatus | "all">("all");
+  const [editing, setEditing] = useState<Partial<Article> | null | false>(false);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  const fetchAll = useCallback(async () => {
+    setLoading(true);
+    const [{ data: arts }, { data: cats }] = await Promise.all([
+      supabase.from("articles").select("*").order("created_at", { ascending: false }),
+      supabase.from("categories").select("id, name_ar, name_en"),
+    ]);
+    setArticles(arts || []);
+    setCategories(cats || []);
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  const filtered = articles.filter(a => {
+    const matchSearch = !search || a.title.toLowerCase().includes(search.toLowerCase());
+    const matchStatus = filterStatus === "all" || a.status === filterStatus;
+    return matchSearch && matchStatus;
+  });
+
+  const handleDelete = async () => {
+    if (!deleteId) return;
+    const { error } = await supabase.from("articles").delete().eq("id", deleteId);
+    if (error) {
+      toast({ title: t("خطأ", "Error"), description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: t("تم الحذف", "Deleted") });
+      setDeleteId(null);
+      fetchAll();
+    }
+  };
+
+  const counts = {
+    all: articles.length,
+    draft: articles.filter(a => a.status === "draft").length,
+    pending_review: articles.filter(a => a.status === "pending_review").length,
+    published: articles.filter(a => a.status === "published").length,
+    archived: articles.filter(a => a.status === "archived").length,
+  };
+
+  // Show editor
+  if (editing !== false) {
+    return (
+      <ArticleEditor
+        article={editing}
+        categories={categories}
+        language={language}
+        onSave={() => { setEditing(false); fetchAll(); }}
+        onClose={() => setEditing(false)}
+      />
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="text-xl font-black text-foreground">{t("إدارة المقالات", "Article Management")}</h1>
+          <p className="text-xs text-muted-foreground">{articles.length} {t("مقال", "articles")}</p>
+        </div>
+        <Button onClick={() => setEditing({})} className="gap-2 h-9 text-sm">
+          <Plus className="h-4 w-4" />
           {t("مقال جديد", "New Article")}
         </Button>
       </div>
 
-      <Card className="border-border/50 shadow-sm">
-        <CardContent className="p-4">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder={t("ابحث عن مقال...", "Search articles...")}
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pr-10 rounded-xl border-border/50"
-              />
-            </div>
-            <div className="flex gap-2">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[140px] rounded-xl border-border/50">
-                  <Filter className="h-4 w-4 me-2 text-muted-foreground" />
-                  <SelectValue placeholder={t("الحالة", "Status")} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">{t("الكل", "All")}</SelectItem>
-                  <SelectItem value="published">{t("منشور", "Published")}</SelectItem>
-                  <SelectItem value="draft">{t("مسودة", "Draft")}</SelectItem>
-                  <SelectItem value="pending_review">{t("قيد المراجعة", "Pending")}</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button variant="outline" size="icon" onClick={fetchData} className="rounded-xl border-border/50">
-                <Calendar className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Status Tabs */}
+      <div className="flex gap-1 flex-wrap">
+        {(["all", "draft", "pending_review", "published", "archived"] as const).map(s => (
+          <button
+            key={s}
+            onClick={() => setFilterStatus(s)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              filterStatus === s
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground hover:bg-muted/80"
+            }`}
+          >
+            {s === "all" ? t("الكل", "All") : STATUS[s]?.[language === "ar" ? "ar" : "en"]}
+            <span className="ms-1.5 opacity-70">({counts[s]})</span>
+          </button>
+        ))}
+      </div>
 
-      <div className="grid grid-cols-1 gap-4">
-        {loading ? (
-          [...Array(5)].map((_, i) => (
-            <div key={i} className="h-24 w-full bg-muted animate-pulse rounded-2xl" />
-          ))
-        ) : filteredArticles.length > 0 ? (
-          filteredArticles.map((article) => (
-            <motion.div
-              key={article.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="group bg-card border border-border/50 rounded-2xl p-4 hover:border-primary/30 hover:shadow-md transition-all duration-300"
-            >
-              <div className="flex items-center gap-4">
-                <div className="h-16 w-24 rounded-xl bg-muted overflow-hidden shrink-0 border border-border/50">
-                  {article.featured_image ? (
-                    <img src={article.featured_image} alt="" className="h-full w-full object-cover" />
-                  ) : (
-                    <div className="h-full w-full flex items-center justify-center text-2xl opacity-20">📰</div>
-                  )}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Badge className={`${STATUS_CONFIG[article.status].color} border-0 text-[10px] px-2 py-0`}>
-                      {language === "ar" ? STATUS_CONFIG[article.status].label_ar : STATUS_CONFIG[article.status].label_en}
-                    </Badge>
-                    {article.is_breaking && <Badge className="bg-primary text-primary-foreground text-[10px] px-2 py-0">{t("عاجل", "Breaking")}</Badge>}
-                    {article.is_featured && <Badge className="bg-amber-500 text-white text-[10px] px-2 py-0">{t("مميز", "Featured")}</Badge>}
-                  </div>
-                  <h3 className="font-bold text-foreground truncate group-hover:text-primary transition-colors">{article.title}</h3>
-                  <div className="flex items-center gap-3 mt-1 text-[11px] text-muted-foreground">
-                    <span className="flex items-center gap-1"><Calendar className="h-3 w-3" />{new Date(article.created_at).toLocaleDateString()}</span>
-                    <span className="flex items-center gap-1"><Layers className="h-3 w-3" />{articleCategoriesMap[article.id]?.map(id => getCatName(id)).join(", ") || t("بدون قسم", "No Category")}</span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Button variant="ghost" size="icon" onClick={() => handleEdit(article)} className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary">
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => window.open(`/article/${article.slug}`, "_blank")} className="h-9 w-9 rounded-xl hover:bg-primary/10 hover:text-primary">
-                    <Eye className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" onClick={() => handleDelete(article.id)} className="h-9 w-9 rounded-xl hover:bg-destructive/10 hover:text-destructive">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </motion.div>
-          ))
-        ) : (
-          <div className="text-center py-20 bg-muted/20 rounded-3xl border-2 border-dashed border-border/50">
-            <FileText className="h-12 w-12 text-muted-foreground/30 mx-auto mb-3" />
-            <p className="text-muted-foreground">{t("لم يتم العثور على مقالات", "No articles found")}</p>
-          </div>
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={t("ابحث في المقالات...", "Search articles...")}
+          className="ps-9 h-9 text-sm"
+        />
+        {search && (
+          <button onClick={() => setSearch("")} className="absolute end-3 top-1/2 -translate-y-1/2">
+            <X className="h-3.5 w-3.5 text-muted-foreground" />
+          </button>
         )}
       </div>
 
-      <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) resetForm(); setIsDialogOpen(open); }}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto p-0 rounded-3xl border-0 shadow-2xl">
-          <DialogHeader className="p-6 pb-0">
-            <DialogTitle className="text-xl font-black flex items-center gap-2">
-              {editingArticle ? (
-                <><Pencil className="h-5 w-5 text-primary" />{t("تعديل المقال", "Edit Article")}</>
-              ) : (
-                <><Plus className="h-5 w-5 text-primary" />{t("إنشاء مقال جديد", "Create New Article")}</>
-              )}
-            </DialogTitle>
-          </DialogHeader>
-
-          {showPreview ? (
-            <div className="p-6 space-y-4">
-              <Button variant="ghost" size="sm" className="gap-1" onClick={() => setShowPreview(false)}>
-                <ArrowLeft className="h-4 w-4" />{t("العودة للتحرير", "Back to Editor")}
-              </Button>
-              <article className="rounded-xl border border-border bg-card p-6 space-y-4">
-                {formImage && <img src={formImage} alt={formTitle} className="w-full h-56 object-cover rounded-xl" />}
-                <h1 className="text-2xl font-bold text-foreground leading-tight">{formTitle || t("بدون عنوان", "Untitled")}</h1>
-                <div className="flex gap-2 flex-wrap">
-                  {formCategories.map((cId) => <Badge key={cId} variant="secondary" className="text-xs">{getCatName(cId)}</Badge>)}
-                  {formBreaking && <Badge className="bg-primary text-primary-foreground text-xs">{t("عاجل", "Breaking")}</Badge>}
-                  {formFeatured && <Badge className="bg-amber-500 text-white text-xs">{t("مميز", "Featured")}</Badge>}
-                </div>
-                {formExcerpt && <p className="text-sm text-muted-foreground italic border-s-2 border-primary ps-3">{formExcerpt}</p>}
-                <div className="prose prose-sm max-w-none text-foreground" dangerouslySetInnerHTML={{ __html: formContent || t("لا يوجد محتوى", "No content yet") }} />
-              </article>
-              
-              {editingArticle && (
-                <div className="mt-6">
-                  <ArticleWorkflow 
-                    articleId={editingArticle.id} 
-                    articleTitle={editingArticle.title} 
-                    articleSlug={editingArticle.slug} 
-                  />
-                </div>
-              )}
-
-              <div className="flex gap-2">
-                <Button onClick={() => handleSave(false)} variant="outline" className="flex-1">{t("حفظ كمسودة", "Save Draft")}</Button>
-                <Button onClick={() => handleSave(true)} className="flex-1 gap-1"><Send className="h-4 w-4" />{t("إرسال للمراجعة", "Submit for Review")}</Button>
-              </div>
-            </div>
-          ) : (
-            <div className="px-6 pb-6 pt-4">
-              <div className="flex items-center gap-2 mb-6 p-1 bg-muted/50 rounded-xl">
-                {STEPS.map((step, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setEditorStep(i)}
-                    className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                      editorStep === i
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    <step.icon className="h-4 w-4" />
-                    <span className="hidden sm:inline">{step.label}</span>
-                    <span className="sm:hidden">{i + 1}</span>
-                  </button>
-                ))}
-              </div>
-
-              {editorStep === 0 && (
-                <div className="space-y-5">
-                  <ImageUploader value={formImage} onChange={setFormImage} />
-                  <div>
-                    <Label className="text-sm font-semibold">{t("عنوان المقال", "Article Title")} *</Label>
-                    <Input
-                      placeholder={t("اكتب عنوان جذاب للمقال...", "Write a catchy title...")}
-                      value={formTitle}
-                      onChange={(e) => setFormTitle(e.target.value)}
-                      className="mt-1.5 text-lg font-semibold rounded-xl h-12"
-                    />
-                  </div>
-                  <div>
-                    <Label className="text-sm font-semibold">{t("الملخص", "Excerpt")}</Label>
-                    <Textarea
-                      placeholder={t("ملخص قصير يظهر في بطاقة المقال...", "Short excerpt shown on article card...")}
-                      value={formExcerpt}
-                      onChange={(e) => setFormExcerpt(e.target.value)}
-                      className="mt-1.5 rounded-xl"
-                      rows={3}
-                    />
-                  </div>
-                  <div className="flex justify-end">
-                    <Button onClick={() => setEditorStep(1)} disabled={!formTitle.trim()} className="gap-1.5 rounded-xl">
-                      {t("التالي: المحتوى", "Next: Content")}
-                      <ArrowLeft className="h-4 w-4 rtl:rotate-180 ltr:rotate-180" />
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {editorStep === 1 && (
-                <div className="space-y-4">
-                  <RichTextEditor content={formContent} onChange={setFormContent} placeholder={t("اكتب محتوى المقال هنا...", "Write article content here...")} />
-                  <div className="flex justify-between">
-                    <Button variant="outline" onClick={() => setEditorStep(0)} className="rounded-xl">
-                      {t("السابق", "Previous")}
-                    </Button>
-                    <Button onClick={() => setEditorStep(2)} className="gap-1.5 rounded-xl">
-                      {t("التالي: الإعدادات", "Next: Settings")}
-                      <ArrowLeft className="h-4 w-4 rtl:rotate-180 ltr:rotate-180" />
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {editorStep === 2 && (
-                <div className="space-y-5">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Card>
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-2 mb-3">
-                          <Layers className="h-4 w-4 text-primary" />
-                          <Label className="text-sm font-semibold">{t("الأقسام", "Categories")}</Label>
-                        </div>
-                        <div className="flex flex-wrap gap-2">
-                          {categories.map((c) => {
-                            const selected = formCategories.includes(c.id);
-                            return (
-                              <button
-                                key={c.id}
-                                type="button"
-                                onClick={() => {
-                                  setFormCategories((prev) => selected ? prev.filter((id) => id !== c.id) : [...prev, c.id]);
-                                }}
-                                className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all ${
-                                  selected
-                                    ? "bg-primary text-primary-foreground border-primary"
-                                    : "bg-muted/50 text-muted-foreground border-border hover:border-primary/50"
-                                }`}
-                              >
-                                {language === "ar" ? c.name_ar : c.name_en}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </CardContent>
-                    </Card>
-
-                    <Card>
-                      <CardContent className="p-4">
-                        <div className="flex items-center gap-2 mb-3">
-                          <Zap className="h-4 w-4 text-primary" />
-                          <Label className="text-sm font-semibold">{t("خيارات النشر", "Publishing Options")}</Label>
-                        </div>
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between p-3 rounded-xl border border-border bg-muted/20">
-                            <div className="flex items-center gap-2">
-                              <Zap className="h-4 w-4 text-primary" />
-                              <p className="text-sm font-medium">{t("خبر عاجل", "Breaking News")}</p>
-                            </div>
-                            <Switch checked={formBreaking} onCheckedChange={setFormBreaking} />
-                          </div>
-                          <div className="flex items-center justify-between p-3 rounded-xl border border-border bg-muted/20">
-                            <div className="flex items-center gap-2">
-                              <Star className="h-4 w-4 text-amber-500" />
-                              <p className="text-sm font-medium">{t("مقال مميز", "Featured Article")}</p>
-                            </div>
-                            <Switch checked={formFeatured} onCheckedChange={setFormFeatured} />
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+      {/* Articles List */}
+      {loading ? (
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="text-center py-20 text-muted-foreground">
+          <FileText className="h-10 w-10 mx-auto mb-3 opacity-20" />
+          <p className="text-sm">{t("لا توجد مقالات", "No articles found")}</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <AnimatePresence>
+            {filtered.map((art, i) => {
+              const cat = categories.find(c => c.id === art.category_id);
+              const st = STATUS[art.status];
+              return (
+                <motion.div
+                  key={art.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0, transition: { delay: i * 0.03 } }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className="group flex items-center gap-3 p-3 rounded-xl border border-border bg-card hover:border-primary/30 hover:bg-muted/30 transition-all duration-200"
+                >
+                  {/* Thumbnail */}
+                  <div className="w-14 h-14 rounded-lg bg-muted overflow-hidden shrink-0">
+                    {art.featured_image ? (
+                      <img src={art.featured_image} alt="" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center">
+                        <FileText className="h-5 w-5 text-muted-foreground/30" />
+                      </div>
+                    )}
                   </div>
 
-                  <Card>
-                    <CardContent className="p-4">
-                      <Label className="text-sm font-semibold mb-1.5 block">{t("اسم الكاتب (اختياري)", "Author Name (Optional)")}</Label>
-                      <Input
-                        placeholder={t("اتركه فارغاً لاستخدام اسمك الحقيقي", "Leave empty to use your real name")}
-                        value={formCustomAuthor}
-                        onChange={(e) => setFormCustomAuthor(e.target.value)}
-                        className="rounded-xl"
-                      />
-                    </CardContent>
-                  </Card>
-
-                  <Card>
-                    <CardContent className="p-4">
-                      <Label className="text-sm font-semibold mb-1.5 block">{t("رابط المقال (Slug)", "Article Slug")}</Label>
-                      <Input
-                        placeholder={t("اتركه فارغاً للتوليد التلقائي", "Leave empty for auto numeric slug")}
-                        value={formCustomSlug}
-                        onChange={(e) => setFormCustomSlug(e.target.value)}
-                        className="rounded-xl font-mono text-sm"
-                        dir="ltr"
-                      />
-                      <p className="text-xs text-muted-foreground mt-1">{t("مثال: cairo-news-2026", "e.g. cairo-news-2026")}</p>
-                    </CardContent>
-                  </Card>
-
-                  <div className="flex justify-between pt-2">
-                    <Button variant="outline" onClick={() => setEditorStep(1)} className="rounded-xl">
-                      {t("السابق", "Previous")}
-                    </Button>
-                    <div className="flex gap-2">
-                      <Button variant="outline" onClick={() => setShowPreview(true)} className="gap-1.5 rounded-xl">
-                        <Eye className="h-4 w-4" />
-                        {t("معاينة", "Preview")}
-                      </Button>
-                      <Button onClick={() => handleSave(false)} className="gap-1.5 rounded-xl">
-                        <Check className="h-4 w-4" />
-                        {t("حفظ كمسودة", "Save Draft")}
-                      </Button>
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start gap-2 flex-wrap">
+                      <p className="text-sm font-bold text-foreground leading-tight truncate flex-1">{art.title}</p>
+                      <Badge className={`text-[10px] px-1.5 py-0.5 rounded-md font-semibold border-0 shrink-0 ${st?.color}`}>
+                        <span className={`w-1 h-1 rounded-full me-1 ${st?.dot}`} />
+                        {language === "ar" ? st?.ar : st?.en}
+                      </Badge>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1 flex-wrap">
+                      {cat && (
+                        <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-medium">
+                          {language === "ar" ? cat.name_ar : cat.name_en}
+                        </span>
+                      )}
+                      {art.is_breaking && <span className="text-[10px] bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400 px-1.5 py-0.5 rounded font-bold">⚡ {t("عاجل","Breaking")}</span>}
+                      {art.is_featured && <span className="text-[10px] bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400 px-1.5 py-0.5 rounded font-bold">⭐ {t("مميز","Featured")}</span>}
+                      <span className="text-[10px] text-muted-foreground">
+                        {new Date(art.created_at).toLocaleDateString(language === "ar" ? "ar-EG" : "en-US", { month: "short", day: "numeric" })}
+                      </span>
+                      {art.views > 0 && (
+                        <span className="text-[10px] text-muted-foreground flex items-center gap-0.5">
+                          <Eye className="h-2.5 w-2.5" />{art.views.toLocaleString()}
+                        </span>
+                      )}
                     </div>
                   </div>
-                </div>
-              )}
-            </div>
-          )}
+
+                  {/* Actions */}
+                  <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setEditing(art)}>
+                      <Pencil className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 hover:text-red-500" onClick={() => setDeleteId(art.id)}>
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
+        </div>
+      )}
+
+      {/* Delete Confirm Dialog */}
+      <Dialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("تأكيد الحذف", "Confirm Delete")}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">{t("هل أنت متأكد من حذف هذا المقال؟ لا يمكن التراجع.", "Are you sure you want to delete this article? This cannot be undone.")}</p>
+          <div className="flex gap-2 justify-end pt-2">
+            <Button variant="outline" onClick={() => setDeleteId(null)}>{t("إلغاء", "Cancel")}</Button>
+            <Button variant="destructive" onClick={handleDelete}>{t("حذف", "Delete")}</Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
