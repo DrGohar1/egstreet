@@ -1,9 +1,5 @@
 {
   "version": 2,
-  "redirects": [
-    { "source": "/Gadmin", "destination": "/admin-panel", "permanent": false },
-    { "source": "/Gadmin/:path*", "destination": "/admin-panel/:path*", "permanent": false }
-  ],
   "rewrites": [
     { "source": "/(.*)", "destination": "/index.html" }
   ]
