@@ -23,7 +23,7 @@ const ArticleCard = ({ title, excerpt, slug, featuredImage, categoryName, publis
   if (variant === "hero") return (
     <Link to={`/article/${slug}`} className="group block relative overflow-hidden rounded-2xl h-full min-h-[360px] md:min-h-[460px]">
       <div className="absolute inset-0 bg-muted">
-        {featuredImage && <img src={featuredImage} alt={title} loading="lazy" className="w-full h-full object-cover image-protected transition-transform duration-700 group-hover:scale-105" />}
+        {featuredImage && <img src={featuredImage} alt={title} loading="lazy" className="w-full h-full object-cover image-protected transition-transform duration-700 group-hover:scale-105"  onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.svg"; }} />}
         <div className="absolute inset-0 hero-gradient" />
       </div>
       <div className="absolute top-4 start-4 flex gap-2 flex-wrap">
@@ -44,7 +44,7 @@ const ArticleCard = ({ title, excerpt, slug, featuredImage, categoryName, publis
   if (variant === "featured-side") return (
     <Link to={`/article/${slug}`} className="group block relative overflow-hidden rounded-xl h-full min-h-[160px]">
       <div className="absolute inset-0 bg-muted">
-        {featuredImage && <img src={featuredImage} alt={title} loading="lazy" className="w-full h-full object-cover image-protected transition-transform duration-700 group-hover:scale-105" />}
+        {featuredImage && <img src={featuredImage} alt={title} loading="lazy" className="w-full h-full object-cover image-protected transition-transform duration-700 group-hover:scale-105"  onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.svg"; }} />}
         <div className="absolute inset-0 hero-gradient" />
       </div>
       {categoryName && <div className="absolute top-3 start-3"><span className="badge-category">{categoryName}</span></div>}
@@ -59,7 +59,7 @@ const ArticleCard = ({ title, excerpt, slug, featuredImage, categoryName, publis
     <Link to={`/article/${slug}`} className="group flex gap-3 py-2.5 border-b border-border/40 last:border-0 hover:bg-muted/40 px-1.5 -mx-1.5 rounded-lg transition-colors duration-200">
       {featuredImage && (
         <div className="w-[68px] h-[52px] shrink-0 rounded-lg overflow-hidden bg-muted">
-          <img src={featuredImage} alt={title} loading="lazy" className="w-full h-full object-cover image-protected transition-transform duration-500 group-hover:scale-110" />
+          <img src={featuredImage} alt={title} loading="lazy" className="w-full h-full object-cover image-protected transition-transform duration-500 group-hover:scale-110"  onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.svg"; }} />
         </div>
       )}
       <div className="flex-1 min-w-0">
@@ -73,7 +73,7 @@ const ArticleCard = ({ title, excerpt, slug, featuredImage, categoryName, publis
     <Link to={`/article/${slug}`} className="group flex gap-3 p-3 bg-card rounded-xl border border-border/50 hover:border-[hsl(var(--primary)/0.35)] hover:shadow-lg transition-all duration-300">
       {featuredImage && (
         <div className="w-24 h-[68px] shrink-0 rounded-lg overflow-hidden bg-muted">
-          <img src={featuredImage} alt={title} loading="lazy" className="w-full h-full object-cover image-protected transition-transform duration-500 group-hover:scale-110" />
+          <img src={featuredImage} alt={title} loading="lazy" className="w-full h-full object-cover image-protected transition-transform duration-500 group-hover:scale-110"  onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.svg"; }} />
         </div>
       )}
       <div className="flex-1 min-w-0">
@@ -92,7 +92,7 @@ const ArticleCard = ({ title, excerpt, slug, featuredImage, categoryName, publis
     <Link to={`/article/${slug}`} className="group block bg-card rounded-xl overflow-hidden border border-border/50 hover:border-[hsl(var(--primary)/0.4)] hover:shadow-xl hover:shadow-[hsl(var(--primary)/0.06)] hover:-translate-y-0.5 transition-all duration-300">
       {featuredImage ? (
         <div className="aspect-[16/10] bg-muted overflow-hidden">
-          <img src={featuredImage} alt={title} loading="lazy" className="w-full h-full object-cover image-protected transition-transform duration-700 group-hover:scale-105" />
+          <img src={featuredImage} alt={title} loading="lazy" className="w-full h-full object-cover image-protected transition-transform duration-700 group-hover:scale-105"  onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.svg"; }} />
         </div>
       ) : (
         <div className="aspect-[16/10] bg-muted/60 flex items-center justify-center"><span className="text-3xl opacity-20">📰</span></div>

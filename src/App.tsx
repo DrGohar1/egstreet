@@ -9,9 +9,6 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { useContentProtection } from "@/hooks/useContentProtection";
 import Index from "./pages/Index";
-import Auth from "./pages/Auth";
-import ResetPassword from "./pages/ResetPassword";
-import UserProfile from "./pages/UserProfile";
 import ArticlePage from "./pages/ArticlePage";
 import CategoryPage from "./pages/CategoryPage";
 import SearchPage from "./pages/SearchPage";
@@ -38,8 +35,12 @@ import AIToolsPage from "./pages/admin/AIToolsPage";
 import BackupRestore from "./pages/admin/BackupRestore";
 import SavedArticlesPage from "./pages/SavedArticlesPage";
 import NewsletterPopup from "./components/NewsletterPopup";
+import ResetPassword from "./pages/ResetPassword";
+import UserProfile from "./pages/UserProfile";
+import Auth from "./pages/Auth";
 
 const queryClient = new QueryClient();
+const ADMIN = "/eg-control-2026";
 
 const AppContent = () => {
   useContentProtection();
@@ -57,22 +58,22 @@ const AppContent = () => {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/profile" element={<UserProfile />} />
         <Route path="/saved" element={<SavedArticlesPage />} />
-        <Route path="/dashboard" element={<AdminLayout><DashboardOverview /></AdminLayout>} />
-        <Route path="/dashboard/users" element={<AdminLayout><UserManagement /></AdminLayout>} />
-        <Route path="/dashboard/articles" element={<AdminLayout><ArticleManagement /></AdminLayout>} />
-        <Route path="/dashboard/categories" element={<AdminLayout><CategoryManagement /></AdminLayout>} />
-        <Route path="/dashboard/breaking" element={<AdminLayout><BreakingNewsManagement /></AdminLayout>} />
-        <Route path="/dashboard/settings" element={<AdminLayout><SiteSettings /></AdminLayout>} />
-        <Route path="/dashboard/subscribers" element={<AdminLayout><SubscriberManagement /></AdminLayout>} />
-        <Route path="/dashboard/comments" element={<AdminLayout><CommentManagement /></AdminLayout>} />
-        <Route path="/dashboard/analytics" element={<AdminLayout><AnalyticsDashboard /></AdminLayout>} />
-        <Route path="/dashboard/pages" element={<AdminLayout><PageManagement /></AdminLayout>} />
-        <Route path="/dashboard/tags" element={<AdminLayout><TagManagement /></AdminLayout>} />
-        <Route path="/dashboard/advertisements" element={<AdminLayout><AdvertisementManagement /></AdminLayout>} />
-        <Route path="/dashboard/permissions" element={<AdminLayout><PermissionManagement /></AdminLayout>} />
-        <Route path="/dashboard/ai/scraper" element={<AdminLayout><NewsScraperPage /></AdminLayout>} />
-        <Route path="/dashboard/ai/tools" element={<AdminLayout><AIToolsPage /></AdminLayout>} />
-        <Route path="/dashboard/backup" element={<AdminLayout><BackupRestore /></AdminLayout>} />
+        <Route path={ADMIN} element={<AdminLayout><DashboardOverview /></AdminLayout>} />
+        <Route path={`${ADMIN}/users`} element={<AdminLayout><UserManagement /></AdminLayout>} />
+        <Route path={`${ADMIN}/articles`} element={<AdminLayout><ArticleManagement /></AdminLayout>} />
+        <Route path={`${ADMIN}/categories`} element={<AdminLayout><CategoryManagement /></AdminLayout>} />
+        <Route path={`${ADMIN}/breaking`} element={<AdminLayout><BreakingNewsManagement /></AdminLayout>} />
+        <Route path={`${ADMIN}/settings`} element={<AdminLayout><SiteSettings /></AdminLayout>} />
+        <Route path={`${ADMIN}/subscribers`} element={<AdminLayout><SubscriberManagement /></AdminLayout>} />
+        <Route path={`${ADMIN}/comments`} element={<AdminLayout><CommentManagement /></AdminLayout>} />
+        <Route path={`${ADMIN}/analytics`} element={<AdminLayout><AnalyticsDashboard /></AdminLayout>} />
+        <Route path={`${ADMIN}/pages`} element={<AdminLayout><PageManagement /></AdminLayout>} />
+        <Route path={`${ADMIN}/tags`} element={<AdminLayout><TagManagement /></AdminLayout>} />
+        <Route path={`${ADMIN}/advertisements`} element={<AdminLayout><AdvertisementManagement /></AdminLayout>} />
+        <Route path={`${ADMIN}/permissions`} element={<AdminLayout><PermissionManagement /></AdminLayout>} />
+        <Route path={`${ADMIN}/ai/scraper`} element={<AdminLayout><NewsScraperPage /></AdminLayout>} />
+        <Route path={`${ADMIN}/ai/tools`} element={<AdminLayout><AIToolsPage /></AdminLayout>} />
+        <Route path={`${ADMIN}/backup`} element={<AdminLayout><BackupRestore /></AdminLayout>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       <NewsletterPopup />
@@ -87,11 +88,11 @@ const App = () => (
         <LanguageProvider>
           <AuthProvider>
             <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <AppContent />
-            </BrowserRouter>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <AppContent />
+              </BrowserRouter>
             </TooltipProvider>
           </AuthProvider>
         </LanguageProvider>

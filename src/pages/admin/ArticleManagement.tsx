@@ -76,6 +76,7 @@ const ArticleManagement = () => {
   const [formBreaking, setFormBreaking] = useState(false);
   const [formFeatured, setFormFeatured] = useState(false);
   const [formCustomAuthor, setFormCustomAuthor] = useState("");
+  const [formCustomSlug, setFormCustomSlug] = useState("");
   const [articleCategoriesMap, setArticleCategoriesMap] = useState<Record<string, string[]>>({});
 
   useEffect(() => {
@@ -123,6 +124,7 @@ const ArticleManagement = () => {
     setFormBreaking(article.is_breaking || false);
     setFormFeatured(article.is_featured || false);
     setFormCustomAuthor(article.custom_author_name || "");
+    setFormCustomSlug(article.slug || "");
     setShowPreview(false);
     setEditorStep(0);
     setIsDialogOpen(true);
@@ -134,7 +136,11 @@ const ArticleManagement = () => {
       return;
     }
 
-    const slug = formTitle.toLowerCase().replace(/[^a-z0-9\u0600-\u06FF]+/g, "-").slice(0, 100) + "-" + Date.now();
+    const articleNum = Date.now().toString().slice(-6);
+    const customSlugVal = (formCustomSlug || "").trim();
+    const slug = customSlugVal
+      ? customSlugVal.toLowerCase().replace(/[^a-z0-9\u0600-\u06FF-]+/g, "-").slice(0, 100)
+      : "article-" + articleNum;
     const status: ArticleStatus = publish ? "published" : "draft";
     
     const payload = {
@@ -495,6 +501,20 @@ const ArticleManagement = () => {
                         onChange={(e) => setFormCustomAuthor(e.target.value)}
                         className="rounded-xl"
                       />
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardContent className="p-4">
+                      <Label className="text-sm font-semibold mb-1.5 block">{t("رابط المقال (Slug)", "Article Slug")}</Label>
+                      <Input
+                        placeholder={t("اتركه فارغاً للتوليد التلقائي", "Leave empty for auto numeric slug")}
+                        value={formCustomSlug}
+                        onChange={(e) => setFormCustomSlug(e.target.value)}
+                        className="rounded-xl font-mono text-sm"
+                        dir="ltr"
+                      />
+                      <p className="text-xs text-muted-foreground mt-1">{t("مثال: cairo-news-2026", "e.g. cairo-news-2026")}</p>
                     </CardContent>
                   </Card>
 

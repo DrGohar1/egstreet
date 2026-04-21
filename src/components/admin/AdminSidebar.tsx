@@ -1,56 +1,53 @@
-import { 
-  LayoutDashboard, Users, FileText, Settings, Zap, Layers, Mail, 
-  MessageSquare, Tag, Megaphone, LogOut, Home, Newspaper, 
+import {
+  LayoutDashboard, Users, FileText, Settings, Zap, Layers, Mail,
+  MessageSquare, Tag, Megaphone, LogOut, Home, Newspaper,
   Brain, Rss, Shield, BarChart3, FileCode, Database
 } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Link } from "react-router-dom";
+import { useNotifications } from "@/hooks/useNotifications";
 import {
-  Sidebar,
-  SidebarContent,
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  useSidebar,
+  Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent,
+  SidebarMenu, SidebarMenuButton, SidebarMenuItem, useSidebar,
 } from "@/components/ui/sidebar";
+
+const ADMIN = "/eg-control-2026";
 
 const AdminSidebar = () => {
   const { t, language } = useLanguage();
   const { signOut } = useAuth();
   const { state } = useSidebar();
+  const { unreadCount } = useNotifications();
   const collapsed = state === "collapsed";
-  const isRtl = language === "ar";
 
   const mainItems = [
-    { title: t("لوحة التحكم", "Dashboard"), url: "/dashboard", icon: LayoutDashboard },
-    { title: t("المقالات", "Articles"), url: "/dashboard/articles", icon: FileText },
-    { title: t("الأقسام", "Categories"), url: "/dashboard/categories", icon: Layers },
-    { title: t("الوسوم", "Tags"), url: "/dashboard/tags", icon: Tag },
-    { title: t("أخبار عاجلة", "Breaking News"), url: "/dashboard/breaking", icon: Zap },
+    { title: t("لوحة التحكم", "Dashboard"), url: ADMIN, icon: LayoutDashboard },
+    { title: t("المقالات", "Articles"), url: `${ADMIN}/articles`, icon: FileText },
+    { title: t("الأقسام", "Categories"), url: `${ADMIN}/categories`, icon: Layers },
+    { title: t("الوسوم", "Tags"), url: `${ADMIN}/tags`, icon: Tag },
+    { title: t("أخبار عاجلة", "Breaking News"), url: `${ADMIN}/breaking`, icon: Zap },
   ];
 
   const managementItems = [
-    { title: t("المستخدمون", "Users"), url: "/dashboard/users", icon: Users },
-    { title: t("الصلاحيات", "Permissions"), url: "/dashboard/permissions", icon: Shield },
-    { title: t("التعليقات", "Comments"), url: "/dashboard/comments", icon: MessageSquare },
-    { title: t("المشتركون", "Subscribers"), url: "/dashboard/subscribers", icon: Mail },
-    { title: t("الإعلانات", "Advertisements"), url: "/dashboard/advertisements", icon: Megaphone },
+    { title: t("المستخدمون", "Users"), url: `${ADMIN}/users`, icon: Users },
+    { title: t("الصلاحيات", "Permissions"), url: `${ADMIN}/permissions`, icon: Shield },
+    { title: t("التعليقات", "Comments"), url: `${ADMIN}/comments`, icon: MessageSquare },
+    { title: t("المشتركون", "Subscribers"), url: `${ADMIN}/subscribers`, icon: Mail },
+    { title: t("الإعلانات", "Advertisements"), url: `${ADMIN}/advertisements`, icon: Megaphone },
   ];
 
   const aiItems = [
-    { title: t("سحب الأخبار", "News Scraper"), url: "/dashboard/ai/scraper", icon: Rss },
-    { title: t("أدوات AI", "AI Tools"), url: "/dashboard/ai/tools", icon: Brain },
+    { title: t("سحب الأخبار", "News Scraper"), url: `${ADMIN}/ai/scraper`, icon: Rss },
+    { title: t("أدوات AI", "AI Tools"), url: `${ADMIN}/ai/tools`, icon: Brain },
   ];
 
   const systemItems = [
-    { title: t("التحليلات", "Analytics"), url: "/dashboard/analytics", icon: BarChart3 },
-    { title: t("الصفحات", "Pages"), url: "/dashboard/pages", icon: FileCode },
-    { title: t("النسخ الاحتياطي", "Backup"), url: "/dashboard/backup", icon: Database },
-    { title: t("الإعدادات", "Settings"), url: "/dashboard/settings", icon: Settings },
+    { title: t("التحليلات", "Analytics"), url: `${ADMIN}/analytics`, icon: BarChart3 },
+    { title: t("الصفحات", "Pages"), url: `${ADMIN}/pages`, icon: FileCode },
+    { title: t("النسخ الاحتياطي", "Backup"), url: `${ADMIN}/backup`, icon: Database },
+    { title: t("الإعدادات", "Settings"), url: `${ADMIN}/settings`, icon: Settings },
   ];
 
   const renderGroup = (items: typeof mainItems, label: string) => (
@@ -66,8 +63,8 @@ const AdminSidebar = () => {
             <SidebarMenuButton asChild>
               <NavLink
                 to={item.url}
-                end={item.url === "/dashboard"}
-                className={`flex items-center ${isRtl ? "flex-row" : "flex-row"} gap-3 px-3 py-2 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all duration-200 text-sm`}
+                end={item.url === ADMIN}
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all duration-200 text-sm ${collapsed ? "justify-center" : ""}`}
                 activeClassName="bg-primary text-primary-foreground font-bold shadow-sm hover:bg-primary hover:text-primary-foreground"
               >
                 <item.icon className="h-4 w-4 shrink-0" />
@@ -81,22 +78,34 @@ const AdminSidebar = () => {
   );
 
   return (
-    <Sidebar className={`${collapsed ? "w-14" : "w-60"} border-e border-sidebar-border`} collapsible="icon">
+    <Sidebar
+      className={`${collapsed ? "w-14" : "w-60"} border-e border-sidebar-border`}
+      collapsible="icon"
+      side={language === "ar" ? "right" : "left"}
+    >
       <SidebarContent className="bg-sidebar flex flex-col h-full overflow-hidden">
         {/* Logo */}
-        {!collapsed && (
-          <div className="p-4 pb-3 border-b border-sidebar-border shrink-0">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center shadow-sm shrink-0">
-                <Newspaper className="h-4 w-4 text-primary-foreground" />
-              </div>
-              <div className="min-w-0 overflow-hidden">
-                <h2 className="text-sm font-black text-sidebar-foreground truncate">
-                  {t("جريدة الشارع", "EgStreet")}
-                </h2>
-                <p className="text-[10px] text-sidebar-foreground/50">{t("لوحة التحكم", "Dashboard")}</p>
-              </div>
+        <div className={`p-4 pb-3 border-b border-sidebar-border shrink-0 flex items-center ${collapsed ? "justify-center" : "gap-2.5"}`}>
+          <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center shadow-sm shrink-0">
+            <Newspaper className="h-4 w-4 text-primary-foreground" />
+          </div>
+          {!collapsed && (
+            <div className="min-w-0 overflow-hidden">
+              <h2 className="text-sm font-black text-sidebar-foreground truncate">
+                {t("جريدة الشارع", "EgStreet")}
+              </h2>
+              <p className="text-[10px] text-sidebar-foreground/50">{t("لوحة التحكم", "Dashboard")}</p>
             </div>
+          )}
+        </div>
+
+        {/* Unread badge banner */}
+        {!collapsed && unreadCount > 0 && (
+          <div className="mx-2 mt-2 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20 flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-primary animate-pulse shrink-0" />
+            <span className="text-xs font-bold text-primary">
+              {unreadCount} {t("إشعار جديد", "new notification")}
+            </span>
           </div>
         )}
 
@@ -111,8 +120,8 @@ const AdminSidebar = () => {
         </SidebarGroup>
 
         {/* Bottom */}
-        {!collapsed && (
-          <div className="p-2 border-t border-sidebar-border space-y-0.5 shrink-0">
+        <div className="p-2 border-t border-sidebar-border space-y-0.5 shrink-0">
+          {!collapsed && (
             <Link
               to="/"
               className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-sidebar-foreground/60 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground transition-all text-sm"
@@ -120,15 +129,15 @@ const AdminSidebar = () => {
               <Home className="h-4 w-4 shrink-0" />
               <span>{t("الموقع", "Site")}</span>
             </Link>
-            <button
-              onClick={signOut}
-              className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-destructive/70 hover:bg-destructive/10 hover:text-destructive transition-all text-sm w-full"
-            >
-              <LogOut className="h-4 w-4 shrink-0" />
-              <span>{t("خروج", "Sign Out")}</span>
-            </button>
-          </div>
-        )}
+          )}
+          <button
+            onClick={signOut}
+            className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-destructive/70 hover:bg-destructive/10 hover:text-destructive transition-all text-sm w-full ${collapsed ? "justify-center" : ""}`}
+          >
+            <LogOut className="h-4 w-4 shrink-0" />
+            {!collapsed && <span>{t("خروج", "Sign Out")}</span>}
+          </button>
+        </div>
       </SidebarContent>
     </Sidebar>
   );

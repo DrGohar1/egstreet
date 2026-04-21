@@ -109,6 +109,10 @@ const Footer = () => {
           {settings.footer_message && (
             <div className="mt-2" dangerouslySetInnerHTML={{ __html: settings.footer_message }} />
           )}
+          <p className="mt-3 opacity-50 text-[10px] tracking-wide">
+            {t("تطوير وبرمجة:", "Developed by:")}{" "}
+            <span className="font-black">{t("د. سعيد جوهر", "Dr. Saeed Gohar")}</span>
+          </p>
         </div>
       </div>
     </footer>
