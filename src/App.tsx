@@ -8,6 +8,7 @@ import { LanguageProvider } from "@/contexts/LanguageContext";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { useContentProtection } from "@/hooks/useContentProtection";
+import { useVisitorTracking } from "@/hooks/useVisitorTracking";
 import Index from "./pages/Index";
 import ArticlePage from "./pages/ArticlePage";
 import CategoryPage from "./pages/CategoryPage";
@@ -39,14 +40,21 @@ import ResetPassword from "./pages/ResetPassword";
 import UserProfile from "./pages/UserProfile";
 import Auth from "./pages/Auth";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { retry: 1, staleTime: 30000 },
+  },
+});
+
 const ADMIN = "/eg-control-2026";
 
 const AppContent = () => {
   useContentProtection();
+  useVisitorTracking(); // Track page visits & IP
   return (
     <>
       <Routes>
+        {/* Public */}
         <Route path="/" element={<Index />} />
         <Route path="/article/:slug" element={<ArticlePage />} />
         <Route path="/category/:slug" element={<CategoryPage />} />
@@ -58,6 +66,7 @@ const AppContent = () => {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/profile" element={<UserProfile />} />
         <Route path="/saved" element={<SavedArticlesPage />} />
+        {/* Admin */}
         <Route path={ADMIN} element={<AdminLayout><DashboardOverview /></AdminLayout>} />
         <Route path={`${ADMIN}/users`} element={<AdminLayout><UserManagement /></AdminLayout>} />
         <Route path={`${ADMIN}/articles`} element={<AdminLayout><ArticleManagement /></AdminLayout>} />
