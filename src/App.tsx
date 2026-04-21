@@ -46,8 +46,7 @@ const queryClient = new QueryClient({
   },
 });
 
-const ADMIN = "/admin-panel";
-const ADMIN2 = "/Gadmin"; // alias
+const ADMIN = "/Gadmin";
 
 const AppContent = () => {
   useContentProtection();
@@ -84,13 +83,7 @@ const AppContent = () => {
         <Route path={`${ADMIN}/ai/scraper`} element={<AdminLayout><NewsScraperPage /></AdminLayout>} />
         <Route path={`${ADMIN}/ai/tools`} element={<AdminLayout><AIToolsPage /></AdminLayout>} />
         <Route path={`${ADMIN}/backup`} element={<AdminLayout><BackupRestore /></AdminLayout>} />
-        {/* /Gadmin aliases */}
-        <Route path={ADMIN2} element={<AdminLayout><DashboardOverview /></AdminLayout>} />
-        <Route path={`${ADMIN2}/users`} element={<AdminLayout><UserManagement /></AdminLayout>} />
-        <Route path={`${ADMIN2}/articles`} element={<AdminLayout><ArticleManagement /></AdminLayout>} />
-        <Route path={`${ADMIN2}/breaking`} element={<AdminLayout><BreakingNewsManagement /></AdminLayout>} />
-        <Route path={`${ADMIN2}/settings`} element={<AdminLayout><SiteSettings /></AdminLayout>} />
-        <Route path={`${ADMIN2}/analytics`} element={<AdminLayout><AnalyticsDashboard /></AdminLayout>} />
+
         <Route path="*" element={<NotFound />} />
       </Routes>
       <NewsletterPopup />
