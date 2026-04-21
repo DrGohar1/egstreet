@@ -46,7 +46,7 @@ const queryClient = new QueryClient({
   },
 });
 
-const ADMIN = "/Gadmin";
+const ADMIN = "/admin-panel";
 
 const AppContent = () => {
   useContentProtection();
