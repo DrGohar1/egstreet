@@ -44,7 +44,7 @@ const Index = () => {
     (async () => {
       const [catR, artR, acR] = await Promise.all([
         supabase.from("categories").select("*").order("sort_order"),
-        supabase.from("articles").select("*").eq("status", "published").order("published_at", { ascending: false }).limit(60),
+        supabase.from("articles").select("id,title,slug,excerpt,cover_image,published_at,author_name,views,category_id").eq("status", "published").order("published_at", { ascending: false }).limit(30),
         supabase.from("article_categories").select("article_id, category_id").throwOnError().catch(() => ({ data: [] })),
       ]);
       if (catR.data) setCategories(catR.data);
