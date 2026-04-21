@@ -1,5 +1,5 @@
 import { ReactNode, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -8,26 +8,39 @@ import NotificationsPanel from "./NotificationsPanel";
 import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Loader2 } from "lucide-react";
 
 const AdminLayout = ({ children }: { children: ReactNode }) => {
   const { user, loading } = useAuth();
   const { t, language } = useLanguage();
   const navigate = useNavigate();
+  const location = useLocation();
   const isRtl = language === "ar";
 
   useEffect(() => {
-    if (!loading && !user) navigate("/auth");
-  }, [user, loading, navigate]);
+    if (!loading && !user) {
+      // Pass current path so Auth can redirect back after login
+      navigate("/auth", { state: { from: location.pathname }, replace: true });
+    }
+  }, [user, loading, navigate, location]);
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      <div className="flex flex-col items-center justify-center min-h-screen bg-background gap-3">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-xs text-muted-foreground">{t("جارٍ التحقق...", "Verifying...")}</p>
       </div>
     );
   }
 
-  if (!user) return null;
+  if (!user) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-background gap-3">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        <p className="text-xs text-muted-foreground">{t("جارٍ التوجيه...", "Redirecting...")}</p>
+      </div>
+    );
+  }
 
   const today = new Date().toLocaleDateString(isRtl ? "ar-EG" : "en-US", {
     weekday: "long", year: "numeric", month: "long", day: "numeric",
