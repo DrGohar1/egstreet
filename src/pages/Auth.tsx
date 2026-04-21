@@ -1,31 +1,32 @@
 import { useState } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import SEOHead from "@/components/SEOHead";
-import { Mail, Lock, User, AlertCircle } from "lucide-react";
+import { Mail, Lock, User, AlertCircle, Eye, EyeOff, Loader2 } from "lucide-react";
 
 const Auth = () => {
   const { t } = useLanguage();
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [isForgot, setIsForgot] = useState(false);
+  const location = useLocation();
+  const returnTo = (location.state as any)?.from || "/";
+
+  const [mode, setMode] = useState<"login" | "signup" | "forgot">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
+  const [showPass, setShowPass] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError("");
-    setSuccess("");
-    setLoading(true);
+    setError(""); setSuccess(""); setLoading(true);
 
-    if (isForgot) {
+    if (mode === "forgot") {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/reset-password`,
       });
@@ -35,109 +36,119 @@ const Auth = () => {
       return;
     }
 
-    if (isSignUp) {
+    if (mode === "signup") {
       const { error } = await signUp(email, password, displayName);
       if (error) setError(error.message);
-      else setSuccess(t("تم إنشاء الحساب! تحقق من بريدك الإلكتروني للتأكيد.", "Account created! Check your email to confirm."));
+      else setSuccess(t("تم إنشاء الحساب! تحقق من بريدك للتأكيد.", "Account created! Check your email."));
     } else {
       const { error } = await signIn(email, password);
       if (error) setError(error.message);
-      else navigate("/");
+      else navigate(returnTo, { replace: true });
     }
     setLoading(false);
   };
 
-  const switchMode = (mode: "login" | "signup" | "forgot") => {
-    setIsSignUp(mode === "signup");
-    setIsForgot(mode === "forgot");
-    setError("");
-    setSuccess("");
-  };
-
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-background to-muted flex items-center justify-center p-4">
       <SEOHead
         title={t("تسجيل الدخول", "Sign In")}
         description={t("تسجيل الدخول إلى جريدة الشارع المصري", "Sign in to EgStreet News")}
       />
-      <div className="w-full max-w-md">
+      <div className="w-full max-w-sm">
+        {/* Logo */}
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-black text-foreground">{t("جريدة الشارع المصري", "EgStreet News")}</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {isForgot
-              ? t("استعادة كلمة المرور", "Recover your password")
-              : isSignUp
-              ? t("إنشاء حساب جديد", "Create a new account")
-              : t("تسجيل الدخول", "Sign in to your account")}
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary mb-3">
+            <span className="text-white font-black text-xl">G</span>
+          </div>
+          <h1 className="text-xl font-black text-foreground">{t("جريدة الشارع المصري", "EgStreet News")}</h1>
+          <p className="text-xs text-muted-foreground mt-1">
+            {mode === "forgot" ? t("استعادة كلمة المرور", "Recover password")
+              : mode === "signup" ? t("إنشاء حساب جديد", "Create account")
+              : t("مرحباً بعودتك", "Welcome back")}
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-card border border-border rounded-lg p-6 space-y-4">
+        <div className="bg-card border border-border rounded-2xl p-6 shadow-lg space-y-4">
+          {/* Error/Success */}
           {error && (
-            <div className="flex items-center gap-2 text-destructive text-sm bg-destructive/10 p-3 rounded">
-              <AlertCircle className="w-4 h-4 shrink-0" /> {error}
+            <div className="flex items-start gap-2 text-red-600 text-xs bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-200 dark:border-red-800">
+              <AlertCircle className="h-3.5 w-3.5 shrink-0 mt-0.5" />
+              <span>{error}</span>
             </div>
           )}
           {success && (
-            <div className="text-sm text-primary bg-primary/10 p-3 rounded">{success}</div>
-          )}
-
-          {isSignUp && !isForgot && (
-            <div>
-              <label className="text-sm font-medium text-foreground mb-1 block">{t("الاسم", "Name")}</label>
-              <div className="relative">
-                <User className="absolute top-2.5 start-3 w-4 h-4 text-muted-foreground" />
-                <input type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} className="w-full ps-9 pe-3 py-2 border border-input rounded-md bg-background text-foreground text-sm focus:ring-2 focus:ring-ring outline-none" required />
-              </div>
+            <div className="text-xs text-emerald-700 bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-lg border border-emerald-200 dark:border-emerald-800">
+              {success}
             </div>
           )}
 
-          <div>
-            <label className="text-sm font-medium text-foreground mb-1 block">{t("البريد الإلكتروني", "Email")}</label>
+          <form onSubmit={handleSubmit} className="space-y-3">
+            {mode === "signup" && (
+              <div className="relative">
+                <User className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input
+                  type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)}
+                  placeholder={t("الاسم الكامل", "Full name")} required
+                  className="w-full h-10 ps-9 pe-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                />
+              </div>
+            )}
+
             <div className="relative">
-              <Mail className="absolute top-2.5 start-3 w-4 h-4 text-muted-foreground" />
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full ps-9 pe-3 py-2 border border-input rounded-md bg-background text-foreground text-sm focus:ring-2 focus:ring-ring outline-none" required />
+              <Mail className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <input
+                type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                placeholder={t("البريد الإلكتروني", "Email address")} required
+                className="w-full h-10 ps-9 pe-3 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+              />
             </div>
-          </div>
 
-          {!isForgot && (
-            <div>
-              <label className="text-sm font-medium text-foreground mb-1 block">{t("كلمة المرور", "Password")}</label>
+            {mode !== "forgot" && (
               <div className="relative">
-                <Lock className="absolute top-2.5 start-3 w-4 h-4 text-muted-foreground" />
-                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full ps-9 pe-3 py-2 border border-input rounded-md bg-background text-foreground text-sm focus:ring-2 focus:ring-ring outline-none" required minLength={6} />
+                <Lock className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <input
+                  type={showPass ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)}
+                  placeholder={t("كلمة المرور", "Password")} required minLength={6}
+                  className="w-full h-10 ps-9 pe-9 rounded-lg border border-input bg-background text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary"
+                />
+                <button type="button" onClick={() => setShowPass(!showPass)}
+                  className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                  {showPass ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
               </div>
-            </div>
-          )}
+            )}
 
-          <button type="submit" disabled={loading} className="w-full py-2.5 bg-primary text-primary-foreground font-bold rounded-md hover:opacity-90 transition-opacity disabled:opacity-50">
-            {loading ? "..." : isForgot ? t("إرسال رابط الاستعادة", "Send Reset Link") : isSignUp ? t("إنشاء حساب", "Sign Up") : t("تسجيل الدخول", "Sign In")}
-          </button>
-
-          {!isForgot && !isSignUp && (
-            <button type="button" onClick={() => switchMode("forgot")} className="text-xs text-primary hover:underline w-full text-center">
-              {t("نسيت كلمة المرور؟", "Forgot password?")}
+            <button type="submit" disabled={loading}
+              className="w-full h-10 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg text-sm font-bold transition-colors flex items-center justify-center gap-2 disabled:opacity-60">
+              {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+              {mode === "forgot" ? t("إرسال رابط الاسترداد", "Send recovery link")
+                : mode === "signup" ? t("إنشاء الحساب", "Create account")
+                : t("تسجيل الدخول", "Sign in")}
             </button>
-          )}
+          </form>
 
-          <p className="text-center text-sm text-muted-foreground">
-            {isForgot ? (
-              <button type="button" onClick={() => switchMode("login")} className="text-primary font-semibold hover:underline">
-                {t("العودة لتسجيل الدخول", "Back to Sign In")}
-              </button>
-            ) : isSignUp ? (
+          {/* Footer Links */}
+          <div className="text-center space-y-2 pt-1">
+            {mode === "login" && (
               <>
-                {t("لديك حساب؟", "Already have an account?")}{" "}
-                <button type="button" onClick={() => switchMode("login")} className="text-primary font-semibold hover:underline">{t("تسجيل الدخول", "Sign In")}</button>
-              </>
-            ) : (
-              <>
-                {t("ليس لديك حساب؟", "Don't have an account?")}{" "}
-                <button type="button" onClick={() => switchMode("signup")} className="text-primary font-semibold hover:underline">{t("إنشاء حساب", "Sign Up")}</button>
+                <button onClick={() => setMode("forgot")}
+                  className="text-xs text-muted-foreground hover:text-primary transition-colors block w-full">
+                  {t("نسيت كلمة المرور؟", "Forgot password?")}
+                </button>
+                <button onClick={() => setMode("signup")}
+                  className="text-xs text-primary font-semibold hover:underline">
+                  {t("إنشاء حساب جديد", "Create new account")}
+                </button>
               </>
             )}
-          </p>
-        </form>
+            {(mode === "signup" || mode === "forgot") && (
+              <button onClick={() => setMode("login")}
+                className="text-xs text-primary font-semibold hover:underline">
+                {t("العودة لتسجيل الدخول", "Back to sign in")}
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
