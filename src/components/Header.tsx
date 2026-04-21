@@ -43,7 +43,7 @@ const Header = () => {
                   <UserCircle className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">{t("حسابي", "Account")}</span>
                 </Link>
-                <Link to="/dashboard" className="flex items-center gap-1 hover:text-[hsl(var(--nav-accent))] transition-colors">
+                <Link to="/admin-panel" className="flex items-center gap-1 hover:text-[hsl(var(--nav-accent))] transition-colors">
                   <User className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">{t("لوحة التحكم", "Dashboard")}</span>
                 </Link>
@@ -51,11 +51,7 @@ const Header = () => {
                   <LogOut className="w-3.5 h-3.5" />
                 </button>
               </div>
-            ) : (
-              <Link to="/auth" className="font-bold hover:text-[hsl(var(--nav-accent))] transition-colors">
-                {t("تسجيل الدخول", "Sign In")}
-              </Link>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
