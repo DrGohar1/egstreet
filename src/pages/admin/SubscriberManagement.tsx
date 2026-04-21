@@ -24,7 +24,7 @@ const SubscriberManagement = () => {
 
   const fetchSubscribers = async () => {
     const { data } = await supabase
-      .from("newsletter_subscribers")
+      .from("subscribers")
       .select("*")
       .order("created_at", { ascending: false });
     if (data) setSubscribers(data);
@@ -34,7 +34,7 @@ const SubscriberManagement = () => {
   useEffect(() => { fetchSubscribers(); }, []);
 
   const handleDelete = async (id: string) => {
-    await supabase.from("newsletter_subscribers").delete().eq("id", id);
+    await supabase.from("subscribers").delete().eq("id", id);
     setSubscribers((prev) => prev.filter((s) => s.id !== id));
     toast({ title: t("تم الحذف", "Deleted") });
   };
