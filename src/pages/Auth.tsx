@@ -135,10 +135,7 @@ const Auth = () => {
                   className="text-xs text-muted-foreground hover:text-primary transition-colors block w-full">
                   {t("نسيت كلمة المرور؟", "Forgot password?")}
                 </button>
-                <button onClick={() => setMode("signup")}
-                  className="text-xs text-primary font-semibold hover:underline">
-                  {t("إنشاء حساب جديد", "Create new account")}
-                </button>
+
               </>
             )}
             {(mode === "signup" || mode === "forgot") && (
