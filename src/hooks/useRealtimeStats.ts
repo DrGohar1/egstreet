@@ -36,7 +36,7 @@ export const useRealtimeStats = () => {
       supabase.from("articles").select("id", { count: "exact", head: true }).eq("status", "draft"),
       supabase.from("articles").select("id", { count: "exact", head: true }).eq("is_breaking", true),
       supabase.from("articles").select("views").eq("status", "published"),
-      supabase.from("newsletter_subscribers").select("id", { count: "exact", head: true }).eq("is_active", true),
+      supabase.from("subscribers").select("id", { count: "exact", head: true }).eq("is_active", true),
       supabase.from("comments").select("id", { count: "exact", head: true }),
       supabase.from("comments").select("id", { count: "exact", head: true }).eq("status", "pending"),
       supabase.from("categories").select("id", { count: "exact", head: true }),
@@ -71,7 +71,7 @@ export const useRealtimeStats = () => {
       .on("postgres_changes", { event: "*", schema: "public", table: "articles" }, () => fetchStats())
       .on("postgres_changes", { event: "*", schema: "public", table: "comments" }, () => fetchStats())
       .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => fetchStats())
-      .on("postgres_changes", { event: "*", schema: "public", table: "newsletter_subscribers" }, () => fetchStats())
+      .on("postgres_changes", { event: "*", schema: "public", table: "subscribers" }, () => fetchStats())
       .subscribe();
 
     return () => { supabase.removeChannel(channel); };
