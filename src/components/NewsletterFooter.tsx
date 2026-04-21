@@ -15,7 +15,7 @@ const NewsletterFooter = () => {
   const handleSubscribe = async () => {
     if (!email.trim()) return;
     setLoading(true);
-    const { error } = await supabase.from("newsletter_subscribers").insert({ email: email.trim() });
+    const { error } = await supabase.from("subscribers").insert({ email: email.trim() });
     setLoading(false);
     if (error) {
       toast({
