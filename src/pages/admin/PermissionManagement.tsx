@@ -1,299 +1,344 @@
-import React, { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { useAuth } from "@/contexts/AuthContext";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Checkbox } from "@/components/ui/checkbox";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/hooks/use-toast";
-import { Shield, Save, Crown, Pencil, Newspaper, Megaphone, Check, RotateCcw } from "lucide-react";
-import { motion } from "framer-motion";
-import type { Database } from "@/integrations/supabase/types";
+import { Loader2, Save, Shield, CheckSquare, Square, Minus } from "lucide-react";
 
-type AppRole = Database["public"]["Enums"]["app_role"];
+// ─── PERMISSION MATRIX DEFINITION ───────────────────────────────────────────
+const ROLES = [
+  { key: "editor_in_chief", ar: "رئيس التحرير",   en: "Editor in Chief",  color: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300" },
+  { key: "journalist",      ar: "صحفي",             en: "Journalist",       color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" },
+  { key: "ads_manager",     ar: "مدير الإعلانات",  en: "Ads Manager",      color: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300" },
+] as const;
+type RoleKey = typeof ROLES[number]["key"];
 
-const ROLE_CONFIG: Record<AppRole, { label_ar: string; label_en: string; icon: React.ElementType; color: string }> = {
-  super_admin: { label_ar: "مدير عام", label_en: "Super Admin", icon: Crown, color: "bg-primary text-primary-foreground" },
-  editor_in_chief: { label_ar: "رئيس تحرير", label_en: "Editor-in-Chief", icon: Pencil, color: "bg-blue-600 text-white" },
-  journalist: { label_ar: "صحفي", label_en: "Journalist", icon: Newspaper, color: "bg-emerald-600 text-white" },
-  ads_manager: { label_ar: "مدير إعلانات", label_en: "Ads Manager", icon: Megaphone, color: "bg-amber-600 text-white" },
-};
-
-const PERMISSION_GROUPS = [
+const SECTIONS = [
   {
-    group_ar: "المقالات", group_en: "Articles",
-    permissions: [
-      { key: "articles_create", ar: "إنشاء مقالات", en: "Create articles" },
-      { key: "articles_edit_own", ar: "تعديل مقالاته", en: "Edit own articles" },
-      { key: "articles_edit_all", ar: "تعديل كل المقالات", en: "Edit all articles" },
-      { key: "articles_delete", ar: "حذف مقالات", en: "Delete articles" },
-      { key: "articles_publish", ar: "نشر مقالات", en: "Publish articles" },
+    group: "ar", groupEn: "Content",
+    items: [
+      { key: "articles.view",    ar: "عرض المقالات",         en: "View Articles" },
+      { key: "articles.create",  ar: "كتابة مقال جديد",      en: "Create Article" },
+      { key: "articles.edit",    ar: "تعديل مقالات الكل",    en: "Edit All Articles" },
+      { key: "articles.delete",  ar: "حذف المقالات",         en: "Delete Articles" },
+      { key: "articles.publish", ar: "نشر/إيقاف المقالات",   en: "Publish Articles" },
+      { key: "breaking.manage",  ar: "إدارة الأخبار العاجلة", en: "Manage Breaking News" },
+      { key: "comments.manage",  ar: "إدارة التعليقات",      en: "Manage Comments" },
+      { key: "tags.manage",      ar: "إدارة الوسوم",          en: "Manage Tags" },
     ],
   },
   {
-    group_ar: "المحتوى", group_en: "Content",
-    permissions: [
-      { key: "categories_manage", ar: "إدارة الأقسام", en: "Manage categories" },
-      { key: "tags_manage", ar: "إدارة الوسوم", en: "Manage tags" },
-      { key: "pages_manage", ar: "إدارة الصفحات", en: "Manage pages" },
-      { key: "breaking_manage", ar: "أخبار عاجلة", en: "Breaking news" },
+    group: "المستخدمون", groupEn: "Users",
+    items: [
+      { key: "users.view",    ar: "عرض المستخدمين",     en: "View Users" },
+      { key: "users.manage",  ar: "إدارة المستخدمين",   en: "Manage Users" },
+      { key: "subscribers.view",   ar: "عرض المشتركين",  en: "View Subscribers" },
     ],
   },
   {
-    group_ar: "الإدارة", group_en: "Management",
-    permissions: [
-      { key: "comments_moderate", ar: "إدارة التعليقات", en: "Moderate comments" },
-      { key: "users_manage", ar: "إدارة المستخدمين", en: "Manage users" },
-      { key: "subscribers_manage", ar: "إدارة المشتركين", en: "Manage subscribers" },
-      { key: "ads_manage", ar: "إدارة الإعلانات", en: "Manage ads" },
+    group: "الإعلانات", groupEn: "Ads",
+    items: [
+      { key: "ads.view",    ar: "عرض الإعلانات",   en: "View Ads" },
+      { key: "ads.manage",  ar: "إدارة الإعلانات", en: "Manage Ads" },
     ],
   },
   {
-    group_ar: "النظام", group_en: "System",
-    permissions: [
-      { key: "settings_manage", ar: "إدارة الإعدادات", en: "Manage settings" },
-      { key: "analytics_view", ar: "عرض التحليلات", en: "View analytics" },
-      { key: "ai_tools", ar: "أدوات AI", en: "AI tools" },
-      { key: "news_scraper", ar: "سحب الأخبار", en: "News scraper" },
+    group: "الإعدادات", groupEn: "Settings",
+    items: [
+      { key: "analytics.view",  ar: "عرض الإحصائيات", en: "View Analytics" },
+      { key: "settings.view",   ar: "عرض الإعدادات",  en: "View Settings" },
+      { key: "settings.edit",   ar: "تعديل الإعدادات", en: "Edit Settings" },
+      { key: "categories.manage", ar: "إدارة الأقسام", en: "Manage Categories" },
+      { key: "pages.manage",    ar: "إدارة الصفحات",  en: "Manage Pages" },
+      { key: "backup.access",   ar: "النسخ الاحتياطي", en: "Backup Access" },
+      { key: "ai.tools",        ar: "أدوات الذكاء الاصطناعي", en: "AI Tools" },
     ],
   },
-];
+] as const;
 
-const ALL_PERMISSIONS = PERMISSION_GROUPS.flatMap(g => g.permissions);
-const ALL_ROLES: AppRole[] = ["super_admin", "editor_in_chief", "journalist", "ads_manager"];
+type PermKey = typeof SECTIONS[number]["items"][number]["key"];
 
-const DEFAULT_PERMISSIONS: Record<AppRole, string[]> = {
-  super_admin: ALL_PERMISSIONS.map(p => p.key),
+// Default permissions per role
+const DEFAULTS: Record<RoleKey, PermKey[]> = {
   editor_in_chief: [
-    "articles_create", "articles_edit_own", "articles_edit_all", "articles_delete", "articles_publish",
-    "categories_manage", "tags_manage", "comments_moderate", "analytics_view", "breaking_manage", "pages_manage",
+    "articles.view","articles.create","articles.edit","articles.delete","articles.publish",
+    "breaking.manage","comments.manage","tags.manage",
+    "users.view","subscribers.view",
+    "ads.view","ads.manage",
+    "analytics.view","settings.view","categories.manage","pages.manage","ai.tools",
   ],
-  journalist: ["articles_create", "articles_edit_own"],
-  ads_manager: ["ads_manage", "analytics_view"],
+  journalist: [
+    "articles.view","articles.create","comments.manage","tags.manage","subscribers.view",
+  ],
+  ads_manager: [
+    "articles.view","ads.view","ads.manage","analytics.view",
+  ],
 };
+
+type Matrix = Record<RoleKey, Set<PermKey>>;
 
 const PermissionManagement = () => {
   const { t, language } = useLanguage();
-  const { user } = useAuth();
   const { toast } = useToast();
-  const [isSuperAdmin, setIsSuperAdmin] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [matrix, setMatrix] = useState<Matrix>(() => {
+    const m: any = {};
+    ROLES.forEach(r => { m[r.key] = new Set(DEFAULTS[r.key]); });
+    return m;
+  });
   const [saving, setSaving] = useState(false);
-  const [permMatrix, setPermMatrix] = useState<Record<AppRole, string[]>>(DEFAULT_PERMISSIONS);
-  const [hasChanges, setHasChanges] = useState(false);
+  const [loading, setLoading] = useState(true);
 
+  // Load saved permissions from DB
   useEffect(() => {
-    const init = async () => {
-      if (user) {
-        const { data } = await supabase.rpc("has_role", { _user_id: user.id, _role: "super_admin" as AppRole });
-        setIsSuperAdmin(!!data);
-      }
-      // Load saved permissions from site_settings
-      const { data } = await supabase.from("site_settings").select("key, value").eq("key", "role_permissions").maybeSingle();
-      if (data?.value) {
-        try {
-          const saved = JSON.parse(data.value);
-          setPermMatrix({ ...DEFAULT_PERMISSIONS, ...saved });
-        } catch {}
+    (async () => {
+      const { data } = await supabase
+        .from("role_permissions" as any)
+        .select("role, permission");
+      if (data && data.length > 0) {
+        const m: any = {};
+        ROLES.forEach(r => { m[r.key] = new Set<PermKey>(); });
+        data.forEach((row: any) => {
+          if (m[row.role]) m[row.role].add(row.permission);
+        });
+        setMatrix(m);
       }
       setLoading(false);
-    };
-    init();
-  }, [user]);
+    })();
+  }, []);
 
-  const togglePermission = (role: AppRole, permKey: string) => {
-    if (role === "super_admin") return; // Super admin always has all
-    setPermMatrix(prev => {
-      const current = prev[role] || [];
-      const has = current.includes(permKey);
-      return {
-        ...prev,
-        [role]: has ? current.filter(k => k !== permKey) : [...current, permKey],
-      };
+  const toggle = (role: RoleKey, perm: PermKey) => {
+    setMatrix(prev => {
+      const next = { ...prev, [role]: new Set(prev[role]) };
+      if (next[role].has(perm)) next[role].delete(perm);
+      else next[role].add(perm);
+      return next;
     });
-    setHasChanges(true);
   };
 
-  const toggleAll = (role: AppRole, groupPermissions: string[], allChecked: boolean) => {
-    if (role === "super_admin") return;
-    setPermMatrix(prev => {
-      const current = prev[role] || [];
-      if (allChecked) {
-        return { ...prev, [role]: current.filter(k => !groupPermissions.includes(k)) };
-      } else {
-        const newPerms = new Set([...current, ...groupPermissions]);
-        return { ...prev, [role]: Array.from(newPerms) };
-      }
+  const toggleAll = (perm: PermKey) => {
+    const allChecked = ROLES.every(r => matrix[r.key].has(perm));
+    setMatrix(prev => {
+      const next = { ...prev };
+      ROLES.forEach(r => {
+        next[r.key] = new Set(prev[r.key]);
+        if (allChecked) next[r.key].delete(perm);
+        else next[r.key].add(perm);
+      });
+      return next;
     });
-    setHasChanges(true);
   };
 
-  const handleSave = async () => {
-    setSaving(true);
-    const { data: existing } = await supabase.from("site_settings").select("id").eq("key", "role_permissions").maybeSingle();
-    const value = JSON.stringify(permMatrix);
-    if (existing) {
-      await supabase.from("site_settings").update({ value }).eq("key", "role_permissions");
-    } else {
-      await supabase.from("site_settings").insert({ key: "role_permissions", value });
-    }
-    toast({ title: t("تم حفظ الصلاحيات", "Permissions saved") });
-    setSaving(false);
-    setHasChanges(false);
+  const toggleRole = (role: RoleKey) => {
+    const allPerms = SECTIONS.flatMap(s => s.items.map(i => i.key)) as PermKey[];
+    const allChecked = allPerms.every(p => matrix[role].has(p));
+    setMatrix(prev => ({
+      ...prev,
+      [role]: allChecked ? new Set() : new Set(allPerms),
+    }));
   };
 
   const resetToDefaults = () => {
-    setPermMatrix(DEFAULT_PERMISSIONS);
-    setHasChanges(true);
+    const m: any = {};
+    ROLES.forEach(r => { m[r.key] = new Set(DEFAULTS[r.key]); });
+    setMatrix(m);
+    toast({ title: t("تم إعادة الضبط للافتراضي", "Reset to defaults") });
   };
 
-  if (loading) {
-    return <div className="flex items-center justify-center py-20"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" /></div>;
-  }
+  const save = async () => {
+    setSaving(true);
+    // Upsert all permissions
+    const rows: any[] = [];
+    ROLES.forEach(r => {
+      matrix[r.key].forEach(perm => {
+        rows.push({ role: r.key, permission: perm });
+      });
+    });
 
-  if (!isSuperAdmin) {
-    return (
-      <div className="flex items-center justify-center py-20 text-muted-foreground">
-        <Shield className="h-8 w-8 me-3" />
-        <p className="text-lg">{t("هذه الصفحة متاحة فقط للمدير العام", "Only Super Admins can access this page")}</p>
-      </div>
-    );
-  }
+    // Delete all then insert (cleanest approach)
+    await supabase.from("role_permissions" as any).delete().neq("role", "super_admin");
+    if (rows.length > 0) {
+      const { error } = await supabase.from("role_permissions" as any).insert(rows);
+      if (error) {
+        // Table might not exist yet — show SQL to create it
+        toast({
+          title: t("⚠️ جدول الصلاحيات غير موجود", "⚠️ Permissions table missing"),
+          description: t("شغّل migration في Supabase SQL Editor", "Run migration in Supabase SQL Editor"),
+          variant: "destructive"
+        });
+        setSaving(false);
+        return;
+      }
+    }
+    setSaving(false);
+    toast({ title: t("✅ تم حفظ الصلاحيات", "✅ Permissions saved") });
+  };
+
+  const allPerms = SECTIONS.flatMap(s => s.items.map(i => i.key)) as PermKey[];
+
+  if (loading) return (
+    <div className="flex items-center justify-center py-20">
+      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+    </div>
+  );
 
   return (
-    <motion.div className="space-y-6" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+    <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-4">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-black text-foreground flex items-center gap-2">
-            <Shield className="h-6 w-6 text-primary" />
-            {t("إدارة الصلاحيات", "Permission Management")}
+          <h1 className="text-xl font-black flex items-center gap-2">
+            <Shield className="h-5 w-5 text-primary" />
+            {t("نظام الصلاحيات", "Permission Management")}
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {t("تحكم في صلاحيات كل دور بالتفصيل", "Control each role's permissions in detail")}
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {t("تحكم في صلاحيات كل دور — super_admin لديه كل الصلاحيات دائماً",
+               "Control permissions per role — super_admin always has full access")}
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={resetToDefaults} className="gap-1.5">
-            <RotateCcw className="h-3.5 w-3.5" />
-            {t("استعادة الافتراضي", "Reset Defaults")}
+          <Button variant="outline" size="sm" onClick={resetToDefaults} className="text-xs h-8">
+            {t("إعادة للافتراضي", "Reset Defaults")}
           </Button>
-          <Button onClick={handleSave} disabled={saving || !hasChanges} size="sm" className="gap-1.5">
-            {saving ? <div className="animate-spin h-3.5 w-3.5 border-2 border-current border-t-transparent rounded-full" /> : <Save className="h-3.5 w-3.5" />}
-            {saving ? t("جارِ الحفظ...", "Saving...") : t("حفظ التغييرات", "Save Changes")}
+          <Button size="sm" onClick={save} disabled={saving} className="text-xs h-8 gap-1.5">
+            {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+            {t("حفظ الصلاحيات", "Save Permissions")}
           </Button>
         </div>
       </div>
 
-      {/* Permission Matrix */}
-      <Card>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-border bg-muted/50">
-                  <th className="text-start p-3 font-bold text-foreground min-w-[200px]">
-                    {t("الصلاحية", "Permission")}
+      {/* Matrix Table */}
+      <div className="rounded-xl border border-border overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="bg-muted/50 border-b border-border">
+                <th className="text-start px-4 py-3 font-bold text-xs text-muted-foreground w-52">
+                  {t("الصلاحية", "Permission")}
+                </th>
+                {ROLES.map(role => (
+                  <th key={role.key} className="px-3 py-3 text-center min-w-[120px]">
+                    <div className="flex flex-col items-center gap-1.5">
+                      <Badge className={`text-[10px] px-2 py-0.5 rounded-md border-0 font-bold ${role.color}`}>
+                        {language === "ar" ? role.ar : role.en}
+                      </Badge>
+                      {/* Toggle entire role */}
+                      <button
+                        onClick={() => toggleRole(role.key)}
+                        className="text-[10px] text-muted-foreground hover:text-primary transition-colors"
+                        title={t("تحديد الكل", "Select all")}
+                      >
+                        {allPerms.every(p => matrix[role.key].has(p))
+                          ? <CheckSquare className="h-4 w-4 text-primary" />
+                          : allPerms.some(p => matrix[role.key].has(p))
+                          ? <Minus className="h-4 w-4 text-amber-500" />
+                          : <Square className="h-4 w-4" />
+                        }
+                      </button>
+                    </div>
                   </th>
-                  {ALL_ROLES.map(role => {
-                    const cfg = ROLE_CONFIG[role];
-                    const Icon = cfg.icon;
+                ))}
+                <th className="px-3 py-3 text-center min-w-[80px]">
+                  <span className="text-[10px] text-muted-foreground">{t("الكل", "All")}</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {SECTIONS.map((section, si) => (
+                <>
+                  {/* Section header row */}
+                  <tr key={`group-${si}`} className="bg-primary/5 border-y border-border">
+                    <td colSpan={ROLES.length + 2} className="px-4 py-2">
+                      <span className="text-[11px] font-black text-primary uppercase tracking-wider">
+                        {language === "ar" ? section.group : section.groupEn}
+                      </span>
+                    </td>
+                  </tr>
+                  {/* Permission rows */}
+                  {section.items.map((perm, pi) => {
+                    const allChecked = ROLES.every(r => matrix[r.key].has(perm.key as PermKey));
+                    const someChecked = ROLES.some(r => matrix[r.key].has(perm.key as PermKey));
                     return (
-                      <th key={role} className="p-3 text-center min-w-[120px]">
-                        <div className="flex flex-col items-center gap-1">
-                          <div className={`w-8 h-8 rounded-lg ${cfg.color} flex items-center justify-center`}>
-                            <Icon className="h-4 w-4" />
-                          </div>
-                          <span className="text-xs font-bold text-foreground">
-                            {language === "ar" ? cfg.label_ar : cfg.label_en}
+                      <tr
+                        key={perm.key}
+                        className={`border-b border-border/50 transition-colors hover:bg-muted/20 ${pi % 2 === 0 ? "" : "bg-muted/10"}`}
+                      >
+                        <td className="px-4 py-2.5">
+                          <span className="text-xs font-medium text-foreground">
+                            {language === "ar" ? perm.ar : perm.en}
                           </span>
-                        </div>
-                      </th>
-                    );
-                  })}
-                </tr>
-              </thead>
-              <tbody>
-                {PERMISSION_GROUPS.map(group => {
-                  const groupKeys = group.permissions.map(p => p.key);
-                  return (
-                    <React.Fragment key={group.group_en}>
-                      {/* Group Header */}
-                      <tr className="bg-muted/30 border-b border-border">
-                        <td className="p-2 ps-3 font-bold text-foreground text-xs uppercase tracking-wider">
-                          {language === "ar" ? group.group_ar : group.group_en}
+                          <span className="block text-[10px] text-muted-foreground/60 font-mono">{perm.key}</span>
                         </td>
-                        {ALL_ROLES.map(role => {
-                          const rolePerms = permMatrix[role] || [];
-                          const allChecked = groupKeys.every(k => rolePerms.includes(k));
-                          const someChecked = groupKeys.some(k => rolePerms.includes(k));
+                        {ROLES.map(role => {
+                          const checked = matrix[role.key].has(perm.key as PermKey);
                           return (
-                            <td key={role} className="p-2 text-center">
-                              {role === "super_admin" ? (
-                                <Check className="h-4 w-4 text-primary mx-auto" />
-                              ) : (
-                                <Checkbox
-                                  checked={allChecked ? true : someChecked ? "indeterminate" : false}
-                                  onCheckedChange={() => toggleAll(role, groupKeys, allChecked)}
-                                  className="mx-auto"
-                                />
-                              )}
+                            <td key={role.key} className="px-3 py-2.5 text-center">
+                              <button
+                                onClick={() => toggle(role.key, perm.key as PermKey)}
+                                className={`w-5 h-5 rounded flex items-center justify-center mx-auto transition-all border-2 ${
+                                  checked
+                                    ? "bg-primary border-primary text-white"
+                                    : "border-border hover:border-primary/50 bg-background"
+                                }`}
+                              >
+                                {checked && (
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                )}
+                              </button>
                             </td>
                           );
                         })}
+                        {/* Toggle all for this perm */}
+                        <td className="px-3 py-2.5 text-center">
+                          <button
+                            onClick={() => toggleAll(perm.key as PermKey)}
+                            className={`w-5 h-5 rounded flex items-center justify-center mx-auto transition-all border-2 ${
+                              allChecked
+                                ? "bg-emerald-500 border-emerald-500 text-white"
+                                : someChecked
+                                ? "bg-amber-400 border-amber-400 text-white"
+                                : "border-border hover:border-emerald-400 bg-background"
+                            }`}
+                          >
+                            {allChecked && <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                            {!allChecked && someChecked && <Minus className="w-3 h-3" />}
+                          </button>
+                        </td>
                       </tr>
-                      {/* Individual Permissions */}
-                      {group.permissions.map(perm => (
-                        <tr key={perm.key} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
-                          <td className="p-2 ps-6 text-foreground">
-                            {language === "ar" ? perm.ar : perm.en}
-                          </td>
-                          {ALL_ROLES.map(role => {
-                            const has = (permMatrix[role] || []).includes(perm.key);
-                            return (
-                              <td key={role} className="p-2 text-center">
-                                {role === "super_admin" ? (
-                                  <Check className="h-4 w-4 text-emerald-600 mx-auto" />
-                                ) : (
-                                  <Checkbox
-                                    checked={has}
-                                    onCheckedChange={() => togglePermission(role, perm.key)}
-                                    className="mx-auto"
-                                  />
-                                )}
-                              </td>
-                            );
-                          })}
-                        </tr>
-                      ))}
-                    </React.Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Summary */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {ALL_ROLES.map(role => {
-          const cfg = ROLE_CONFIG[role];
-          const count = (permMatrix[role] || []).length;
-          return (
-            <Card key={role} className="overflow-hidden">
-              <div className={`h-1 ${cfg.color}`} />
-              <CardContent className="p-3">
-                <p className="text-xs text-muted-foreground">{language === "ar" ? cfg.label_ar : cfg.label_en}</p>
-                <p className="text-xl font-black text-foreground mt-1">{count}/{ALL_PERMISSIONS.length}</p>
-                <p className="text-[10px] text-muted-foreground">{t("صلاحية", "permissions")}</p>
-              </CardContent>
-            </Card>
-          );
-        })}
+                    );
+                  })}
+                </>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
-    </motion.div>
+
+      {/* Legend */}
+      <div className="flex items-center gap-4 text-xs text-muted-foreground flex-wrap">
+        <div className="flex items-center gap-1.5">
+          <div className="w-4 h-4 rounded bg-primary border-2 border-primary flex items-center justify-center">
+            <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+          </div>
+          {t("مسموح", "Allowed")}
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-4 h-4 rounded border-2 border-border bg-background" />
+          {t("ممنوع", "Denied")}
+        </div>
+        <div className="flex items-center gap-1.5">
+          <div className="w-4 h-4 rounded bg-emerald-500 border-2 border-emerald-500 flex items-center justify-center">
+            <svg className="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>
+          </div>
+          {t("تحديد الكل في هذا الصف", "Select all in row")}
+        </div>
+        <div className="ms-auto text-[11px] bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 px-2 py-1 rounded border border-amber-200 dark:border-amber-800">
+          🔒 super_admin = {t("كل الصلاحيات دائماً", "all permissions always")}
+        </div>
+      </div>
+    </div>
   );
 };
 
