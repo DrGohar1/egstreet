@@ -1,4 +1,5 @@
 import { Toaster } from "@/components/ui/toaster";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -93,6 +94,7 @@ const AppContent = () => {
 
 const App = () => (
   <HelmetProvider>
+    <ErrorBoundary>
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <LanguageProvider>
@@ -108,6 +110,7 @@ const App = () => (
         </LanguageProvider>
       </ThemeProvider>
     </QueryClientProvider>
+    </ErrorBoundary>
   </HelmetProvider>
 );
 
