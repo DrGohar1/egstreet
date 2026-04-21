@@ -46,7 +46,7 @@ const queryClient = new QueryClient({
   },
 });
 
-const ADMIN = "/eg-control-2026";
+const ADMIN = "/Gadmin";
 
 const AppContent = () => {
   useContentProtection();
