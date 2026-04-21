@@ -9,6 +9,7 @@ import LanguageToggle from "@/components/LanguageToggle";
 import ThemeToggle from "@/components/ThemeToggle";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Loader2 } from "lucide-react";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 const AdminLayout = ({ children }: { children: ReactNode }) => {
   const { user, loading } = useAuth();
@@ -74,6 +75,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
               </div>
             </div>
           </header>
+          <ErrorBoundary>
           <main className="flex-1 p-4 md:p-6 overflow-auto">{children}</main>
         </div>
       </div>
