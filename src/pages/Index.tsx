@@ -45,13 +45,14 @@ const Index = () => {
       const [catR, artR, acR] = await Promise.all([
         supabase.from("categories").select("*").order("sort_order"),
         supabase.from("articles").select("*").eq("status", "published").order("published_at", { ascending: false }).limit(60),
-        supabase.from("article_categories").select("article_id, category_id"),
+        supabase.from("article_categories").select("article_id, category_id").throwOnError().catch(() => ({ data: [] })),
       ]);
       if (catR.data) setCategories(catR.data);
       if (artR.data) setArticles(artR.data);
-      if (acR.data) {
+      const acData = (acR as any).data || [];
+      if (acData.length > 0) {
         const m: Record<string, string[]> = {};
-        acR.data.forEach((x: any) => { if (!m[x.article_id]) m[x.article_id] = []; m[x.article_id].push(x.category_id); });
+        acData.forEach((x: any) => { if (!m[x.article_id]) m[x.article_id] = []; m[x.article_id].push(x.category_id); });
         setAcMap(m);
       }
       setLoading(false);
