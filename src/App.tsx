@@ -36,6 +36,7 @@ import NewsScraperPage from "./pages/admin/NewsScraperPage";
 import AIToolsPage from "./pages/admin/AIToolsPage";
 import BackupRestore from "./pages/admin/BackupRestore";
 import AutomationPage from "./pages/admin/AutomationPage";
+import ArticleEditor from "./pages/admin/ArticleEditor";
 import SavedArticlesPage from "./pages/SavedArticlesPage";
 import NewsletterPopup from "./components/NewsletterPopup";
 import ResetPassword from "./pages/ResetPassword";
@@ -71,6 +72,8 @@ const AppContent = () => {
         {/* Admin */}
         <Route path={ADMIN} element={<AdminLayout><DashboardOverview /></AdminLayout>} />
         <Route path={`${ADMIN}/users`} element={<AdminLayout><UserManagement /></AdminLayout>} />
+        <Route path={`${ADMIN}/articles/new`} element={<AdminLayout><ArticleEditor /></AdminLayout>} />
+        <Route path={`${ADMIN}/articles/edit/:id`} element={<AdminLayout><ArticleEditor /></AdminLayout>} />
         <Route path={`${ADMIN}/articles`} element={<AdminLayout><ArticleManagement /></AdminLayout>} />
         <Route path={`${ADMIN}/categories`} element={<AdminLayout><CategoryManagement /></AdminLayout>} />
         <Route path={`${ADMIN}/breaking`} element={<AdminLayout><BreakingNewsManagement /></AdminLayout>} />
