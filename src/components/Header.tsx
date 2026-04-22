@@ -104,7 +104,7 @@ export default function Header() {
               </Link>
               {user
                 ? <Link to="/profile" className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-black text-sm hover:bg-primary/80 transition-colors">
-                    {user.email?.[0]?.toUpperCase()||"U"}
+                    {profile?.display_name?.[0]?.toUpperCase()||profile?.username?.[0]?.toUpperCase()||"U"}
                   </Link>
                 : <Link to="/auth" className="text-xs font-black bg-primary text-white px-3 py-1.5 rounded-lg hover:bg-primary/80 transition-colors hidden sm:block">
                     دخول
