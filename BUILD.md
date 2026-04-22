@@ -1,4 +1,3 @@
-# Build 1776802079
-- ErrorBoundary added
-- White screen fixed
-- Admin route /Gadmin restored
+# Build 1776869781
+- Fixed /admin-panel → /Gadmin in all files
+- AdminSidebar synced
