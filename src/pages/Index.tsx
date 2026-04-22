@@ -6,6 +6,7 @@ import CategoryNav from "@/components/CategoryNav";
 import BreakingTicker from "@/components/BreakingTicker";
 import StickyHeader from "@/components/StickyHeader";
 import ArticleCard from "@/components/ArticleCard";
+import HeroSlider from "@/components/HeroSlider";
 import SkeletonCard from "@/components/SkeletonCard";
 import AdBanner from "@/components/AdBanner";
 import Footer from "@/components/Footer";
@@ -95,18 +96,18 @@ const Index = () => {
           </section>
         ) : articles.length > 0 ? (
           <>
-            {/* ═══ HERO BENTO ═══ */}
+            {/* ═══ HERO SLIDER ═══ */}
             <section className="grid grid-cols-1 lg:grid-cols-12 gap-4">
               <div className="lg:col-span-7">
-                {featured[0] && (
-                  <ArticleCard variant="hero" title={featured[0].title} excerpt={featured[0].excerpt || undefined}
-                    slug={featured[0].slug} featuredImage={featured[0].featured_image || undefined}
-                    categoryName={getCatName(featured[0])} publishedAt={featured[0].published_at || undefined}
-                    views={featured[0].views} isBreaking={featured[0].is_breaking || false} />
-                )}
+                <HeroSlider articles={featured.slice(0, 6).map(a => ({
+                  id: a.id, title: a.title, slug: a.slug,
+                  excerpt: a.excerpt, featured_image: a.featured_image,
+                  published_at: a.published_at, views: a.views,
+                  categoryName: getCatName(a), is_breaking: a.is_breaking,
+                }))} />
               </div>
               <div className="lg:col-span-5 grid grid-cols-2 gap-3">
-                {featured.slice(1, 5).map(a => (
+                {featured.slice(0, 4).map(a => (
                   <ArticleCard key={a.id} variant="featured-side" title={a.title} slug={a.slug}
                     featuredImage={a.featured_image || undefined} categoryName={getCatName(a)}
                     publishedAt={a.published_at || undefined} />
