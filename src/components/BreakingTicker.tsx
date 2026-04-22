@@ -1,45 +1,54 @@
-import { useLanguage } from "@/contexts/LanguageContext";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Zap } from "lucide-react";
 
-interface BreakingItem {
-  title: string;
-  slug?: string;
-}
+export default function BreakingTicker() {
+  const [items,   setItems]   = useState<any[]>([]);
+  const [current, setCurrent] = useState(0);
+  const timerRef = useRef<ReturnType<typeof setInterval>|null>(null);
 
-interface BreakingTickerProps {
-  headlines: string[];
-  slugs?: string[];
-}
+  useEffect(()=>{
+    supabase.from("breaking_news").select("id,title,slug").eq("is_active",true)
+      .order("created_at",{ascending:false}).limit(8)
+      .then(({data})=>{ if(data?.length) setItems(data); });
+  },[]);
 
-const BreakingTicker = ({ headlines, slugs = [] }: BreakingTickerProps) => {
-  const { t, direction } = useLanguage();
+  useEffect(()=>{
+    if (!items.length) return;
+    timerRef.current = setInterval(()=>setCurrent(c=>(c+1)%items.length), 4000);
+    return ()=>{ if(timerRef.current) clearInterval(timerRef.current); };
+  },[items]);
 
-  if (headlines.length === 0) return null;
+  if (!items.length) return null;
 
   return (
-    <div className="ticker-gradient overflow-hidden">
-      <div className="container flex items-center h-9">
-        <span className="shrink-0 bg-foreground text-background px-3 py-0.5 text-xs font-bold uppercase tracking-wider rounded-sm animate-pulse">
-          {t("عاجل", "BREAKING")}
-        </span>
-        <div className="overflow-hidden flex-1 mx-3">
-          <div className={`whitespace-nowrap ${direction === "rtl" ? "animate-ticker-rtl" : "animate-ticker"}`}>
-            {headlines.map((h, i) => (
-              slugs[i] ? (
-                <Link key={i} to={`/article/${slugs[i]}`} className="text-ticker-foreground text-sm font-semibold mx-8 hover:underline">
-                  {h}
-                </Link>
-              ) : (
-                <span key={i} className="text-ticker-foreground text-sm font-semibold mx-8">
-                  {h}
-                </span>
-              )
-            ))}
-          </div>
+    <div className="bg-primary text-white h-9 flex items-center overflow-hidden select-none">
+      <div className="flex items-center gap-0 h-full shrink-0">
+        <div className="flex items-center gap-2 bg-red-700 h-full px-3">
+          <Zap className="w-3.5 h-3.5 animate-pulse"/>
+          <span className="text-xs font-black whitespace-nowrap">عاجل</span>
         </div>
+        <div className="w-0 h-0 border-y-[18px] border-y-transparent border-r-[10px] border-r-red-700"/>
+      </div>
+      <div className="flex-1 overflow-hidden px-3 relative h-full flex items-center">
+        {items.map((item,i)=>(
+          <div key={item.id}
+            className={`absolute inset-0 flex items-center px-3 transition-all duration-500 ${i===current?"opacity-100 translate-y-0":"opacity-0 translate-y-2"}`}>
+            <Link to={item.slug ? `/article/${item.slug}`:"/"}
+              className="text-xs font-bold whitespace-nowrap hover:underline truncate">
+              {item.title}
+            </Link>
+          </div>
+        ))}
+      </div>
+      {/* Dots */}
+      <div className="flex items-center gap-1 px-3 shrink-0">
+        {items.map((_,i)=>(
+          <button key={i} onClick={()=>setCurrent(i)}
+            className={`w-1.5 h-1.5 rounded-full transition-all ${i===current?"bg-white":"bg-white/40"}`}/>
+        ))}
       </div>
     </div>
   );
-};
-
-export default BreakingTicker;
+}
