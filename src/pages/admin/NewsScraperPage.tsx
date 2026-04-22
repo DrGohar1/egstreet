@@ -1,459 +1,239 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import { useToast } from "@/hooks/use-toast";
-import {
-  Rss, Search, Globe, Cpu, ExternalLink, ArrowRight, Sparkles, Loader2,
-  RefreshCw, Newspaper, TrendingUp, Zap, FlaskConical, Heart, Landmark,
-  CheckCircle, XCircle, Clock, Send, Edit3, ChevronDown, ChevronUp
-} from "lucide-react";
+import { Rss, RefreshCw, Plus, Check, X, Globe, Filter, ChevronDown, Newspaper, ExternalLink, Loader2 } from "lucide-react";
+import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 
-interface NewsItem {
-  title: string;
-  description: string;
-  link: string;
-  pubDate: string;
-  image: string | null;
-  source: string;
-  sourceIcon?: string;
-  sourceLang: string;
+interface RssFeed {
+  id: string; name: string; name_en: string; url: string;
+  category: string; icon: string; active: boolean;
 }
 
-interface SourceStatus {
-  name: string;
-  icon: string;
-  count: number;
-  error?: string;
+interface RssItem {
+  title: string; link: string; description: string;
+  pubDate: string; source: string; sourceId: string;
+  image?: string; selected?: boolean;
 }
 
-const CATEGORIES = [
-  { key: "world", ar: "عالمي", en: "World", icon: Globe, color: "bg-blue-500" },
-  { key: "egypt", ar: "مصر", en: "Egypt", icon: Landmark, color: "bg-amber-500" },
-  { key: "tech", ar: "تقنية", en: "Tech", icon: Cpu, color: "bg-violet-500" },
-  { key: "sports", ar: "رياضة", en: "Sports", icon: Zap, color: "bg-emerald-500" },
-  { key: "business", ar: "أعمال", en: "Business", icon: TrendingUp, color: "bg-orange-500" },
-  { key: "science", ar: "علوم", en: "Science", icon: FlaskConical, color: "bg-cyan-500" },
-  { key: "health", ar: "صحة", en: "Health", icon: Heart, color: "bg-rose-500" },
-];
-
-const fadeCard = {
-  hidden: { opacity: 0, y: 16, scale: 0.97 },
-  visible: (i: number) => ({
-    opacity: 1, y: 0, scale: 1,
-    transition: { delay: i * 0.04, duration: 0.4, ease: "easeOut" as const },
-  }),
-  exit: { opacity: 0, scale: 0.95, transition: { duration: 0.2 } },
-};
+const PROXY = "https://api.allorigins.win/get?url=";
 
 const NewsScraperPage = () => {
   const { t, language } = useLanguage();
-  const { toast } = useToast();
-  const [items, setItems] = useState<NewsItem[]>([]);
-  const [sources, setSources] = useState<SourceStatus[]>([]);
+  const [feeds, setFeeds] = useState<RssFeed[]>([]);
+  const [selectedFeed, setSelectedFeed] = useState<RssFeed | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState("all");
+  const [items, setItems] = useState<RssItem[]>([]);
   const [loading, setLoading] = useState(false);
-  const [rewriting, setRewriting] = useState<string | null>(null);
-  const [rewrittenContent, setRewrittenContent] = useState<Record<string, string>>({});
-  const [editingContent, setEditingContent] = useState<Record<string, string>>({});
-  const [customUrl, setCustomUrl] = useState("");
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const [expandedItem, setExpandedItem] = useState<string | null>(null);
-  const [showSources, setShowSources] = useState(false);
-  const [autoRefresh, setAutoRefresh] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [categories, setCategories] = useState<any[]>([]);
+  const [targetCatId, setTargetCatId] = useState("");
+  const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
 
-  // Auto refresh every 60s
   useEffect(() => {
-    if (!autoRefresh || !activeCategory) return;
-    const interval = setInterval(() => fetchNews(activeCategory), 60000);
-    return () => clearInterval(interval);
-  }, [autoRefresh, activeCategory]);
+    loadFeeds();
+    loadCategories();
+  }, []);
 
-  const fetchNews = async (category: string) => {
+  const loadFeeds = async () => {
+    const { data } = await supabase.from("site_settings").select("value").eq("key", "rss_feeds").single();
+    if (data?.value) {
+      const f = typeof data.value === "string" ? JSON.parse(data.value) : data.value;
+      setFeeds(Array.isArray(f) ? f : []);
+    }
+  };
+
+  const loadCategories = async () => {
+    const { data } = await supabase.from("categories").select("id,name_ar,name_en,slug");
+    if (data) { setCategories(data); setTargetCatId(data[0]?.id || ""); }
+  };
+
+  const fetchRss = async (feed: RssFeed) => {
+    setSelectedFeed(feed);
     setLoading(true);
-    setActiveCategory(category);
+    setItems([]);
+    setSelectedItems(new Set());
     try {
-      const { data, error } = await supabase.functions.invoke("news-scraper", {
-        body: { category },
-      });
-      if (error) throw error;
-      setItems(data.items || []);
-      setSources(data.sources || []);
-    } catch (e: any) {
-      toast({ title: t("خطأ في جلب الأخبار", "Error fetching news"), variant: "destructive" });
+      const res = await fetch(`${PROXY}${encodeURIComponent(feed.url)}`);
+      const data = await res.json();
+      const xml = new DOMParser().parseFromString(data.contents, "text/xml");
+      const entries = Array.from(xml.querySelectorAll("item, entry"));
+      const parsed: RssItem[] = entries.slice(0, 20).map(el => {
+        const get = (tag: string) => el.querySelector(tag)?.textContent?.trim() || "";
+        const mediaUrl = el.querySelector("media\\:content, enclosure")?.getAttribute("url") || "";
+        return {
+          title: get("title"),
+          link: get("link") || el.querySelector("link")?.getAttribute("href") || "",
+          description: get("description, summary").replace(/<[^>]*>/g, "").slice(0, 200),
+          pubDate: get("pubDate, published, updated"),
+          source: feed.name,
+          sourceId: feed.id,
+          image: mediaUrl,
+          selected: false,
+        };
+      }).filter(i => i.title);
+      setItems(parsed);
+      toast.success(`${t("تم جلب", "Fetched")} ${parsed.length} ${t("خبر", "articles")}`);
+    } catch (e) {
+      toast.error(t("فشل في جلب الأخبار", "Failed to fetch news"));
     }
     setLoading(false);
   };
 
-  const fetchCustom = async () => {
-    if (!customUrl.trim()) return;
-    setLoading(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("news-scraper", {
-        body: { customUrl: customUrl.trim() },
-      });
-      if (error) throw error;
-      setItems(data.items || []);
-      setSources(data.sources || []);
-    } catch (e: any) {
-      toast({ title: t("خطأ", "Error"), description: e.message, variant: "destructive" });
-    }
-    setLoading(false);
-  };
-
-  const rewriteArticle = async (item: NewsItem) => {
-    const key = item.link;
-    setRewriting(key);
-    try {
-      const { data, error } = await supabase.functions.invoke("ai-rewrite", {
-        body: {
-          content: `Title: ${item.title}\n\n${item.description}`,
-          action: "rewrite",
-          language: language === "ar" ? "ar" : "en",
-        },
-      });
-      if (error) throw error;
-      setRewrittenContent(prev => ({ ...prev, [key]: data.result }));
-      setEditingContent(prev => ({ ...prev, [key]: data.result }));
-      toast({ title: t("تم إعادة الكتابة!", "Rewritten!") });
-    } catch (e: any) {
-      toast({ title: t("خطأ", "Error"), variant: "destructive" });
-    }
-    setRewriting(null);
-  };
-
-  const importArticle = async (item: NewsItem) => {
-    const content = editingContent[item.link] || rewrittenContent[item.link] || item.description;
-    const articleNum = Date.now().toString().slice(-6);
-    const slug = "article-" + articleNum;
-
-    const { error } = await supabase.from("articles").insert({
-      title: item.title,
-      slug,
-      content: `<p>${content}</p>`,
-      excerpt: content.slice(0, 200),
-      featured_image: item.image,
-      status: "draft" as const,
-      author_id: (await supabase.auth.getUser()).data.user?.id,
+  const toggleItem = (idx: number) => {
+    setSelectedItems(prev => {
+      const next = new Set(prev);
+      next.has(idx) ? next.delete(idx) : next.add(idx);
+      return next;
     });
-
-    if (error) {
-      toast({ title: t("خطأ", "Error"), description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: t("تم الاستيراد كمسودة!", "Imported as draft!") });
-    }
   };
 
-  const totalFetched = items.length;
-  const activeSources = sources.filter(s => s.count > 0).length;
+  const selectAll = () => setSelectedItems(new Set(items.map((_, i) => i)));
+  const clearAll = () => setSelectedItems(new Set());
+
+  const importSelected = async () => {
+    if (!selectedItems.size) return toast.error(t("اختر أخباراً أولاً", "Select articles first"));
+    if (!targetCatId) return toast.error(t("اختر قسماً", "Select category"));
+    setImporting(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    let ok = 0;
+    for (const idx of selectedItems) {
+      const item = items[idx];
+      const { error } = await supabase.from("articles").insert({
+        title: item.title,
+        slug: `rss-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        excerpt: item.description || item.title,
+        content: `<p>${item.description}</p><p><a href="${item.link}" target="_blank" rel="noopener">المصدر: ${item.source}</a></p>`,
+        featured_image: item.image || null,
+        category_id: targetCatId,
+        author_id: user?.id,
+        status: "draft",
+        is_featured: false,
+        is_breaking: false,
+        views: 0,
+        published_at: item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString(),
+        custom_author_name: item.source,
+        reading_time: 3,
+      });
+      if (!error) ok++;
+    }
+    toast.success(`${t("تم استيراد", "Imported")} ${ok} ${t("خبر كمسودة", "articles as draft")}`);
+    setImporting(false);
+    setSelectedItems(new Set());
+  };
+
+  const catFeedMap: Record<string, string> = {
+    all: t("الكل", "All"), egypt: t("مصر", "Egypt"), world: t("العالم", "World"),
+    sports: t("رياضة", "Sports"), tech: t("تكنولوجيا", "Tech"), politics: t("سياسة", "Politics"),
+  };
+
+  const filteredFeeds = categoryFilter === "all" ? feeds : feeds.filter(f => f.category === categoryFilter);
 
   return (
-    <motion.div className="space-y-5" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-      {/* Header */}
-      <div className="rounded-2xl bg-gradient-to-br from-primary/90 to-primary/60 p-6 text-primary-foreground relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZGVmcz48cGF0dGVybiBpZD0iZ3JpZCIgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBwYXR0ZXJuVW5pdHM9InVzZXJTcGFjZU9uVXNlIj48cGF0aCBkPSJNIDQwIDAgTCAwIDAgMCA0MCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSJ3aGl0ZSIgc3Ryb2tlLW9wYWNpdHk9IjAuMDUiIHN0cm9rZS13aWR0aD0iMSIvPjwvcGF0dGVybj48L2RlZnM+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNncmlkKSIvPjwvc3ZnPg==')] opacity-50" />
-        <div className="relative flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
-              <Rss className="h-6 w-6" />
-            </div>
-            <div>
-              <h1 className="text-xl font-black">{t("مركز الأخبار الذكي", "Smart News Hub")}</h1>
-              <p className="text-sm opacity-80">{t("سحب لحظي من أكثر من 20 مصدر عالمي مع إعادة كتابة بالذكاء الاصطناعي", "Live feed from 20+ global sources with AI rewriting")}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {activeCategory && (
-              <Button
-                variant="secondary"
-                size="sm"
-                className="gap-1.5 bg-white/20 hover:bg-white/30 text-white border-0"
-                onClick={() => fetchNews(activeCategory)}
-                disabled={loading}
-              >
-                <RefreshCw className={`h-3.5 w-3.5 ${loading ? "animate-spin" : ""}`} />
-                {t("تحديث", "Refresh")}
-              </Button>
-            )}
-            <Button
-              variant={autoRefresh ? "default" : "secondary"}
-              size="sm"
-              className={`gap-1.5 ${autoRefresh ? "bg-emerald-500 hover:bg-emerald-600 text-white border-0" : "bg-white/20 hover:bg-white/30 text-white border-0"}`}
-              onClick={() => setAutoRefresh(!autoRefresh)}
-            >
-              <Clock className="h-3.5 w-3.5" />
-              {t("تلقائي", "Auto")}
-            </Button>
-          </div>
+    <div className="space-y-6 p-1" dir="rtl">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-black flex items-center gap-2"><Rss className="text-primary" /> {t("سحب الأخبار RSS", "RSS News Scraper")}</h1>
+          <p className="text-muted-foreground text-sm mt-1">{t("اختر مصدر، اجلب الأخبار، واستورد ما تريد مسودةً", "Pick a source, fetch news, import as drafts")}</p>
         </div>
-
-        {/* Live Stats */}
-        {totalFetched > 0 && (
-          <div className="relative flex gap-4 mt-4 pt-4 border-t border-white/20">
-            <div className="text-center">
-              <p className="text-2xl font-black">{totalFetched}</p>
-              <p className="text-[10px] opacity-60">{t("خبر", "articles")}</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-black">{activeSources}</p>
-              <p className="text-[10px] opacity-60">{t("مصدر نشط", "active sources")}</p>
-            </div>
-            <div className="text-center">
-              <p className="text-2xl font-black">{Object.keys(rewrittenContent).length}</p>
-              <p className="text-[10px] opacity-60">{t("مُعاد كتابته", "rewritten")}</p>
-            </div>
-          </div>
+        {selectedItems.size > 0 && (
+          <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="flex items-center gap-3">
+            <select value={targetCatId} onChange={e => setTargetCatId(e.target.value)}
+              className="text-sm border border-border rounded-lg px-3 py-2 bg-background">
+              {categories.map(c => <option key={c.id} value={c.id}>{c.name_ar}</option>)}
+            </select>
+            <button onClick={importSelected} disabled={importing}
+              className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-primary/90 disabled:opacity-50">
+              {importing ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+              {t("استورد المحدد", "Import Selected")} ({selectedItems.size})
+            </button>
+          </motion.div>
         )}
       </div>
 
-      {/* Category Chips */}
-      <div className="flex flex-wrap gap-2">
-        {CATEGORIES.map(cat => {
-          const Icon = cat.icon;
-          const isActive = activeCategory === cat.key;
-          return (
-            <button
-              key={cat.key}
-              onClick={() => fetchNews(cat.key)}
-              disabled={loading}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all duration-300 ${
-                isActive
-                  ? `${cat.color} text-white shadow-lg shadow-${cat.color}/30 scale-105`
-                  : "bg-card border border-border text-muted-foreground hover:border-primary/50 hover:text-foreground"
-              }`}
-            >
-              <Icon className="h-4 w-4" />
-              {language === "ar" ? cat.ar : cat.en}
-            </button>
-          );
-        })}
-      </div>
-
-      {/* Custom URL */}
-      <Card className="border-dashed border-2 border-border/50">
-        <CardContent className="p-3">
-          <div className="flex gap-2">
-            <Input
-              placeholder={t("أدخل رابط RSS مخصص من أي موقع...", "Enter any custom RSS feed URL...")}
-              value={customUrl}
-              onChange={e => setCustomUrl(e.target.value)}
-              className="flex-1 rounded-xl"
-              onKeyDown={e => e.key === "Enter" && fetchCustom()}
-            />
-            <Button onClick={fetchCustom} disabled={loading} size="sm" className="gap-1.5 rounded-xl shrink-0">
-              <Search className="h-4 w-4" />
-              {t("جلب", "Fetch")}
-            </Button>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        {/* LEFT: Feed list */}
+        <div className="lg:col-span-1 space-y-3">
+          {/* Category filter */}
+          <div className="flex flex-wrap gap-1.5">
+            {Object.entries(catFeedMap).map(([k, v]) => (
+              <button key={k} onClick={() => setCategoryFilter(k)}
+                className={`text-xs px-3 py-1 rounded-full font-medium transition-colors ${categoryFilter === k ? "bg-primary text-white" : "bg-muted text-muted-foreground hover:bg-muted/80"}`}>
+                {v}
+              </button>
+            ))}
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Source Status */}
-      {sources.length > 0 && (
-        <div>
-          <button
-            onClick={() => setShowSources(!showSources)}
-            className="flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors mb-2"
-          >
-            {showSources ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-            {t("حالة المصادر", "Source Status")} ({sources.length})
-          </button>
-          <AnimatePresence>
-            {showSources && (
-              <motion.div
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden"
-              >
-                <div className="flex flex-wrap gap-2">
-                  {sources.map((s, i) => (
-                    <div key={i} className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs border ${s.error ? "border-destructive/30 bg-destructive/5 text-destructive" : "border-emerald-200 bg-emerald-50 dark:bg-emerald-950/20 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400"}`}>
-                      <span>{s.icon}</span>
-                      <span className="font-medium">{s.name}</span>
-                      {s.error ? (
-                        <XCircle className="h-3 w-3" />
-                      ) : (
-                        <span className="flex items-center gap-0.5">
-                          <CheckCircle className="h-3 w-3" />
-                          {s.count}
-                        </span>
-                      )}
-                    </div>
-                  ))}
+          <div className="space-y-2 max-h-[600px] overflow-y-auto">
+            {filteredFeeds.map(feed => (
+              <motion.button key={feed.id} onClick={() => fetchRss(feed)} whileHover={{ x: -3 }}
+                className={`w-full text-start flex items-center gap-3 p-3 rounded-xl border transition-all ${selectedFeed?.id === feed.id ? "border-primary bg-primary/5 shadow-sm" : "border-border bg-card hover:border-primary/40"}`}>
+                <span className="text-2xl">{feed.icon}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="font-bold text-sm truncate">{feed.name}</div>
+                  <div className="text-[11px] text-muted-foreground capitalize">{catFeedMap[feed.category] || feed.category}</div>
                 </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+                {selectedFeed?.id === feed.id && <Check className="w-4 h-4 text-primary shrink-0" />}
+              </motion.button>
+            ))}
+          </div>
         </div>
-      )}
 
-      {/* Loading */}
-      {loading && (
-        <div className="flex flex-col items-center justify-center py-16 gap-4">
-          <div className="relative">
-            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        {/* RIGHT: Articles */}
+        <div className="lg:col-span-3">
+          {!selectedFeed && !loading && (
+            <div className="flex flex-col items-center justify-center h-64 text-center text-muted-foreground">
+              <Globe className="w-12 h-12 mb-3 opacity-30" />
+              <p className="font-medium">{t("اختر مصدراً من اليسار لجلب الأخبار", "Select a source to fetch news")}</p>
             </div>
-            <div className="absolute -top-1 -right-1 w-4 h-4 bg-primary rounded-full animate-ping" />
-          </div>
-          <p className="text-sm text-muted-foreground">{t("جارِ السحب من المصادر...", "Fetching from sources...")}</p>
-        </div>
-      )}
+          )}
 
-      {/* Results Grid */}
-      <AnimatePresence mode="popLayout">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {items.map((item, i) => {
-            const key = item.link;
-            const hasRewrite = !!rewrittenContent[key];
-            const isExpanded = expandedItem === key;
-            return (
-              <motion.div
-                key={key || i}
-                variants={fadeCard}
-                custom={i}
-                initial="hidden"
-                animate="visible"
-                exit="exit"
-                layout
-              >
-                <Card className={`overflow-hidden group transition-all duration-300 hover:shadow-xl hover:shadow-primary/5 ${hasRewrite ? "ring-2 ring-emerald-500/30" : "hover:border-primary/30"}`}>
-                  {/* Image */}
-                  {item.image && (
-                    <div className="aspect-video overflow-hidden bg-muted relative">
-                      <img
-                        src={item.image}
-                        alt=""
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                        onError={e => (e.currentTarget.style.display = "none")}
-                      />
-                      <div className="absolute top-2 start-2">
-                        <Badge className="bg-black/60 text-white text-[10px] backdrop-blur-sm border-0 gap-1">
-                          {item.sourceIcon} {item.source}
-                        </Badge>
+          {loading && (
+            <div className="flex flex-col items-center justify-center h-64">
+              <Loader2 className="w-10 h-10 animate-spin text-primary mb-3" />
+              <p className="text-muted-foreground">{t("جاري جلب الأخبار...", "Fetching news...")}</p>
+            </div>
+          )}
+
+          {!loading && items.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">{items.length} {t("خبر متاح", "articles available")} — {selectedFeed?.name}</p>
+                <div className="flex gap-2">
+                  <button onClick={selectAll} className="text-xs px-3 py-1 rounded-lg bg-muted hover:bg-muted/80">{t("تحديد الكل", "Select All")}</button>
+                  <button onClick={clearAll} className="text-xs px-3 py-1 rounded-lg bg-muted hover:bg-muted/80">{t("إلغاء الكل", "Clear All")}</button>
+                </div>
+              </div>
+
+              <div className="space-y-2 max-h-[580px] overflow-y-auto">
+                <AnimatePresence>
+                  {items.map((item, idx) => (
+                    <motion.div key={idx} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: idx * 0.03 }}
+                      onClick={() => toggleItem(idx)}
+                      className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-all ${selectedItems.has(idx) ? "border-primary bg-primary/5" : "border-border bg-card hover:border-primary/30"}`}>
+                      <div className={`w-5 h-5 rounded-md border-2 shrink-0 mt-0.5 flex items-center justify-center transition-colors ${selectedItems.has(idx) ? "border-primary bg-primary" : "border-border"}`}>
+                        {selectedItems.has(idx) && <Check className="w-3 h-3 text-white" />}
                       </div>
-                      {hasRewrite && (
-                        <div className="absolute top-2 end-2">
-                          <Badge className="bg-emerald-500 text-white text-[10px] border-0 gap-1">
-                            <Sparkles className="h-2.5 w-2.5" /> AI
-                          </Badge>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  <CardContent className="p-4">
-                    {!item.image && (
-                      <div className="flex items-center gap-1.5 mb-2">
-                        <Badge variant="outline" className="text-[10px] gap-1">{item.sourceIcon} {item.source}</Badge>
-                        {hasRewrite && <Badge className="bg-emerald-500 text-white text-[10px] border-0 gap-1"><Sparkles className="h-2.5 w-2.5" /> AI</Badge>}
-                      </div>
-                    )}
-
-                    <h3 className="font-bold text-foreground text-sm leading-snug line-clamp-2 mb-2">
-                      {item.title}
-                    </h3>
-
-                    <p className="text-xs text-muted-foreground line-clamp-2 mb-2">{item.description}</p>
-
-                    {item.pubDate && (
-                      <p className="text-[10px] text-muted-foreground/60 mb-3 flex items-center gap-1">
-                        <Clock className="h-2.5 w-2.5" />
-                        {new Date(item.pubDate).toLocaleDateString(language === "ar" ? "ar-EG" : "en-US", {
-                          month: "short", day: "numeric", hour: "2-digit", minute: "2-digit"
-                        })}
-                      </p>
-                    )}
-
-                    {/* Rewritten / Edit Area */}
-                    <AnimatePresence>
-                      {isExpanded && hasRewrite && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: "auto", opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          className="mb-3 overflow-hidden"
-                        >
-                          <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800">
-                            <p className="text-[10px] font-bold text-emerald-700 dark:text-emerald-400 mb-2 flex items-center gap-1">
-                              <Sparkles className="h-3 w-3" />
-                              {t("النسخة المعاد كتابتها - اضغط للتعديل:", "AI Version - click to edit:")}
-                            </p>
-                            <Textarea
-                              value={editingContent[key] || rewrittenContent[key]}
-                              onChange={e => setEditingContent(prev => ({ ...prev, [key]: e.target.value }))}
-                              rows={4}
-                              className="text-xs bg-white dark:bg-background rounded-lg"
-                            />
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-
-                    {/* Actions */}
-                    <div className="flex flex-wrap gap-1.5">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="gap-1 text-[11px] h-7 rounded-lg flex-1"
-                        onClick={() => rewriteArticle(item)}
-                        disabled={rewriting === key}
-                      >
-                        {rewriting === key ? <Loader2 className="h-3 w-3 animate-spin" /> : <Sparkles className="h-3 w-3" />}
-                        {t("إعادة كتابة", "Rewrite")}
-                      </Button>
-                      <Button
-                        size="sm"
-                        className="gap-1 text-[11px] h-7 rounded-lg flex-1"
-                        onClick={() => importArticle(item)}
-                      >
-                        <Send className="h-3 w-3" />
-                        {t("استيراد", "Import")}
-                      </Button>
-                      {hasRewrite && (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-7 px-2 rounded-lg"
-                          onClick={() => setExpandedItem(isExpanded ? null : key)}
-                        >
-                          <Edit3 className="h-3 w-3" />
-                        </Button>
-                      )}
-                      {item.link && (
-                        <Button variant="ghost" size="sm" className="h-7 px-2 rounded-lg" asChild>
-                          <a href={item.link} target="_blank" rel="noopener noreferrer">
-                            <ExternalLink className="h-3 w-3" />
+                      {item.image && <img src={item.image} alt="" className="w-16 h-12 object-cover rounded-lg shrink-0" onError={e => (e.target as any).style.display = "none"} />}
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-bold text-sm line-clamp-2 leading-snug">{item.title}</h3>
+                        {item.description && <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{item.description}</p>}
+                        <div className="flex items-center gap-3 mt-1.5 text-[11px] text-muted-foreground">
+                          {item.pubDate && <span>{new Date(item.pubDate).toLocaleDateString("ar-EG")}</span>}
+                          <a href={item.link} target="_blank" rel="noopener" onClick={e => e.stopPropagation()} className="flex items-center gap-0.5 hover:text-primary">
+                            <ExternalLink className="w-3 h-3" /> {t("المصدر", "Source")}
                           </a>
-                        </Button>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            );
-          })}
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
+            </div>
+          )}
         </div>
-      </AnimatePresence>
-
-      {/* Empty State */}
-      {!loading && items.length === 0 && (
-        <div className="text-center py-20">
-          <div className="w-20 h-20 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-            <Newspaper className="h-10 w-10 text-primary/40" />
-          </div>
-          <h3 className="text-lg font-bold text-foreground mb-1">{t("اختر فئة للبدء", "Select a category to start")}</h3>
-          <p className="text-sm text-muted-foreground max-w-md mx-auto">
-            {t("اختر فئة من الأعلى أو أدخل رابط RSS مخصص لسحب الأخبار من أي مصدر في العالم", "Choose a category above or enter a custom RSS URL to fetch news from any source worldwide")}
-          </p>
-        </div>
-      )}
-    </motion.div>
+      </div>
+    </div>
   );
 };
 
