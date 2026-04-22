@@ -12,7 +12,7 @@ export const useVisitorTracking = () => {
     lastPath.current = path;
 
     // Don't track admin pages
-    if (path.startsWith("/admin-panel") || path.startsWith("/auth")) return;
+    if (path.startsWith("/Gadmin") || path.startsWith("/auth")) return;
 
     // Try edge function first, fallback to direct insert
     supabase.functions
