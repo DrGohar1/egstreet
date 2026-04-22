@@ -35,6 +35,7 @@ import PermissionManagement from "./pages/admin/PermissionManagement";
 import NewsScraperPage from "./pages/admin/NewsScraperPage";
 import AIToolsPage from "./pages/admin/AIToolsPage";
 import BackupRestore from "./pages/admin/BackupRestore";
+import AutomationPage from "./pages/admin/AutomationPage";
 import SavedArticlesPage from "./pages/SavedArticlesPage";
 import NewsletterPopup from "./components/NewsletterPopup";
 import ResetPassword from "./pages/ResetPassword";
@@ -83,6 +84,7 @@ const AppContent = () => {
         <Route path={`${ADMIN}/permissions`} element={<AdminLayout><PermissionManagement /></AdminLayout>} />
         <Route path={`${ADMIN}/ai/scraper`} element={<AdminLayout><NewsScraperPage /></AdminLayout>} />
         <Route path={`${ADMIN}/ai/tools`} element={<AdminLayout><AIToolsPage /></AdminLayout>} />
+        <Route path={`${ADMIN}/automation`} element={<AdminLayout><AutomationPage /></AdminLayout>} />
         <Route path={`${ADMIN}/backup`} element={<AdminLayout><BackupRestore /></AdminLayout>} />
 
         <Route path="*" element={<NotFound />} />
