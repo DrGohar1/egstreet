@@ -1,114 +1,213 @@
+import { Link } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
-import { Link } from "react-router-dom";
-import { Facebook, Twitter, Mail, Rss, Youtube, Instagram, Send, MessageCircle } from "lucide-react";
-import NewsletterFooter from "./NewsletterFooter";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useState } from "react";
+import {
+  Newspaper, Facebook, Twitter, Youtube, Instagram, Mail,
+  Send, MapPin, Phone, Heart, Code2, ExternalLink
+} from "lucide-react";
 
 const Footer = () => {
   const { t, language } = useLanguage();
   const { settings } = useSiteSettings();
-  const rssUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/rss`;
+  const [categories, setCategories] = useState<any[]>([]);
+  const [pages, setPages] = useState<any[]>([]);
+  const [email, setEmail] = useState("");
+  const [subDone, setSubDone] = useState(false);
+
+  useEffect(() => {
+    supabase.from("categories").select("id,name_ar,name_en,slug").order("sort_order").limit(8)
+      .then(({ data }) => setCategories(data || []));
+    supabase.from("pages").select("id,title_ar,title_en,slug").eq("is_published", true).limit(6)
+      .then(({ data }) => setPages(data || []));
+  }, []);
+
+  const subscribe = async () => {
+    if (!email.includes("@")) return;
+    await supabase.from("subscribers").insert({ email });
+    setSubDone(true);
+  };
 
   const siteName = language === "ar"
-    ? (settings.site_name_ar || "جريدة الشارع المصري")
+    ? (settings.site_name_ar || "الشارع المصري")
     : (settings.site_name_en || "EgStreet News");
 
-  const copyright = settings.copyright_text || t("جميع الحقوق محفوظة © 2026 جريدة الشارع المصري", "All Rights Reserved © 2026 EgStreet News");
-  const partnerCredit = settings.partner_credit || t("تحت رعاية شركة الكينج للانتاج الفني", "Under the Patronage of Al-King for Art Production");
-
-  const socials = [
-    { key: "social_facebook", icon: Facebook, label: "Facebook" },
-    { key: "social_twitter", icon: Twitter, label: "Twitter" },
-    { key: "social_youtube", icon: Youtube, label: "YouTube" },
-    { key: "social_instagram", icon: Instagram, label: "Instagram" },
-    { key: "social_telegram", icon: Send, label: "Telegram" },
-    { key: "social_whatsapp", icon: MessageCircle, label: "WhatsApp" },
-  ];
-
-  const activeSocials = socials.filter(s => settings[s.key]);
-
   return (
-    <footer className="bg-secondary text-secondary-foreground mt-12" style={settings.font_family ? { fontFamily: settings.font_family } : undefined}>
-      <div className="container py-10">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+    <footer className="bg-card border-t border-border mt-12" dir="rtl">
+
+      {/* Main footer grid */}
+      <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+
           {/* Brand */}
-          <div>
-            {settings.logo_url ? (
-              <img src={settings.logo_url} alt={siteName} className="h-10 object-contain mb-3 brightness-0 invert opacity-80" />
-            ) : (
-              <h3 className="text-xl font-black mb-2">{siteName}</h3>
-            )}
-            <p className="text-sm opacity-70 leading-relaxed">
-              {settings.site_description || t("أخبار مصر والعالم العربي لحظة بلحظة", "Egypt & Arab world news, moment by moment")}
+          <div className="lg:col-span-1">
+            <Link to="/" className="flex items-center gap-2 mb-4 group">
+              {settings.logo_url ? (
+                <img src={settings.logo_url} alt={siteName} className="h-9 w-auto" />
+              ) : (
+                <div className="w-9 h-9 rounded-xl bg-primary flex items-center justify-center">
+                  <Newspaper className="w-5 h-5 text-white" />
+                </div>
+              )}
+              <span className="font-black text-lg text-foreground">{siteName}</span>
+            </Link>
+            <p className="text-sm text-muted-foreground leading-relaxed mb-5">
+              {settings.site_description_ar || t(
+                "جريدتك الإلكترونية الأولى للأخبار المصرية والعربية. موثوقة، سريعة، محايدة.",
+                "Your #1 source for Egyptian and Arab news. Reliable, fast, neutral."
+              )}
             </p>
+            {/* Social */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {[
+                { href: settings.facebook_url || "#", icon: Facebook, color: "hover:bg-blue-600" },
+                { href: settings.twitter_url  || "#", icon: Twitter,  color: "hover:bg-black" },
+                { href: settings.youtube_url  || "#", icon: Youtube,  color: "hover:bg-red-600" },
+                { href: settings.instagram_url|| "#", icon: Instagram, color: "hover:bg-pink-600" },
+              ].map(({ href, icon: Icon, color }) => (
+                <a key={href + color} href={href} target="_blank" rel="noreferrer"
+                  className={`w-9 h-9 rounded-xl bg-muted ${color} hover:text-white flex items-center justify-center transition-all`}>
+                  <Icon className="w-4 h-4" />
+                </a>
+              ))}
+            </div>
           </div>
 
-          {/* Quick Links */}
+          {/* Sections */}
           <div>
-            <h4 className="font-bold mb-3 text-sm uppercase tracking-wider opacity-80">{t("روابط سريعة", "Quick Links")}</h4>
-            <ul className="space-y-2 text-sm opacity-70">
-              <li><Link to="/" className="hover:text-primary transition-colors">{t("الرئيسية", "Home")}</Link></li>
-              <li><Link to="/page/about" className="hover:text-primary transition-colors">{t("من نحن", "About Us")}</Link></li>
-              <li><Link to="/page/privacy" className="hover:text-primary transition-colors">{t("سياسة الخصوصية", "Privacy Policy")}</Link></li>
-              <li><Link to="/page/contact" className="hover:text-primary transition-colors">{t("اتصل بنا", "Contact Us")}</Link></li>
-              <li><Link to="/search" className="hover:text-primary transition-colors">{t("بحث", "Search")}</Link></li>
-              <li>
-                <a href={rssUrl} target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors flex items-center gap-1">
-                  <Rss className="w-3 h-3" /> RSS
-                </a>
-              </li>
+            <h3 className="font-black text-sm mb-4 text-foreground flex items-center gap-2">
+              <div className="w-1 h-4 bg-primary rounded-full" />
+              {t("الأقسام", "Sections")}
+            </h3>
+            <ul className="space-y-2">
+              {categories.map(cat => (
+                <li key={cat.id}>
+                  <Link to={`/category/${cat.slug}`}
+                    className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5 group">
+                    <span className="w-1 h-1 rounded-full bg-muted-foreground group-hover:bg-primary transition-colors" />
+                    {language === "ar" ? cat.name_ar : cat.name_en}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
-          {/* Contact + Social */}
+          {/* Pages */}
           <div>
-            <h4 className="font-bold mb-3 text-sm uppercase tracking-wider opacity-80">{t("تواصل معنا", "Contact Us")}</h4>
-            {settings.contact_email && <p className="text-sm opacity-70 mb-1">📧 {settings.contact_email}</p>}
-            {settings.contact_phone && <p className="text-sm opacity-70 mb-1">📱 {settings.contact_phone}</p>}
-            {settings.contact_address && <p className="text-sm opacity-70 mb-3">📍 {settings.contact_address}</p>}
-            <div className="flex items-center gap-2 mt-3">
-              {activeSocials.map(s => (
-                <a key={s.key} href={settings[s.key]} target="_blank" rel="noopener noreferrer" className="p-2 rounded-full bg-secondary-foreground/10 hover:bg-primary hover:text-primary-foreground transition-colors" title={s.label}>
-                  <s.icon className="w-4 h-4" />
-                </a>
+            <h3 className="font-black text-sm mb-4 text-foreground flex items-center gap-2">
+              <div className="w-1 h-4 bg-primary rounded-full" />
+              {t("روابط مهمة", "Quick Links")}
+            </h3>
+            <ul className="space-y-2">
+              <li>
+                <Link to="/" className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5 group">
+                  <span className="w-1 h-1 rounded-full bg-muted-foreground group-hover:bg-primary transition-colors" />
+                  {t("الرئيسية", "Home")}
+                </Link>
+              </li>
+              {pages.map(p => (
+                <li key={p.id}>
+                  <Link to={`/page/${p.slug}`}
+                    className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5 group">
+                    <span className="w-1 h-1 rounded-full bg-muted-foreground group-hover:bg-primary transition-colors" />
+                    {language === "ar" ? p.title_ar : p.title_en}
+                  </Link>
+                </li>
               ))}
-              {activeSocials.length === 0 && (
-                <>
-                  <a href="#" className="p-2 rounded-full bg-secondary-foreground/10 hover:bg-primary hover:text-primary-foreground transition-colors"><Facebook className="w-4 h-4" /></a>
-                  <a href="#" className="p-2 rounded-full bg-secondary-foreground/10 hover:bg-primary hover:text-primary-foreground transition-colors"><Twitter className="w-4 h-4" /></a>
-                  <a href="#" className="p-2 rounded-full bg-secondary-foreground/10 hover:bg-primary hover:text-primary-foreground transition-colors"><Mail className="w-4 h-4" /></a>
-                </>
-              )}
-            </div>
+              {[
+                { label: t("تواصل معنا", "Contact Us"), href: "/page/contact" },
+                { label: t("سياسة الخصوصية", "Privacy Policy"), href: "/page/privacy" },
+              ].map(l => (
+                <li key={l.href}>
+                  <Link to={l.href} className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5 group">
+                    <span className="w-1 h-1 rounded-full bg-muted-foreground group-hover:bg-primary transition-colors" />
+                    {l.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
           </div>
 
           {/* Newsletter */}
           <div>
-            <NewsletterFooter />
-          </div>
-        </div>
+            <h3 className="font-black text-sm mb-4 text-foreground flex items-center gap-2">
+              <div className="w-1 h-4 bg-primary rounded-full" />
+              {t("النشرة الإخبارية", "Newsletter")}
+            </h3>
+            <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
+              {t("اشترك واحصل على آخر الأخبار مباشرةً لبريدك الإلكتروني كل يوم.", "Subscribe for daily news in your inbox.")}
+            </p>
+            {subDone ? (
+              <div className="bg-green-500/10 border border-green-500/20 text-green-600 dark:text-green-400 rounded-xl p-3 text-xs text-center font-bold">
+                ✅ {t("شكراً! تم اشتراكك بنجاح.", "Thanks! You're subscribed.")}
+              </div>
+            ) : (
+              <div className="flex gap-2">
+                <input type="email" value={email} onChange={e => setEmail(e.target.value)}
+                  onKeyDown={e => e.key === "Enter" && subscribe()}
+                  placeholder={t("بريدك الإلكتروني", "Your email")}
+                  className="flex-1 min-w-0 border border-border rounded-xl px-3 py-2 text-xs bg-background focus:ring-2 focus:ring-primary/30 outline-none"
+                  dir="ltr"
+                />
+                <button onClick={subscribe}
+                  className="w-9 h-9 bg-primary rounded-xl flex items-center justify-center text-white hover:bg-primary/90 transition-colors shrink-0">
+                  <Send className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
 
-        {/* Our Network Section */}
-        <div className="border-t border-secondary-foreground/20 mt-8 pt-6">
-          <h4 className="text-center text-xs font-bold uppercase tracking-wider opacity-60 mb-4">
-            {t("شبكتنا", "Our Network")}
-          </h4>
-          <div className="flex justify-center items-center gap-6 flex-wrap">
-            {settings.partner_logo_url && (
-              <a href={settings.partner_link || "#"} target="_blank" rel="noopener noreferrer">
-                <img src={settings.partner_logo_url} alt={settings.partner_credit || ""} className="h-10 object-contain opacity-40 hover:opacity-80 transition-opacity brightness-0 invert" />
-              </a>
+            {/* Contact info */}
+            {settings.contact_email && (
+              <div className="mt-4 space-y-1.5">
+                <a href={`mailto:${settings.contact_email}`}
+                  className="flex items-center gap-2 text-xs text-muted-foreground hover:text-primary transition-colors">
+                  <Mail className="w-3.5 h-3.5 shrink-0" />
+                  {settings.contact_email}
+                </a>
+                {settings.contact_phone && (
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Phone className="w-3.5 h-3.5 shrink-0" />
+                    {settings.contact_phone}
+                  </div>
+                )}
+              </div>
             )}
           </div>
         </div>
+      </div>
 
-        {/* Bottom bar */}
-        <div className="border-t border-secondary-foreground/20 mt-6 pt-6 text-center text-xs opacity-60 space-y-1">
-          <p>{copyright}</p>
-          <p className="font-semibold">{partnerCredit}</p>
-          {settings.footer_message && (
-            <div className="mt-2" dangerouslySetInnerHTML={{ __html: settings.footer_message }} />
-          )}
+      {/* Bottom bar */}
+      <div className="border-t border-border">
+        <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+          <p className="text-xs text-muted-foreground text-center">
+            © {new Date().getFullYear()} {siteName} — {t("جميع الحقوق محفوظة", "All rights reserved")}
+          </p>
+          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+            <Link to="/page/privacy" className="hover:text-primary transition-colors">{t("الخصوصية", "Privacy")}</Link>
+            <span>·</span>
+            <Link to="/page/terms" className="hover:text-primary transition-colors">{t("الشروط", "Terms")}</Link>
+          </div>
+        </div>
+
+        {/* Developer credit */}
+        <div className="border-t border-border/50 bg-muted/30">
+          <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-3 flex flex-col sm:flex-row items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Code2 className="w-3.5 h-3.5 text-primary" />
+              {t("تم التطوير بواسطة", "Developed by")}
+              <a href="https://wa.me/201001234567" target="_blank" rel="noreferrer"
+                className="font-black text-primary hover:underline flex items-center gap-0.5">
+                GoharTech
+                <ExternalLink className="w-2.5 h-2.5" />
+              </a>
+            </div>
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              {t("صُنع بـ", "Made with")}
+              <Heart className="w-3 h-3 text-red-500 fill-red-500 mx-0.5" />
+              {t("في مصر 🇪🇬", "in Egypt 🇪🇬")}
+            </div>
+          </div>
         </div>
       </div>
     </footer>
