@@ -1,322 +1,152 @@
 import { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { useNavigate, useLocation } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
-import SEOHead from "@/components/SEOHead";
-import { Mail, Lock, User, Eye, EyeOff, Loader2, ArrowLeft, Newspaper, KeyRound, CheckCircle2 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { Eye, EyeOff, Loader2, Newspaper, Lock, UserPlus, LogIn } from "lucide-react";
 
-type Mode = "login" | "signup" | "forgot";
-
-const Auth = () => {
-  const { t } = useLanguage();
+export default function Auth() {
   const { signIn, signUp } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-  const returnTo = (location.state as any)?.from || "/";
-
-  const [mode, setMode] = useState<Mode>("login");
-  const [email, setEmail] = useState("");
+  const [tab,      setTab]      = useState("login");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [confirmPass, setConfirmPass] = useState("");
-  const [displayName, setDisplayName] = useState("");
+  const [display,  setDisplay]  = useState("");
   const [showPass, setShowPass] = useState(false);
-  const [showConfirm, setShowConfirm] = useState(false);
-  const [error, setError] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [success, setSuccess] = useState("");
+  const [loading,  setLoading]  = useState(false);
+  const [error,    setError]    = useState(null);
+  const [success,  setSuccess]  = useState(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const cleanUser = (v) => v.toLowerCase().replace(/[^a-z0-9_]/g,"").slice(0,20);
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(""); setSuccess(""); setSubmitting(true);
+    setError(null); setSuccess(null);
+    if (!username.trim()) { setError("ادخل اسم المستخدم"); return; }
+    if (!password)        { setError("ادخل كلمة السر"); return; }
+    setLoading(true);
 
-    if (mode === "forgot") {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      setSubmitting(false);
-      if (error) setError(error.message);
-      else setSuccess(t("✅ تم إرسال رابط استعادة كلمة المرور إلى بريدك الإلكتروني.", "✅ Password reset link sent to your email."));
-      return;
-    }
-
-    if (mode === "signup") {
-      if (password !== confirmPass) {
-        setError(t("كلمتا المرور غير متطابقتين", "Passwords do not match"));
-        setSubmitting(false);
-        return;
-      }
-      if (password.length < 6) {
-        setError(t("كلمة المرور يجب أن تكون 6 أحرف على الأقل", "Password must be at least 6 characters"));
-        setSubmitting(false);
-        return;
-      }
-      const { error } = await signUp(email, password, displayName);
-      setSubmitting(false);
-      if (error) setError(error.message);
-      else setSuccess(t("✅ تم إنشاء الحساب! تحقق من بريدك الإلكتروني للتأكيد.", "✅ Account created! Check your email to confirm."));
-      return;
-    }
-
-    // Login
-    const { error } = await signIn(email, password);
-    setSubmitting(false);
-    if (error) {
-      if (error.message.includes("Invalid login")) {
-        setError(t("البريد الإلكتروني أو كلمة المرور غير صحيحة", "Invalid email or password"));
-      } else {
-        setError(error.message);
-      }
+    if (tab === "login") {
+      const { error } = await signIn(username, password);
+      if (error) { setError(error); setLoading(false); return; }
+      navigate("/");
     } else {
-      navigate(returnTo, { replace: true });
+      if (password.length < 6) { setError("كلمة السر 6 أحرف على الأقل"); setLoading(false); return; }
+      const { error } = await signUp(username, password, display || username);
+      if (error) { setError(error); setLoading(false); return; }
+      setSuccess("تم إنشاء الحساب! جاري الدخول...");
+      setTimeout(async () => { await signIn(username, password); navigate("/"); }, 1200);
     }
+    setLoading(false);
   };
 
-  const titles: Record<Mode, { ar: string; en: string; sub_ar: string; sub_en: string }> = {
-    login: { ar: "مرحباً بعودتك 👋", en: "Welcome back 👋", sub_ar: "سجّل دخولك للمتابعة", sub_en: "Sign in to continue" },
-    signup: { ar: "إنشاء حساب جديد", en: "Create account", sub_ar: "انضم إلى الشارع المصري", sub_en: "Join EgStreet News" },
-    forgot: { ar: "نسيت كلمة المرور؟", en: "Forgot password?", sub_ar: "سنرسل رابط الاسترداد لبريدك", sub_en: "We'll send a reset link to your email" },
-  };
-
-  const title = titles[mode];
+  const strength = password.length >= 12 ? 4 : password.length >= 8 ? 3 : password.length >= 6 ? 2 : password.length >= 3 ? 1 : 0;
+  const strengthColors = ["bg-muted","bg-red-400","bg-yellow-400","bg-blue-400","bg-green-400"];
 
   return (
-    <div className="min-h-screen bg-background flex" dir="rtl">
-      <SEOHead
-        title={t("تسجيل الدخول", "Sign In")}
-        description={t("تسجيل الدخول إلى جريدة الشارع المصري", "Sign in to EgStreet News")}
-      />
+    <div className="min-h-screen bg-background flex items-center justify-center p-4" dir="rtl">
+      <div className="w-full max-w-sm">
 
-      {/* Left decorative panel — desktop only */}
-      <div className="hidden lg:flex lg:w-1/2 relative bg-primary overflow-hidden flex-col items-center justify-center p-12 text-white">
-        {/* Decorative circles */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2" />
-        <div className="absolute bottom-0 left-0 w-72 h-72 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/2" />
-        <div className="absolute top-1/3 left-1/4 w-40 h-40 bg-white/5 rounded-full" />
-
-        <div className="relative z-10 text-center max-w-sm">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-white/20 backdrop-blur-sm mb-6 shadow-xl">
-            <Newspaper className="w-10 h-10 text-white" />
+        <Link to="/" className="flex flex-col items-center gap-2 mb-8">
+          <div className="w-14 h-14 bg-primary rounded-2xl flex items-center justify-center shadow-lg">
+            <Newspaper className="w-7 h-7 text-white"/>
           </div>
-          <h1 className="text-3xl font-black mb-3">الشارع المصري</h1>
-          <p className="text-white/75 text-sm leading-relaxed mb-8">
-            أحدث الأخبار المصرية والعربية والعالمية — موثوقة وسريعة ومحايدة
-          </p>
-          {/* Stats */}
-          <div className="grid grid-cols-3 gap-4">
-            {[
-              { n: "16+", l: "مقال" },
-              { n: "6", l: "قسم" },
-              { n: "24/7", l: "تغطية" },
-            ].map(s => (
-              <div key={s.l} className="bg-white/10 backdrop-blur-sm rounded-2xl p-3">
-                <div className="text-xl font-black">{s.n}</div>
-                <div className="text-xs text-white/70">{s.l}</div>
-              </div>
+          <div className="text-center">
+            <div className="font-black text-xl leading-tight">الشارع المصري</div>
+            <div className="text-xs text-muted-foreground">EG Street News</div>
+          </div>
+        </Link>
+
+        <div className="bg-card border border-border rounded-2xl p-6 shadow-sm">
+
+          <div className="flex bg-muted rounded-xl p-1 mb-6">
+            {["login","register"].map(t => (
+              <button key={t} onClick={() => { setTab(t); setError(null); setSuccess(null); }}
+                className={"flex-1 flex items-center justify-center gap-1.5 py-2 rounded-lg text-sm font-bold transition-all " +
+                  (tab===t ? "bg-card shadow-sm text-foreground" : "text-muted-foreground")}>
+                {t==="login" ? <><LogIn className="w-3.5 h-3.5"/>دخول</> : <><UserPlus className="w-3.5 h-3.5"/>تسجيل</>}
+              </button>
             ))}
           </div>
-        </div>
-      </div>
 
-      {/* Right form panel */}
-      <div className="flex-1 flex items-center justify-center p-6">
-        <div className="w-full max-w-sm">
-
-          {/* Mobile logo */}
-          <div className="lg:hidden text-center mb-8">
-            <div className="inline-flex items-center gap-2 mb-2">
-              <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center">
-                <Newspaper className="w-5 h-5 text-white" />
-              </div>
-              <span className="font-black text-lg">الشارع المصري</span>
-            </div>
-          </div>
-
-          {/* Title */}
-          <AnimatePresence mode="wait">
-            <motion.div key={mode} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }} className="mb-7">
-              <h2 className="text-2xl font-black text-foreground">
-                {t(title.ar, title.en)}
-              </h2>
-              <p className="text-muted-foreground text-sm mt-1">
-                {t(title.sub_ar, title.sub_en)}
-              </p>
-            </motion.div>
-          </AnimatePresence>
-
-          {/* Success message */}
-          <AnimatePresence>
-            {success && (
-              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
-                className="flex items-start gap-3 bg-green-500/10 border border-green-500/30 text-green-700 dark:text-green-400 rounded-2xl p-4 mb-5 text-sm">
-                <CheckCircle2 className="w-5 h-5 shrink-0 mt-0.5" />
-                <span>{success}</span>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Error */}
-          <AnimatePresence>
-            {error && (
-              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
-                className="bg-destructive/10 border border-destructive/30 text-destructive rounded-2xl p-4 mb-5 text-sm">
-                {error}
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
-            <AnimatePresence mode="wait">
-              <motion.div key={mode} initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-4">
 
-                {/* Display name (signup only) */}
-                {mode === "signup" && (
-                  <div>
-                    <label className="text-sm font-bold text-foreground mb-1.5 block">
-                      {t("الاسم الكامل", "Full Name")}
-                    </label>
-                    <div className="relative">
-                      <User className="absolute top-1/2 -translate-y-1/2 start-3.5 w-4 h-4 text-muted-foreground" />
-                      <input
-                        type="text"
-                        value={displayName}
-                        onChange={e => setDisplayName(e.target.value)}
-                        placeholder={t("أدخل اسمك الكامل", "Enter your full name")}
-                        required
-                        className="w-full border border-border rounded-xl px-4 py-3 ps-10 text-sm bg-background focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {/* Email */}
-                <div>
-                  <label className="text-sm font-bold text-foreground mb-1.5 block">
-                    {t("البريد الإلكتروني", "Email")}
-                  </label>
-                  <div className="relative">
-                    <Mail className="absolute top-1/2 -translate-y-1/2 start-3.5 w-4 h-4 text-muted-foreground" />
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={e => setEmail(e.target.value)}
-                      placeholder="example@email.com"
-                      required
-                      autoComplete="email"
-                      className="w-full border border-border rounded-xl px-4 py-3 ps-10 text-sm bg-background focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
-                      dir="ltr"
-                    />
-                  </div>
-                </div>
-
-                {/* Password */}
-                {mode !== "forgot" && (
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="text-sm font-bold text-foreground">
-                        {t("كلمة المرور", "Password")}
-                      </label>
-                      {mode === "login" && (
-                        <button type="button" onClick={() => { setMode("forgot"); setError(""); }}
-                          className="text-xs text-primary hover:underline">
-                          {t("نسيت كلمة المرور؟", "Forgot password?")}
-                        </button>
-                      )}
-                    </div>
-                    <div className="relative">
-                      <Lock className="absolute top-1/2 -translate-y-1/2 start-3.5 w-4 h-4 text-muted-foreground" />
-                      <input
-                        type={showPass ? "text" : "password"}
-                        value={password}
-                        onChange={e => setPassword(e.target.value)}
-                        placeholder="••••••••"
-                        required
-                        autoComplete={mode === "signup" ? "new-password" : "current-password"}
-                        className="w-full border border-border rounded-xl px-4 py-3 ps-10 pe-12 text-sm bg-background focus:ring-2 focus:ring-primary/30 focus:border-primary outline-none transition-all"
-                        dir="ltr"
-                      />
-                      <button type="button" onClick={() => setShowPass(!showPass)}
-                        className="absolute top-1/2 -translate-y-1/2 end-3.5 text-muted-foreground hover:text-foreground transition-colors">
-                        {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {/* Confirm password (signup only) */}
-                {mode === "signup" && (
-                  <div>
-                    <label className="text-sm font-bold text-foreground mb-1.5 block">
-                      {t("تأكيد كلمة المرور", "Confirm Password")}
-                    </label>
-                    <div className="relative">
-                      <KeyRound className="absolute top-1/2 -translate-y-1/2 start-3.5 w-4 h-4 text-muted-foreground" />
-                      <input
-                        type={showConfirm ? "text" : "password"}
-                        value={confirmPass}
-                        onChange={e => setConfirmPass(e.target.value)}
-                        placeholder="••••••••"
-                        required
-                        className={`w-full border rounded-xl px-4 py-3 ps-10 pe-12 text-sm bg-background focus:ring-2 focus:ring-primary/30 outline-none transition-all ${
-                          confirmPass && confirmPass !== password ? "border-red-400 focus:ring-red-400/30" : "border-border focus:border-primary"
-                        }`}
-                        dir="ltr"
-                      />
-                      <button type="button" onClick={() => setShowConfirm(!showConfirm)}
-                        className="absolute top-1/2 -translate-y-1/2 end-3.5 text-muted-foreground hover:text-foreground transition-colors">
-                        {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                    {confirmPass && confirmPass !== password && (
-                      <p className="text-xs text-red-500 mt-1">{t("كلمتا المرور غير متطابقتين", "Passwords don't match")}</p>
-                    )}
-                  </div>
-                )}
-
-                {/* Submit */}
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="w-full flex items-center justify-center gap-2 bg-primary text-white py-3 rounded-xl font-black text-sm hover:bg-primary/90 active:scale-[0.98] disabled:opacity-60 transition-all shadow-md shadow-primary/20 mt-2"
-                >
-                  {submitting ? (
-                    <><Loader2 className="w-4 h-4 animate-spin" /> {t("جاري...", "Loading...")}</>
-                  ) : mode === "forgot" ? (
-                    <>{t("إرسال رابط الاستعادة", "Send reset link")}</>
-                  ) : mode === "signup" ? (
-                    <>{t("إنشاء الحساب", "Create Account")}</>
-                  ) : (
-                    <>{t("تسجيل الدخول", "Sign In")}</>
-                  )}
-                </button>
-              </motion.div>
-            </AnimatePresence>
-          </form>
-
-          {/* Mode toggle */}
-          <div className="mt-6 text-center space-y-2">
-            {mode === "login" ? (
-              <p className="text-sm text-muted-foreground">
-                {t("ليس لديك حساب؟ ", "Don't have an account? ")}
-                <button onClick={() => { setMode("signup"); setError(""); }}
-                  className="text-primary font-bold hover:underline">
-                  {t("أنشئ حساباً", "Sign up")}
-                </button>
-              </p>
-            ) : (
-              <button onClick={() => { setMode("login"); setError(""); setSuccess(""); }}
-                className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground mx-auto transition-colors">
-                <ArrowLeft className="w-3.5 h-3.5" />
-                {t("العودة لتسجيل الدخول", "Back to sign in")}
-              </button>
+            {tab === "register" && (
+              <div>
+                <label className="block text-xs font-bold mb-1.5">الاسم الظاهر <span className="text-muted-foreground font-normal">(اختياري)</span></label>
+                <input value={display} onChange={e => setDisplay(e.target.value)}
+                  placeholder="مثال: محمد أحمد"
+                  className="w-full bg-muted border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"/>
+              </div>
             )}
-          </div>
+
+            <div>
+              <label className="block text-xs font-bold mb-1.5">اسم المستخدم</label>
+              <div className="relative">
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm font-bold select-none">@</span>
+                <input value={username} onChange={e => setUsername(cleanUser(e.target.value))}
+                  placeholder="ahmed_news" autoComplete="username"
+                  className="w-full bg-muted border border-border rounded-xl pr-8 pl-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"
+                  dir="ltr"/>
+              </div>
+              {tab==="register" && username.length > 0 && username.length < 3 && (
+                <p className="text-[10px] text-red-500 mt-1">3 حروف على الأقل</p>
+              )}
+              {tab==="register" && username.length >= 3 && (
+                <p className="text-[10px] text-green-600 mt-1 font-bold">@{username} ✓</p>
+              )}
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold mb-1.5">كلمة السر</label>
+              <div className="relative">
+                <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"/>
+                <input type={showPass?"text":"password"} value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder={tab==="register" ? "6 أحرف على الأقل" : "كلمة السر"}
+                  autoComplete={tab==="login"?"current-password":"new-password"}
+                  className="w-full bg-muted border border-border rounded-xl pr-10 pl-10 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 transition-all"
+                  dir="ltr"/>
+                <button type="button" onClick={() => setShowPass(s => !s)}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                  {showPass ? <EyeOff className="w-4 h-4"/> : <Eye className="w-4 h-4"/>}
+                </button>
+              </div>
+              {tab==="register" && password.length > 0 && (
+                <div className="flex gap-1 mt-2">
+                  {[1,2,3,4].map(i => (
+                    <div key={i} className={"h-1 flex-1 rounded-full transition-all " + (strength >= i ? strengthColors[i] : "bg-muted")}/>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl px-3 py-2.5 text-xs font-medium flex items-center gap-2 dark:bg-red-900/20 dark:border-red-800 dark:text-red-400">
+                ⚠️ {error}
+              </div>
+            )}
+            {success && (
+              <div className="bg-green-50 border border-green-200 text-green-700 rounded-xl px-3 py-2.5 text-xs font-medium flex items-center gap-2">
+                ✅ {success}
+              </div>
+            )}
+
+            <button type="submit" disabled={loading}
+              className="w-full bg-primary text-white font-black py-3 rounded-xl hover:bg-primary/90 transition-all active:scale-[0.98] disabled:opacity-60 flex items-center justify-center gap-2 shadow-sm">
+              {loading ? <><Loader2 className="w-4 h-4 animate-spin"/>جاري التحقق...</>
+                : tab==="login" ? <><LogIn className="w-4 h-4"/>دخول</>
+                : <><UserPlus className="w-4 h-4"/>إنشاء الحساب</>}
+            </button>
+
+            {tab==="register" && (
+              <p className="text-[10px] text-muted-foreground text-center">بالتسجيل توافق على شروط الاستخدام</p>
+            )}
+          </form>
         </div>
+
+        <p className="text-center text-xs text-muted-foreground mt-4">
+          <Link to="/" className="hover:text-primary transition-colors">← العودة للرئيسية</Link>
+        </p>
       </div>
     </div>
   );
-};
-
-export default Auth;
+}
