@@ -1,170 +1,193 @@
-<div align="center">
+# 🗞️ الشارع المصري — EG Street News
 
-# 🗞️ جريدة الشارع المصري
-### EgStreet News — صحافة تضرم عقلك
+> منصة إخبارية رقمية عصرية — **Egypt's Premier Digital News Platform**
 
-[![Live Demo](https://img.shields.io/badge/🌐_Live_Demo-egstreet.vercel.app-D90221?style=for-the-badge)](https://egstreet.vercel.app)
-[![Supabase](https://img.shields.io/badge/Supabase-Database-3ECF8E?style=for-the-badge&logo=supabase)](https://supabase.com)
-[![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react)](https://react.dev)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org)
-[![Vite](https://img.shields.io/badge/Vite-6-646CFF?style=for-the-badge&logo=vite)](https://vitejs.dev)
-[![PWA](https://img.shields.io/badge/PWA-Ready-5A0FC8?style=for-the-badge&logo=pwa)](https://web.dev/progressive-web-apps)
-[![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](LICENSE)
-
-> منصة إخبارية مصرية مستقلة مبنية بأحدث تقنيات الويب.
-> Full-stack Arabic news platform with real-time updates, admin dashboard, AI tools & PWA.
-
-</div>
+[![Deploy on Vercel](https://img.shields.io/badge/Deploy-Vercel-black?logo=vercel)](https://egstreet-psi.vercel.app)
+[![Supabase](https://img.shields.io/badge/Database-Supabase-3ECF8E?logo=supabase)](https://supabase.com)
+[![React](https://img.shields.io/badge/Frontend-React%2018-61DAFB?logo=react)](https://react.dev)
 
 ---
 
-## ✨ المميزات الرئيسية
-
-### 🎯 للقارئ
-- 📰 **صفحة رئيسية** — Bento Hero layout، أقسام مصنفة، آخر الأخبار، الأكثر قراءة
-- ⚡ **أخبار عاجلة** — شريط متحرك Real-time
-- 🌙 **Dark/Light Mode** — تلقائي مع toggle
-- 🌐 **ثنائي اللغة** — عربي RTL + إنجليزي LTR
-- 🔍 **بحث متقدم** — Full Text Search
-- 💾 **حفظ المقالات** — للمستخدمين المسجلين
-- 💬 **تعليقات** — مع Moderation كامل
-- 📤 **مشاركة** — Facebook / Twitter / WhatsApp / Copy
-- 📱 **PWA** — تثبيت على الموبايل كتطبيق كامل
-- 📊 **شريط تقدم القراءة** — يظهر أعلى كل مقال
-
-### 🛠️ للمدير والمحرر
-- 🔒 **Admin مخفي** — على `/eg-control-2026`
-- 🔔 **إشعارات Realtime** — مقالات / تعليقات / يوزرز جدد
-- ✍️ **TipTap Editor** — محرر نصوص احترافي
-- 🔗 **Slug ذكي** — تلقائي `article-XXXXXX` أو يدوي
-- 📊 **تحليلات** — مشاهدات يومية وإحصاءات
-- 👥 **إدارة مستخدمين** — أدوار متعددة
-- 💰 **إعلانات** — مع تتبع Impressions & Clicks
-- 🤖 **AI Tools** — توليد محتوى وتلخيص
-- 🗞️ **News Scraper** — سحب أخبار تلقائي
-- 💾 **Backup & Restore**
-
----
-
-## 🏗️ Tech Stack
+## 🚀 Tech Stack
 
 | Layer | Technology |
-|-------|-----------|
-| **Frontend** | React 18 + TypeScript + Vite 6 |
-| **Styling** | Tailwind CSS + shadcn/ui |
-| **Routing** | React Router DOM v6 |
-| **State** | TanStack Query v5 |
-| **Database** | Supabase (PostgreSQL + RLS) |
-| **Auth** | Supabase Auth |
-| **Storage** | Supabase Storage |
-| **Rich Text** | TipTap Editor |
-| **PWA** | Vite PWA Plugin |
-| **Fonts** | Cairo + Amiri (Google Fonts) |
+|---|---|
+| Frontend | React 18 + TypeScript + Vite |
+| Styling | Tailwind CSS v3 + shadcn/ui |
+| Animations | Framer Motion v12 |
+| Database | Supabase (PostgreSQL + Auth + Storage) |
+| Icons | Lucide React |
+| Routing | React Router v6 |
+| State | TanStack Query v5 |
+| Deployment | Vercel |
 
 ---
 
-## 🚀 البدء السريع
+## 📁 Folder Architecture
 
+```
+src/
+├── components/
+│   ├── layout/
+│   │   ├── Header.tsx          # Sticky header, search, dark mode
+│   │   ├── Footer.tsx          # Footer with links and newsletter
+│   │   └── AdminLayout.tsx     # Admin panel wrapper
+│   ├── news/
+│   │   ├── BreakingTicker.tsx  # Animated breaking news ticker
+│   │   ├── NewsCard.tsx        # Reusable article card
+│   │   └── HeroGrid.tsx        # Homepage hero section
+│   ├── ui/                     # shadcn/ui primitives
+│   ├── SEOHead.tsx             # Dynamic meta tags
+│   └── SocialShareButtons.tsx  # Share: WhatsApp, FB, Twitter, Telegram
+│
+├── pages/
+│   ├── Index.tsx               # 🏠 Homepage — Hero, Trending, Categories
+│   ├── ArticlePage.tsx         # 📰 Article — Reading progress, TTS, Related
+│   ├── CategoryPage.tsx        # 📂 Category archive with filters
+│   ├── SearchPage.tsx          # 🔍 Full-text search
+│   ├── Auth.tsx                # 🔐 Login / Register
+│   └── admin/
+│       ├── DashboardOverview.tsx
+│       ├── ArticleManagement.tsx
+│       ├── ArticleEditor.tsx   # ✍️ Rich editor + Unsplash image picker
+│       ├── UserManagement.tsx  # 👥 Invite by email + roles + permissions
+│       ├── AnalyticsDashboard.tsx
+│       └── ...
+│
+├── contexts/
+│   ├── AuthContext.tsx          # Supabase Auth
+│   ├── LanguageContext.tsx      # AR/EN i18n
+│   └── ThemeContext.tsx         # Dark/Light mode
+│
+├── hooks/
+│   ├── usePermissions.tsx      # Role-based access control
+│   └── useArticles.tsx         # Data fetching hooks
+│
+├── integrations/
+│   └── supabase/
+│       ├── client.ts           # Supabase client
+│       └── types.ts            # Database types
+│
+└── styles/
+    ├── globals.css             # Base styles + Arabic typography
+    └── article.css             # Article body prose styles
+```
+
+---
+
+## 🗄️ Database Schema
+
+### Core Tables
+```sql
+articles       — المقالات (title, slug, content, status, views, featured_image)
+categories     — الأقسام (name_ar, name_en, slug, color)
+breaking_news  — الأخبار العاجلة (title, is_active)
+profiles       — بيانات المستخدمين (display_name, avatar_url)
+user_roles     — الأدوار والصلاحيات (role, permissions JSON)
+subscribers    — المشتركين في النشرة البريدية
+advertisements — الإعلانات
+```
+
+---
+
+## ⚙️ Setup & Installation
+
+### 1. Clone & Install
 ```bash
-# 1. Clone
 git clone https://github.com/DrGohar1/egstreet.git
 cd egstreet
-
-# 2. Install
 npm install
+```
 
-# 3. Environment
-cp .env.example .env.local
-# Edit: VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY
+### 2. Environment Variables
+Create `.env.local`:
+```env
+VITE_SUPABASE_URL=https://neojditfucitnovcfspw.supabase.co
+VITE_SUPABASE_ANON_KEY=your_anon_key
+VITE_SUPABASE_SERVICE_KEY=your_service_key
+```
 
-# 4. Database
-# Run docs/supabase-schema.sql in Supabase SQL Editor
-
-# 5. Run
+### 3. Run Development
+```bash
 npm run dev
+# → http://localhost:5173
 ```
 
-### إنشاء أول Admin
-```sql
--- Run in Supabase SQL Editor
-INSERT INTO public.user_roles (user_id, role)
-VALUES ('your-user-uuid', 'super_admin');
-```
-
----
-
-## 🔑 Kill Switch — نظام التحكم في المميزات
-
-| المفتاح | الميزة | الافتراضي |
-|---------|--------|:-:|
-| `feature_comments` | التعليقات | ✅ |
-| `feature_newsletter` | النشرة البريدية | ✅ |
-| `feature_breaking_ticker` | شريط الأخبار العاجلة | ✅ |
-| `feature_ads` | الإعلانات | ✅ |
-| `feature_saved_articles` | حفظ المقالات | ✅ |
-| `feature_social_share` | المشاركة الاجتماعية | ✅ |
-| `feature_copy_protection` | حماية المحتوى | ✅ |
-| `feature_ai_tools` | أدوات AI | 🔒 |
-| `feature_news_scraper` | سحب الأخبار | 🔒 |
-
----
-
-## 📁 الهيكل
-
-```
-egstreet/
-├── src/
-│   ├── App.tsx              # Routes
-│   ├── components/admin/    # Dashboard components
-│   ├── hooks/               # Custom hooks
-│   ├── pages/admin/         # 16 admin pages
-│   └── integrations/        # Supabase client
-├── public/                  # Static assets
-├── docs/                    # Documentation
-├── AGENT_PROMPT.md          # AI deployment guide
-└── README.md
+### 4. Deploy to Vercel
+```bash
+vercel --prod
 ```
 
 ---
 
-## 🚢 النشر
+## 👥 User Roles & Permissions
+
+| Role | صلاحيات |
+|---|---|
+| `super_admin` | كل الصلاحيات |
+| `editor_in_chief` | تحرير المحتوى + إحصائيات |
+| `journalist` | كتابة مقالاته فقط |
+| `ads_manager` | الإعلانات + الإحصائيات |
+
+**Invite Flow:** Admin → UserManagement → دعوة بالإيميل → يستلم رابط → يختار كلمة السر
+
+---
+
+## 📱 Key Features
+
+- ✅ **Responsive** — Mobile-first + Bottom Navigation
+- ✅ **Dark Mode** — كامل ومتكامل
+- ✅ **Breaking Ticker** — شريط الأخبار العاجلة المتحرك
+- ✅ **Text-to-Speech** — الاستماع للخبر
+- ✅ **Reading Progress** — مؤشر تقدم القراءة
+- ✅ **Image Picker** — Unsplash search + upload + URL
+- ✅ **SEO Optimized** — Open Graph + Twitter Cards
+- ✅ **Analytics Dashboard** — إحصائيات المشاهدات
+- ✅ **Automation Center** — RSS + Newsletter + Auto-publish
+- ✅ **Role-based Access** — صلاحيات دقيقة لكل مستخدم
+
+---
+
+## 📋 Git Commit Strategy
 
 ```bash
-npm run build
-npx vercel --prod
+# 1. Initialize project foundation
+git commit -m "init: Vite + React + TypeScript + Tailwind scaffold"
+
+# 2. Database & auth layer
+git commit -m "feat(db): Supabase schema — articles, categories, users, roles"
+
+# 3. Core UI components
+git commit -m "feat(ui): Header, Footer, NewsCard, BreakingTicker, SEOHead"
+
+# 4. Public pages
+git commit -m "feat(pages): Homepage, ArticlePage, CategoryPage, SearchPage"
+
+# 5. Admin panel
+git commit -m "feat(admin): Dashboard, ArticleEditor, UserManagement, Analytics"
 ```
 
 ---
 
-## 👥 الفريق
+## 🎨 Design System
 
-| الدور | الاسم |
-|-------|-------|
-| **رئيس مجلس الإدارة** | د. هشام القريبي |
-| **رئيس التحرير** | سيد بغدادي |
-| **السياسة التحريرية** | د. محمود توفيق عليوة |
-| **تطوير وبرمجة** | **د. سعيد جوهر** |
+### Colors
+```css
+--primary: #e11d48;          /* أحمر إخباري */
+--background: #ffffff;       /* أبيض صريح */
+--card: #f9fafb;             /* رمادي فاتح */
+--foreground: #111827;       /* أسود عميق */
+--muted: #f3f4f6;            /* رمادي للخلفيات */
+--border: #e5e7eb;           /* حدود خفية */
+```
 
----
-
-## 📜 Changelog — آخر التحديثات (أبريل 2026)
-
-- ✅ Admin route مخفي على `/eg-control-2026`
-- ✅ نظام إشعارات Realtime كامل
-- ✅ لوحة إشعارات أنيقة مع badge
-- ✅ Slug تلقائي `article-XXXXXX` + يدوي
-- ✅ شريط تقدم القراءة
-- ✅ Skeleton loading للمقالات
-- ✅ زر حفظ المقال 🔖
-- ✅ Image fallback للصور المكسورة
-- ✅ Default OG image للمشاركة
+### Typography
+```css
+/* Headers */    font-family: 'Cairo', 'Tajawal', sans-serif;
+/* Body text */  font-family: 'Noto Naskh Arabic', 'Amiri', serif;
+/* Monospace */  font-family: 'JetBrains Mono', monospace;
+```
 
 ---
 
-<div align="center">
-
-**صُنع بـ ❤️ في مصر 🇪🇬**
-
-[![GitHub stars](https://img.shields.io/github/stars/DrGohar1/egstreet?style=social)](https://github.com/DrGohar1/egstreet/stargazers)
-
-</div>
+> Built with ❤️ by **Dr. Gohar** — EG Street News Team
