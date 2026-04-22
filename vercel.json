@@ -12,6 +12,7 @@
     }
   ],
   "env": {
-    "VITE_BUILD_TIME": "1776875625"
+    "VITE_BUILD_TIME": "1776876885",
+    "VITE_FORCE_REBUILD": "true"
   }
 }
