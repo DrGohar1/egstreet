@@ -52,7 +52,7 @@ const HeroSlider = ({ articles }: { articles: HeroArticle[] }) => {
                     <img
                       src={a.featured_image} alt={a.title}
                       loading={i === 0 ? "eager" : "lazy"}
-                      className="w-full h-full object-cover absolute inset-0 transition-transform duration-[10s] ease-out group-hover:scale-105"
+                      className="w-full h-full object-cover absolute inset-0 transition-transform duration-700 ease-out group-hover:scale-105"
                       onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                     />
                   )}
