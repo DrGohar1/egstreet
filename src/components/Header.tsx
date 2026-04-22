@@ -43,7 +43,7 @@ const Header = () => {
                   <UserCircle className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">{t("حسابي", "Account")}</span>
                 </Link>
-                <Link to="/admin-panel" className="flex items-center gap-1 hover:text-[hsl(var(--nav-accent))] transition-colors">
+                <Link to="/Gadmin" className="flex items-center gap-1 hover:text-[hsl(var(--nav-accent))] transition-colors">
                   <User className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">{t("لوحة التحكم", "Dashboard")}</span>
                 </Link>
