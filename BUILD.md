@@ -1,3 +1,3 @@
-# Build 1776869781
-- Fixed /admin-panel → /Gadmin in all files
-- AdminSidebar synced
+# Deploy 1776874314
+- Fixed custom_custom_author_name typo
+- Full responsive Index.tsx mobile + desktop
