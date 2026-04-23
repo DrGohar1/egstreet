@@ -43,7 +43,7 @@ export function usePermissions() {
       });
   }, [user]);
 
-  const isSuperAdmin = role === "super_admin";
+  const isSuperAdmin = role === "super_admin";  // top role in app_role enum
   const isEditor = role === "editor_in_chief" || isSuperAdmin;
   const can = (key: keyof Permissions) => isSuperAdmin || perms[key] === true;
 
