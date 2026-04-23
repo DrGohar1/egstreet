@@ -53,9 +53,9 @@ const SubscriberManagement = () => {
   }
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-foreground">{t("المشتركون", "Subscribers")}</h2>
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-3">
+        <h2 className="text-xl sm:text-2xl font-bold text-foreground">{t("المشتركون", "Subscribers")}</h2>
         <Button onClick={exportCSV} variant="outline" size="sm" className="gap-2">
           <Download className="h-4 w-4" />
           {t("تصدير CSV", "Export CSV")}
