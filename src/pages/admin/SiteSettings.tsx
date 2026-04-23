@@ -97,7 +97,7 @@ const SiteSettings = () => {
   return (
     <motion.div initial="hidden" animate="visible" variants={{ visible: { transition: { staggerChildren: 0.05 } } }}>
       {/* Header */}
-      <motion.div variants={fadeIn} className="flex items-center justify-between mb-6">
+      <motion.div variants={fadeIn} className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-3">
         <div>
           <h2 className="text-2xl font-black text-foreground flex items-center gap-2">
             <Sparkles className="h-6 w-6 text-primary" />
