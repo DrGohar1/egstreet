@@ -8,12 +8,12 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
+/* Roles exactly match DB enum app_role */
 const ROLES = [
   { id:"super_admin",    label:"سوبر أدمن",    color:"text-rose-500",   bg:"bg-rose-500/10",   icon:ShieldAlert },
   { id:"editor_in_chief",label:"رئيس التحرير", color:"text-amber-500",  bg:"bg-amber-500/10",  icon:ShieldCheck },
   { id:"journalist",     label:"صحفي",         color:"text-blue-500",   bg:"bg-blue-500/10",   icon:Shield      },
   { id:"ads_manager",    label:"مدير إعلانات", color:"text-green-500",  bg:"bg-green-500/10",  icon:Star        },
-  { id:"viewer",         label:"قارئ",          color:"text-gray-400",   bg:"bg-gray-500/10",   icon:Eye         },
 ];
 
 const SECTIONS = [
@@ -41,15 +41,13 @@ const DEFAULTS: Record<string,string[]> = {
   editor_in_chief:["articles","categories","tags","breaking","media","analytics"],
   journalist:     ["articles","categories","tags","media"],
   ads_manager:    ["ads","media","analytics"],
-  viewer:         [],
 };
 
 type Matrix = Record<string, Set<string>>;
 
 export default function PermissionManagement() {
   const { role:myRole } = usePermissions();
-  const isDeveloper  = myRole==="developer";
-  const isSuperAdmin = myRole==="super_admin" || isDeveloper;
+  const isSuperAdmin = myRole==="super_admin";
 
   const [matrix, setMatrix] = useState<Matrix>(()=>{
     const m:Matrix = {};
@@ -118,7 +116,7 @@ export default function PermissionManagement() {
   const save = async () => {
     setSaving(true);
     try {
-      await supabase.from("role_permissions" as any).delete().neq("role","developer");
+      await supabase.from("role_permissions" as any).delete().in("role",["super_admin","editor_in_chief","journalist","ads_manager"]);
       const rows:any[] = [];
       ROLES.forEach(r=>{ matrix[r.id]?.forEach(p=>{ rows.push({role:r.id, permission:p}); }); });
       if (rows.length) {
