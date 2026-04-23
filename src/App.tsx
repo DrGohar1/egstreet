@@ -39,6 +39,7 @@ import AutomationPage from "./pages/admin/AutomationPage";
 import ArticleEditor from "./pages/admin/ArticleEditor";
 import SavedArticlesPage from "./pages/SavedArticlesPage";
 import NewsletterPopup from "./components/NewsletterPopup";
+import ArchivePage from "./pages/ArchivePage";
 import ResetPassword from "./pages/ResetPassword";
 import UserProfile from "./pages/UserProfile";
 import Auth from "./pages/Auth";
@@ -69,6 +70,7 @@ const AppContent = () => {
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/profile" element={<UserProfile />} />
         <Route path="/saved" element={<SavedArticlesPage />} />
+        <Route path="/archive" element={<ArchivePage />} />
         {/* Admin */}
         <Route path={ADMIN} element={<AdminLayout><DashboardOverview /></AdminLayout>} />
         <Route path={`${ADMIN}/users`} element={<AdminLayout><UserManagement /></AdminLayout>} />
