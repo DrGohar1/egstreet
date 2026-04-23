@@ -41,6 +41,7 @@ import SavedArticlesPage from "./pages/SavedArticlesPage";
 import NewsletterPopup from "./components/NewsletterPopup";
 import ResetPassword from "./pages/ResetPassword";
 import UserProfile from "./pages/UserProfile";
+import Auth from "./pages/Auth";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -64,6 +65,7 @@ const AppContent = () => {
         <Route path="/page/:slug" element={<StaticPage />} />
         <Route path="/author/:userId" element={<AuthorPage />} />
         <Route path="/tag/:slug" element={<TagPage />} />
+        <Route path="/auth" element={<Auth />} />
         <Route path="/reset-password" element={<ResetPassword />} />
         <Route path="/profile" element={<UserProfile />} />
         <Route path="/saved" element={<SavedArticlesPage />} />
