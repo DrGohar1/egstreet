@@ -116,6 +116,7 @@ const Footer = () => {
                 </li>
               ))}
               {[
+                { label: t("أرشيف المقالات", "Archive"), href: "/archive" },
                 { label: t("تواصل معنا", "Contact Us"), href: "/page/contact" },
                 { label: t("سياسة الخصوصية", "Privacy Policy"), href: "/page/privacy" },
               ].map(l => (
@@ -198,7 +199,7 @@ const Footer = () => {
               {t("تم التطوير بواسطة", "Developed by")}
               <a href="https://wa.me/201001234567" target="_blank" rel="noreferrer"
                 className="font-black text-primary hover:underline flex items-center gap-0.5">
-                GoharTech
+                {settings?.developer_name || "GoharTech"}
                 <ExternalLink className="w-2.5 h-2.5" />
               </a>
             </div>
