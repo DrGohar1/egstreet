@@ -16,31 +16,117 @@ const UNSPLASH_KEY = "P8Dz4oGBSFgpfPgFKdWm9ZHAYijpqMiCj7d7E_B3Tic";
 interface Category { id:string; name_ar:string; name_en:string; slug:string; }
 
 // ── Image Picker Modal ──
+/* ── Image Crop Helper ── */
+type CropBox = { x:number; y:number; w:number; h:number };
+
+const ImageCropModal = ({ src, onDone, onCancel }:{src:string; onDone:(url:string)=>void; onCancel:()=>void}) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
+  const [crop, setCrop] = useState<CropBox>({x:0,y:0,w:100,h:100});
+  const [dragging, setDragging] = useState(false);
+  const [start, setStart] = useState({x:0,y:0});
+  const [imgLoaded, setImgLoaded] = useState(false);
+  const [aspect, setAspect] = useState<"free"|"16:9"|"4:3"|"1:1">("16:9");
+
+  const ASPECTS:Record<string,number|null> = { "free":null, "16:9":16/9, "4:3":4/3, "1:1":1 };
+
+  const applyCrop = () => {
+    const img = imgRef.current; const canvas = canvasRef.current;
+    if (!img || !canvas) return;
+    const scaleX = img.naturalWidth / img.width;
+    const scaleY = img.naturalHeight / img.height;
+    canvas.width  = crop.w * scaleX;
+    canvas.height = crop.h * scaleY;
+    const ctx = canvas.getContext("2d")!;
+    ctx.drawImage(img, crop.x*scaleX, crop.y*scaleY, crop.w*scaleX, crop.h*scaleY, 0, 0, canvas.width, canvas.height);
+    onDone(canvas.toDataURL("image/jpeg", 0.92));
+  };
+
+  const onMouseDown = (e:React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left; const y = e.clientY - rect.top;
+    setDragging(true); setStart({x,y});
+    setCrop({x, y, w:0, h:0});
+  };
+  const onMouseMove = (e:React.MouseEvent<HTMLDivElement>) => {
+    if (!dragging) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left; const y = e.clientY - rect.top;
+    let w = x - start.x; let h = y - start.y;
+    const asp = ASPECTS[aspect];
+    if (asp) h = w / asp;
+    setCrop({x:Math.min(start.x,x), y:Math.min(start.y,y), w:Math.abs(w), h:Math.abs(h)});
+  };
+  const onMouseUp = () => setDragging(false);
+
+  return (
+    <div className="fixed inset-0 bg-black/80 z-[60] flex items-center justify-center p-4" onClick={onCancel}>
+      <div className="bg-card rounded-2xl p-4 max-w-2xl w-full space-y-3" onClick={e=>e.stopPropagation()}>
+        <div className="flex items-center justify-between">
+          <h4 className="font-black text-sm flex items-center gap-2">✂️ قص الصورة</h4>
+          <div className="flex gap-1">
+            {(["free","16:9","4:3","1:1"] as const).map(a=>(
+              <button key={a} onClick={()=>setAspect(a)}
+                className={`text-[10px] px-2 py-1 rounded-lg border font-bold transition-all ${aspect===a?"border-primary bg-primary/10 text-primary":"border-border text-muted-foreground"}`}>
+                {a}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="relative overflow-hidden rounded-xl select-none cursor-crosshair"
+          onMouseDown={onMouseDown} onMouseMove={onMouseMove} onMouseUp={onMouseUp} onMouseLeave={onMouseUp}>
+          <img ref={imgRef} src={src} alt="" crossOrigin="anonymous" className="w-full max-h-80 object-contain"
+            onLoad={()=>setImgLoaded(true)}/>
+          {crop.w>0 && crop.h>0 && (
+            <div className="absolute border-2 border-primary bg-primary/10" style={{
+              left:crop.x, top:crop.y, width:crop.w, height:crop.h, pointerEvents:"none"
+            }}/>
+          )}
+        </div>
+        <canvas ref={canvasRef} className="hidden"/>
+        <div className="flex gap-2">
+          <button onClick={applyCrop} className="flex-1 bg-primary text-white py-2 rounded-xl font-black text-sm hover:bg-primary/85 transition-colors">
+            تطبيق القص
+          </button>
+          <button onClick={onCancel} className="px-4 border border-border rounded-xl text-sm hover:bg-muted transition-colors">
+            إلغاء
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const ImagePicker = ({ onSelect, onClose }: { onSelect:(url:string)=>void; onClose:()=>void }) => {
   const [tab,       setTab]       = useState<"unsplash"|"upload"|"url">("unsplash");
-  const [query,     setQuery]     = useState("");
+  const [query,     setQuery]     = useState("egypt news");
   const [images,    setImages]    = useState<any[]>([]);
   const [loading,   setLoading]   = useState(false);
   const [urlInput,  setUrlInput]  = useState("");
   const [uploading, setUploading] = useState(false);
+  const [cropSrc,   setCropSrc]   = useState<string|null>(null);
+  const [pendingSelect, setPendingSelect] = useState<string|null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const searchUnsplash = async (q:string) => {
     if (!q.trim()) return;
     setLoading(true);
+    setImages([]);
     try {
       const r = await fetch(
-        `https://api.unsplash.com/search/photos?query=${encodeURIComponent(q)}&per_page=16&orientation=landscape`,
+        `https://api.unsplash.com/search/photos?query=${encodeURIComponent(q)}&per_page=20&orientation=landscape&content_filter=high`,
         { headers:{ Authorization:`Client-ID ${UNSPLASH_KEY}` } }
       );
+      if (!r.ok) throw new Error(`${r.status}`);
       const data = await r.json();
-      setImages(data.results||[]);
-    } catch(_) {
-      // Fallback: use picsum
-      setImages(Array.from({length:12},(_,i)=>({
-        id:String(i),
-        urls:{ small:`https://picsum.photos/seed/${q+i}/400/250`, regular:`https://picsum.photos/seed/${q+i}/1200/750` },
-        alt_description:q, user:{ name:"Picsum" }
+      if (!data.results?.length) throw new Error("no results");
+      setImages(data.results);
+    } catch(e) {
+      // Fallback to Pexels-style random images
+      setImages(Array.from({length:16},(_,i)=>({
+        id:`fallback_${i}`,
+        urls:{ small:`https://picsum.photos/seed/${encodeURIComponent(q)}${i}/400/250`, regular:`https://picsum.photos/seed/${encodeURIComponent(q)}${i}/1200/750` },
+        alt_description:`${q} ${i+1}`, user:{ name:"Picsum Photos" }
       })));
     }
     setLoading(false);
@@ -78,9 +164,12 @@ const ImagePicker = ({ onSelect, onClose }: { onSelect:(url:string)=>void; onClo
     }
   };
 
-  useEffect(()=>{ searchUnsplash("مصر أخبار egypt news"); },[]);
+  useEffect(()=>{ searchUnsplash("egypt news مصر"); },[]);
 
   return (
+    <>
+    {cropSrc && <ImageCropModal src={cropSrc} onDone={url=>{ onSelect(url); setCropSrc(null); onClose(); }} onCancel={()=>setCropSrc(null)}/>}
+    <div style={{display: cropSrc ? "none" : undefined}}>
     <>
       <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
         className="fixed inset-0 bg-black/70 z-50" onClick={onClose}/>
@@ -136,16 +225,22 @@ const ImagePicker = ({ onSelect, onClose }: { onSelect:(url:string)=>void; onClo
               {loading && <div className="flex justify-center py-8"><Loader2 className="w-6 h-6 animate-spin text-primary"/></div>}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                 {images.map(img=>(
-                  <button key={img.id} onClick={()=>{onSelect(img.urls.regular||img.urls.small); onClose();}}
-                    className="relative group overflow-hidden rounded-xl aspect-video hover:ring-2 hover:ring-primary transition-all">
+                  <div key={img.id} className="relative group overflow-hidden rounded-xl aspect-video">
                     <img src={img.urls.small} alt={img.alt_description||""} className="w-full h-full object-cover"/>
-                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-all flex items-center justify-center">
-                      <span className="text-white text-xs font-bold opacity-0 group-hover:opacity-100">اختر</span>
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/60 transition-all flex items-center justify-center gap-1">
+                      <button onClick={()=>{onSelect(img.urls.regular||img.urls.small); onClose();}}
+                        className="opacity-0 group-hover:opacity-100 text-white text-[10px] font-black bg-primary px-2 py-1 rounded-lg transition-all">
+                        اختر
+                      </button>
+                      <button onClick={()=>{ setPendingSelect(img.urls.regular||img.urls.small); setCropSrc(img.urls.regular||img.urls.small); }}
+                        className="opacity-0 group-hover:opacity-100 text-white text-[10px] font-black bg-black/70 px-2 py-1 rounded-lg transition-all">
+                        ✂️ قص
+                      </button>
                     </div>
                     <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 p-1">
                       <p className="text-white text-[8px] truncate">{img.user?.name}</p>
                     </div>
-                  </button>
+                  </div>
                 ))}
               </div>
             </div>
