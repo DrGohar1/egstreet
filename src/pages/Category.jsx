@@ -1,0 +1,5 @@
+import { useParams } from 'react-router-dom'
+export default function CategoryPage() {
+  const { slug } = useParams()
+  return <div className="min-h-screen grid place-items-center text-gray-400" dir="rtl">تصنيف: {slug}</div>
+}
