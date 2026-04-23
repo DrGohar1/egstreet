@@ -1,503 +1,637 @@
-import { useState, useEffect } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { useAuth } from "@/contexts/AuthContext";
-import { usePermissions } from "@/hooks/usePermissions";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { supabase } from "@/integrations/supabase/client";
+import { usePermissions } from "@/hooks/usePermissions";
+import { useLanguage } from "@/contexts/LanguageContext";
+import ImageUploader from "@/components/ImageUploader";
 import {
-  Users, Plus, Shield, Edit2, Trash2, X,
-  Loader2, Mail, Crown, UserCheck, Megaphone,
-  Key, CheckCircle2, Copy, Eye, EyeOff, Lock,
-  ChevronDown, Terminal, User, AlertCircle, RefreshCw
+  Users, Plus, Search, X, Pencil, Trash2, Eye, EyeOff,
+  Shield, ShieldCheck, ShieldAlert, Star, Code2, Loader2,
+  Copy, RefreshCw, Check, ChevronDown, Filter, Download,
+  Mail, Lock, UserCog, Image as ImageIcon, Key, MoreVertical
 } from "lucide-react";
 import { toast } from "sonner";
 
-/* ── Role hierarchy: developer > super_admin > editor_in_chief > journalist > ads_manager ── */
-const ALL_ROLES = [
-  { id:"developer",       label:"Developer",        color:"bg-purple-600",  icon:Terminal,  desc:"وصول كامل + ميزات مخفية عن الباقين",   devOnly:true  },
-  { id:"super_admin",     label:"سوبر أدمن",        color:"bg-red-500",     icon:Crown,     desc:"صلاحيات كاملة على كل شيء",             devOnly:false },
-  { id:"editor_in_chief", label:"رئيس التحرير",     color:"bg-blue-500",    icon:UserCheck, desc:"تحرير وإدارة كل المحتوى",              devOnly:false },
-  { id:"journalist",      label:"صحفي",             color:"bg-green-500",   icon:Users,     desc:"كتابة وتعديل مقالاته فقط",             devOnly:false },
-  { id:"ads_manager",     label:"مدير إعلانات",     color:"bg-yellow-500",  icon:Megaphone, desc:"إدارة الإعلانات والإحصائيات",          devOnly:false },
+/* ── Role hierarchy ── */
+const ROLES = [
+  { id:"developer",      label:"مطوّر",        desc:"تحكم كامل بلا قيود",        color:"bg-violet-600", badge:"bg-violet-500/20 text-violet-400", icon:Code2,      devOnly:true  },
+  { id:"super_admin",    label:"سوبر أدمن",    desc:"إدارة كاملة بما فيها المستخدمين", color:"bg-rose-600",   badge:"bg-rose-500/20 text-rose-400",    icon:ShieldAlert,devOnly:true  },
+  { id:"editor_in_chief",label:"رئيس التحرير", desc:"نشر وإدارة المحتوى كاملاً",  color:"bg-amber-600",  badge:"bg-amber-500/20 text-amber-400",  icon:ShieldCheck,devOnly:false },
+  { id:"journalist",     label:"صحفي",         desc:"كتابة وتحرير المقالات",       color:"bg-blue-600",   badge:"bg-blue-500/20 text-blue-400",    icon:Shield,     devOnly:false },
+  { id:"ads_manager",    label:"مدير إعلانات", desc:"إدارة الإعلانات والعروض",     color:"bg-green-600",  badge:"bg-green-500/20 text-green-400",  icon:Star,       devOnly:false },
+  { id:"viewer",         label:"قارئ",          desc:"عرض فقط",                     color:"bg-gray-500",   badge:"bg-gray-500/20 text-gray-400",    icon:Eye,        devOnly:false },
 ];
 
 const PERM_KEYS: Record<string,string> = {
-  articles:"المقالات", categories:"الأقسام", breaking:"الأخبار العاجلة",
-  users:"المستخدمون", settings:"الإعدادات", ads:"الإعلانات",
-  analytics:"التحليلات", pages:"الصفحات", subscribers:"المشتركون",
-  comments:"التعليقات", ai:"أدوات AI / RSS", backup:"النسخ الاحتياطي",
-  tags:"الوسوم", permissions:"الصلاحيات",
+  articles:"المقالات", categories:"الأقسام", tags:"الوسوم",
+  breaking:"عاجل", media:"الوسائط", ads:"الإعلانات",
+  analytics:"التحليلات", users:"المستخدمين",
+  settings:"الإعدادات", permissions:"الصلاحيات",
 };
-
 const ROLE_DEFAULTS: Record<string,Record<string,boolean>> = {
-  developer:       Object.fromEntries(Object.keys(PERM_KEYS).map(k=>[k,true])),
-  super_admin:     Object.fromEntries(Object.keys(PERM_KEYS).map(k=>[k,true])),
-  editor_in_chief: Object.fromEntries(Object.keys(PERM_KEYS).map(k=>[k,!["users","settings","backup","permissions"].includes(k)])),
-  journalist:      Object.fromEntries(Object.keys(PERM_KEYS).map(k=>[k,["articles","tags","comments"].includes(k)])),
-  ads_manager:     Object.fromEntries(Object.keys(PERM_KEYS).map(k=>[k,["ads","analytics"].includes(k)])),
+  developer:      Object.fromEntries(Object.keys(PERM_KEYS).map(k=>[k,true])),
+  super_admin:    Object.fromEntries(Object.keys(PERM_KEYS).map(k=>[k,true])),
+  editor_in_chief:Object.fromEntries(Object.keys(PERM_KEYS).map(k=>[k,!["users","settings","permissions"].includes(k)])),
+  journalist:     { articles:true, categories:true, tags:true, breaking:false, media:true, ads:false, analytics:false, users:false, settings:false, permissions:false },
+  ads_manager:    { articles:false, categories:false, tags:false, breaking:false, media:true, ads:true, analytics:true, users:false, settings:false, permissions:false },
+  viewer:         Object.fromEntries(Object.keys(PERM_KEYS).map(k=>[k,false])),
 };
+function genPassword(len=14){ return Array.from(crypto.getRandomValues(new Uint8Array(len))).map(b=>"abcdefghijkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789@#$%"[b%60]).join(""); }
+const fmt=(d:string)=>new Date(d).toLocaleDateString("ar-EG",{day:"2-digit",month:"short",year:"numeric"});
 
-function genPassword(len=12) {
-  const chars="abcdefghijklmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789@#$!";
-  return Array.from({length:len},()=>chars[Math.floor(Math.random()*chars.length)]).join("");
-}
+type UserRow = {
+  id:string; email:string; created_at:string; last_sign_in_at?:string;
+  display_name?:string; username?:string; avatar_url?:string;
+  role:string; permissions:Record<string,boolean>;
+};
 
 export default function UserManagement() {
-  const { t } = useLanguage();
-  const { user: me } = useAuth();
-  const { role: myRole, isSuperAdmin } = usePermissions();
-
-  const isDeveloper = myRole === "developer";
-  const canManage   = isDeveloper || isSuperAdmin;
-
-  /* ── visible roles based on current user level ── */
-  const visibleRoles = ALL_ROLES.filter(r => isDeveloper || !r.devOnly);
-
-  const [users,     setUsers]     = useState<any[]>([]);
-  const [loading,   setLoading]   = useState(true);
-  const [showAdd,   setShowAdd]   = useState(false);
-  const [editUser,  setEditUser]  = useState<any>(null);
-  const [saving,    setSaving]    = useState(false);
-  const [delConfirm,setDelConfirm]= useState<string|null>(null);
-
-  /* Add form */
-  const [form, setForm] = useState({ email:"", displayName:"", username:"", role:"journalist", password:"", autoPass:true, avatarUrl:"" });
-  const [showPass, setShowPass]   = useState(false);
-  const [addStep,  setAddStep]    = useState<"form"|"done">("form");
-  const [createdInfo, setCreatedInfo] = useState<{email:string;password:string;role:string}|null>(null);
-
-  /* Edit form */
-  const [editForm, setEditForm]   = useState<any>({});
-  const [editPerms, setEditPerms] = useState<Record<string,boolean>>({});
-  const [editShowPass, setEditShowPass] = useState(false);
-
-  useEffect(()=>{ loadUsers(); },[]);
-
-  const loadUsers = async () => {
-    setLoading(true);
-    const [{ data:profiles }, { data:roles }] = await Promise.all([
-      supabase.from("profiles").select("id,user_id,display_name,username,created_at,email"),
-      supabase.from("user_roles").select("user_id,role,permissions"),
-    ]);
-    const merged = (profiles||[])
-      .map(p=>({...p, roleData:(roles||[]).find(r=>r.user_id===p.user_id)}))
-      /* hide developer accounts from non-developers */
-      .filter(u => isDeveloper || u.roleData?.role !== "developer")
-      /* hide my own account from the list to avoid self-sabotage */
-      .filter(u => u.user_id !== me?.id || isDeveloper);
-    setUsers(merged);
-    setLoading(false);
-  };
-
-  /* ── Create user with password ── */
-  const handleCreate = async () => {
-    if (!form.email.trim()) return toast.error("أدخل البريد الإلكتروني");
-    const password = form.autoPass ? genPassword() : form.password;
-    if (!password || password.length < 8) return toast.error("كلمة المرور قصيرة جداً (8 أحرف على الأقل)");
-
-    setSaving(true);
-    try {
-      /* Use Supabase signUp from admin – creates user in auth.users */
-      const { data, error } = await supabase.auth.signUp({
-        email: form.email.trim(),
-        password,
-        options: {
-          data: {
-            display_name: form.displayName || form.email.split("@")[0],
-            username: form.username || form.email.split("@")[0].toLowerCase().replace(/\s+/g,"_"),
-            force_password_change: true,
-          }
-        }
-      });
-
-      if (error) throw error;
-      if (!data.user) throw new Error("فشل إنشاء الحساب");
-
-      const uid = data.user.id;
-
-      /* Save profile */
-      await supabase.from("profiles").upsert({
-        user_id: uid,
-        display_name: form.displayName || form.email.split("@")[0],
-        username: form.username || form.email.split("@")[0].toLowerCase().replace(/\s+/g,"_"),
-        email: form.email.trim(),
-      }, { onConflict:"user_id" });
-
-      /* Save role + permissions */
-      const perms = ROLE_DEFAULTS[form.role] || ROLE_DEFAULTS.journalist;
-      await supabase.from("user_roles").upsert({
-        user_id: uid, role: form.role,
-        permissions: JSON.stringify(perms),
-      }, { onConflict:"user_id" });
-
-      setCreatedInfo({ email: form.email.trim(), password, role: form.role });
-      setAddStep("done");
-      toast.success("✅ تم إنشاء الحساب");
-      loadUsers();
-    } catch(err:any) {
-      toast.error("فشل الإنشاء: " + (err.message || "خطأ غير معروف"));
-    }
-    setSaving(false);
-  };
-
-  /* ── Save user edits ── */
-  const saveEdit = async () => {
-    if (!editUser) return;
-    setSaving(true);
-    const uid = editUser.user_id || editUser.id;
-    try {
-      await supabase.from("profiles").update({
-        display_name: editForm.displayName,
-        username: editForm.username,
-        email: editForm.email,
-      }).eq("user_id", uid);
-
-      await supabase.from("user_roles").upsert({
-        user_id: uid, role: editForm.role,
-        permissions: JSON.stringify(editPerms),
-      }, { onConflict:"user_id" });
-
-      if (editForm.newPassword && editForm.newPassword.length >= 8) {
-        /* Update via admin API using service key env var if available */
-        toast.info("تغيير الباسورد يحتاج صلاحية Admin API – تم حفظ البيانات الأخرى");
-      }
-
-      toast.success("✅ تم حفظ التعديلات");
-      setSaving(false); setEditUser(null); loadUsers();
-    } catch(err:any) {
-      toast.error("خطأ: " + (err.message||""));
-      setSaving(false);
-    }
-  };
-
-  /* ── Delete user ── */
-  const deleteUser = async (userId:string) => {
-    await supabase.from("user_roles").delete().eq("user_id",userId);
-    await supabase.from("profiles").delete().eq("user_id",userId);
-    toast.success("تم حذف المستخدم");
-    setDelConfirm(null); loadUsers();
-  };
-
-  const openEdit = (u:any) => {
-    setEditUser(u);
-    setEditForm({
-      displayName: u.display_name||"",
-      username: u.username||"",
-      email: u.email||"",
-      role: u.roleData?.role||"journalist",
-      newPassword: "",
-    });
-    const p = u.roleData?.permissions;
-    setEditPerms(typeof p==="string"?JSON.parse(p):(p||{}));
-  };
-
-  if (!canManage) return (
-    <div className="flex flex-col items-center justify-center h-64 gap-3">
-      <Shield className="w-12 h-12 text-muted-foreground/30"/>
-      <p className="text-muted-foreground font-bold">غير مصرح لك بالوصول</p>
+  const { role:myRole } = usePermissions();
+  const { t, language } = useLanguage();
+  const isDeveloper  = myRole==="developer";
+  const isSuperAdmin = myRole==="super_admin" || isDeveloper;
+  if (!isSuperAdmin) return (
+    <div className="flex flex-col items-center justify-center py-32 gap-4 text-muted-foreground">
+      <Shield className="w-16 h-16 opacity-10"/>
+      <p className="font-bold text-lg">صلاحية مرفوضة</p>
+      <p className="text-sm">هذه الصفحة للمسؤولين فقط</p>
     </div>
   );
 
-  return (
-    <div className="space-y-5" dir="rtl">
+  const [users,      setUsers]      = useState<UserRow[]>([]);
+  const [loading,    setLoading]    = useState(true);
+  const [search,     setSearch]     = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [panel,      setPanel]      = useState<"none"|"add"|"edit"|"permissions">("none");
+  const [selected,   setSelected]   = useState<UserRow|null>(null);
+  const [createdInfo,setCreatedInfo]= useState<{email:string;pass:string}|null>(null);
+  const [delId,      setDelId]      = useState<string|null>(null);
 
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
+  /* ── add form ── */
+  const [addForm, setAddForm] = useState({ email:"", displayName:"", username:"", role:"journalist", password:"", autoPass:true, avatarUrl:"" });
+  const [addStep, setAddStep] = useState<"form"|"done">("form");
+  const [addLoading, setAddLoading] = useState(false);
+  const [addShowPass, setAddShowPass] = useState(false);
+
+  /* ── edit form ── */
+  const [editForm, setEditForm] = useState({ displayName:"", username:"", role:"journalist", newPassword:"", avatarUrl:"", permissions:{} as Record<string,boolean> });
+  const [editShowPass, setEditShowPass] = useState(false);
+  const [editLoading,  setEditLoading]  = useState(false);
+  const [editAvatarMode, setEditAvatarMode] = useState(false);
+
+  /* ── fetch ── */
+  const fetchUsers = async () => {
+    setLoading(true);
+    const [{ data:profiles }, { data:roles }] = await Promise.all([
+      supabase.from("profiles").select("id,email,created_at,display_name,username,avatar_url"),
+      supabase.from("user_roles").select("user_id,role,permissions"),
+    ]);
+    const merged = (profiles||[]).map(p=>({
+      ...p,
+      display_name: p.display_name||"",
+      username: p.username||"",
+      avatar_url: p.avatar_url||"",
+      role: (roles||[]).find(r=>r.user_id===p.id)?.role||"viewer",
+      permissions: (() => {
+        const raw = (roles||[]).find(r=>r.user_id===p.id)?.permissions;
+        if (!raw) return ROLE_DEFAULTS["viewer"];
+        try { return typeof raw==="string" ? JSON.parse(raw) : raw; }
+        catch { return ROLE_DEFAULTS["viewer"]; }
+      })(),
+    })).filter(u=>isDeveloper||u.role!=="developer");
+    setUsers(merged);
+    setLoading(false);
+  };
+  useEffect(()=>{ fetchUsers(); },[]);
+
+  /* ── filter ── */
+  const filtered = users.filter(u=>{
+    const q=search.toLowerCase();
+    const matchQ = !q || u.email?.toLowerCase().includes(q) || u.display_name?.toLowerCase().includes(q) || u.username?.toLowerCase().includes(q);
+    const matchR = roleFilter==="all" || u.role===roleFilter;
+    return matchQ && matchR;
+  });
+
+  /* ── create user ── */
+  const handleCreate = async () => {
+    const pass = addForm.autoPass ? genPassword() : addForm.password;
+    if (!addForm.email.includes("@")) return toast.error("أدخل بريد إلكتروني صحيح");
+    if (pass.length < 8) return toast.error("كلمة المرور 8 أحرف على الأقل");
+    setAddLoading(true);
+    try {
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL||"https://neojditfucitnovcfspw.supabase.co"}/functions/v1/create-user`, {
+        method:"POST", headers:{"Content-Type":"application/json", Authorization:`Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`},
+        body: JSON.stringify({ email:addForm.email.trim(), password:pass, display_name:addForm.displayName.trim()||null, username:addForm.username.trim().toLowerCase()||null, avatar_url:addForm.avatarUrl||null })
+      });
+      const json = await res.json();
+      const uid = json?.user?.id || json?.id;
+      if (!uid && !res.ok) throw new Error(json?.error || json?.message || "فشل الإنشاء");
+      const uidFinal = uid || json?.user?.id;
+      if (uidFinal) {
+        const perms = ROLE_DEFAULTS[addForm.role] || ROLE_DEFAULTS["viewer"];
+        await supabase.from("user_roles").upsert({ user_id:uidFinal, role:addForm.role, permissions:JSON.stringify(perms) });
+        if (addForm.avatarUrl) {
+          await supabase.from("profiles").update({ avatar_url:addForm.avatarUrl }).eq("id", uidFinal);
+        }
+      }
+      setCreatedInfo({ email:addForm.email.trim(), pass });
+      setAddStep("done");
+      fetchUsers();
+      toast.success("تم إنشاء المستخدم بنجاح");
+    } catch(e:any){
+      // Fallback: try direct insert to profiles
+      toast.error(e.message || "فشل إنشاء المستخدم");
+    } finally { setAddLoading(false); }
+  };
+
+  /* ── edit user ── */
+  const openEdit = (u:UserRow) => {
+    setSelected(u);
+    setEditForm({ displayName:u.display_name||"", username:u.username||"", role:u.role, newPassword:"", avatarUrl:u.avatar_url||"", permissions:{...u.permissions} });
+    setEditAvatarMode(false);
+    setPanel("edit");
+  };
+
+  const handleEdit = async () => {
+    if (!selected) return;
+    setEditLoading(true);
+    try {
+      // Update profile
+      await supabase.from("profiles").update({
+        display_name: editForm.displayName.trim()||null,
+        username: editForm.username.trim().toLowerCase()||null,
+        avatar_url: editForm.avatarUrl||null,
+      }).eq("id", selected.id);
+      // Update role + permissions
+      await supabase.from("user_roles").upsert({
+        user_id:selected.id, role:editForm.role,
+        permissions:JSON.stringify(editForm.permissions),
+      });
+      // Password change via edge function
+      if (editForm.newPassword && editForm.newPassword.length>=8) {
+        await fetch(`${import.meta.env.VITE_SUPABASE_URL||"https://neojditfucitnovcfspw.supabase.co"}/functions/v1/update-user-password`, {
+          method:"POST", headers:{"Content-Type":"application/json", Authorization:`Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`},
+          body:JSON.stringify({ user_id:selected.id, new_password:editForm.newPassword })
+        });
+      }
+      setPanel("none");
+      fetchUsers();
+      toast.success("تم حفظ التعديلات");
+    } catch(e:any){ toast.error(e.message||"حدث خطأ"); }
+    finally { setEditLoading(false); }
+  };
+
+  /* ── delete user ── */
+  const handleDelete = async () => {
+    if (!delId) return;
+    try {
+      await supabase.from("profiles").delete().eq("id",delId);
+      await supabase.from("user_roles").delete().eq("user_id",delId);
+      setUsers(u=>u.filter(x=>x.id!==delId));
+      setDelId(null);
+      toast.success("تم حذف المستخدم");
+    } catch(e:any){ toast.error(e.message||"فشل الحذف"); }
+  };
+
+  /* ── stats ── */
+  const stats = ROLES.filter(r=>!r.devOnly||isDeveloper).map(r=>({ ...r, count:users.filter(u=>u.role===r.id).length }));
+  const visibleRoles = ROLES.filter(r=>!r.devOnly||isDeveloper);
+
+  /* ── render ── */
+  return (
+    <div className="space-y-5 pb-20" dir="rtl">
+
+      {/* ── Header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-black flex items-center gap-2">
-            <Users className="text-primary w-6 h-6"/> إدارة المستخدمين
-            {isDeveloper && <span className="text-[10px] bg-purple-600 text-white px-2 py-0.5 rounded-full font-bold">Developer Mode</span>}
+          <h1 className="text-xl sm:text-2xl font-black text-foreground flex items-center gap-2">
+            <Users className="w-6 h-6 text-primary"/>إدارة المستخدمين
           </h1>
-          <p className="text-sm text-muted-foreground">{users.length} مستخدم مسجّل</p>
+          <p className="text-xs text-muted-foreground mt-0.5">{users.length} مستخدم مسجّل</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={loadUsers} className="w-9 h-9 rounded-xl border border-border hover:bg-muted flex items-center justify-center transition-colors">
-            <RefreshCw className="w-4 h-4"/>
+          <button onClick={fetchUsers} className="w-9 h-9 rounded-xl border border-border hover:bg-muted flex items-center justify-center transition-colors">
+            <RefreshCw className="w-4 h-4 text-muted-foreground"/>
           </button>
-          <button onClick={()=>{setShowAdd(true);setAddStep("form");setForm({email:"",displayName:"",username:"",role:"journalist",password:"",autoPass:true});setCreatedInfo(null);}}
-            className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-primary/90 transition-colors shadow-sm">
-            <Plus className="w-4 h-4"/> إضافة مستخدم
+          <button onClick={()=>{ setPanel("add"); setAddStep("form"); setAddForm({email:"",displayName:"",username:"",role:"journalist",password:"",autoPass:true,avatarUrl:""}); setCreatedInfo(null); }}
+            className="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl font-black text-sm hover:bg-primary/85 transition-colors">
+            <Plus className="w-4 h-4"/>مستخدم جديد
           </button>
         </div>
       </div>
 
-      {/* Role legend */}
+      {/* ── Stats pills ── */}
       <div className="flex flex-wrap gap-2">
-        {visibleRoles.map(r=>(
-          <span key={r.id} className={`text-[10px] text-white px-2.5 py-1 rounded-full font-bold flex items-center gap-1 ${r.color}`}>
-            <r.icon className="w-2.5 h-2.5"/>{r.label}
-          </span>
+        {stats.map(r=>(
+          <button key={r.id} onClick={()=>setRoleFilter(prev=>prev===r.id?"all":r.id)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all border ${roleFilter===r.id?r.badge+" border-current":"border-border bg-card hover:bg-muted text-muted-foreground"}`}>
+            <r.icon className="w-3 h-3"/>{r.label}
+            <span className="opacity-70">({r.count})</span>
+          </button>
         ))}
       </div>
 
-      {/* Users List */}
+      {/* ── Search ── */}
+      <div className="relative">
+        <Search className="absolute start-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground"/>
+        <input value={search} onChange={e=>setSearch(e.target.value)}
+          placeholder="ابحث بالاسم أو الإيميل..."
+          className="w-full bg-card border border-border rounded-xl ps-9 pe-9 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"/>
+        {search && <button onClick={()=>setSearch("")} className="absolute end-3 top-1/2 -translate-y-1/2"><X className="w-4 h-4 text-muted-foreground"/></button>}
+      </div>
+
+      {/* ── User table (desktop) / Cards (mobile) ── */}
       {loading ? (
-        <div className="flex items-center justify-center h-40"><Loader2 className="w-6 h-6 animate-spin text-primary"/></div>
+        <div className="flex items-center justify-center py-20">
+          <Loader2 className="w-8 h-8 animate-spin text-primary/40"/>
+        </div>
       ) : (
-        <div className="space-y-2.5">
-          {users.map((u,i)=>{
-            const roleObj = ALL_ROLES.find(r=>r.id===u.roleData?.role);
-            const Icon = roleObj?.icon||User;
-            return (
-              <motion.div key={u.id||u.user_id} initial={{opacity:0,y:8}} animate={{opacity:1,y:0}} transition={{delay:i*.04}}
-                className="bg-card border border-border rounded-2xl p-4 flex items-center gap-3 sm:gap-4">
-                <div className={`w-11 h-11 rounded-full ${roleObj?.color||"bg-primary"} flex items-center justify-center text-white font-black text-lg shrink-0`}>
-                  {(u.display_name||u.email||"?")[0].toUpperCase()}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="font-bold text-sm truncate">{u.display_name||"—"}</div>
-                  <div className="text-[11px] text-muted-foreground truncate">{u.email||u.username||u.user_id?.slice(0,12)+"..."}</div>
-                  <div className="flex items-center gap-2 mt-1 flex-wrap">
-                    {roleObj && (
-                      <span className={`text-[9px] text-white px-2 py-0.5 rounded-full font-bold ${roleObj.color}`}>{roleObj.label}</span>
-                    )}
-                    <span className="text-[10px] text-muted-foreground">{new Date(u.created_at).toLocaleDateString("ar-EG")}</span>
+        <>
+          {/* Desktop Table */}
+          <div className="hidden md:block rounded-2xl border border-border overflow-hidden bg-card">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/40">
+                    <th className="text-start px-4 py-3 text-xs font-black text-muted-foreground">المستخدم</th>
+                    <th className="text-start px-4 py-3 text-xs font-black text-muted-foreground">البريد</th>
+                    <th className="text-start px-4 py-3 text-xs font-black text-muted-foreground">الدور</th>
+                    <th className="text-start px-4 py-3 text-xs font-black text-muted-foreground">الصلاحيات</th>
+                    <th className="text-start px-4 py-3 text-xs font-black text-muted-foreground">تاريخ الإنشاء</th>
+                    <th className="text-center px-4 py-3 text-xs font-black text-muted-foreground">إجراء</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map((u,i)=>{
+                    const roleObj = ROLES.find(r=>r.id===u.role)||ROLES[3];
+                    const Icon = roleObj.icon;
+                    const permCount = Object.values(u.permissions).filter(Boolean).length;
+                    return (
+                      <motion.tr key={u.id} initial={{opacity:0,y:6}} animate={{opacity:1,y:0,transition:{delay:i*0.02}}}
+                        className="border-b border-border/50 hover:bg-muted/30 transition-colors group">
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            {u.avatar_url
+                              ? <img src={u.avatar_url} alt="" className="w-9 h-9 rounded-full object-cover shrink-0 ring-2 ring-primary/10"/>
+                              : <div className={`w-9 h-9 rounded-full ${roleObj.color} flex items-center justify-center text-white font-black text-sm shrink-0`}>
+                                  {(u.display_name||u.email||"?")[0].toUpperCase()}
+                                </div>
+                            }
+                            <div>
+                              <p className="font-bold text-foreground text-sm leading-tight">{u.display_name||"—"}</p>
+                              {u.username && <p className="text-[10px] text-muted-foreground">@{u.username}</p>}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-muted-foreground text-xs font-mono">{u.email}</td>
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-lg ${roleObj.badge}`}>
+                            <Icon className="w-3 h-3"/>{roleObj.label}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1">
+                            <div className="w-16 bg-muted rounded-full h-1.5">
+                              <div className="bg-primary h-1.5 rounded-full transition-all" style={{width:`${(permCount/Object.keys(PERM_KEYS).length)*100}%`}}/>
+                            </div>
+                            <span className="text-[10px] text-muted-foreground">{permCount}/{Object.keys(PERM_KEYS).length}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 text-xs text-muted-foreground">{fmt(u.created_at)}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <button onClick={()=>openEdit(u)}
+                              className="w-7 h-7 rounded-lg hover:bg-primary/10 hover:text-primary flex items-center justify-center transition-colors" title="تعديل">
+                              <Pencil className="w-3.5 h-3.5"/>
+                            </button>
+                            <button onClick={()=>setDelId(u.id)} disabled={u.id===selected?.id}
+                              className="w-7 h-7 rounded-lg hover:bg-red-500/10 hover:text-red-500 flex items-center justify-center transition-colors" title="حذف">
+                              <Trash2 className="w-3.5 h-3.5"/>
+                            </button>
+                          </div>
+                        </td>
+                      </motion.tr>
+                    );
+                  })}
+                  {filtered.length===0 && (
+                    <tr><td colSpan={6} className="text-center py-16 text-muted-foreground text-sm">
+                      <Users className="w-10 h-10 mx-auto mb-2 opacity-10"/>لا يوجد مستخدمون
+                    </td></tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Mobile Cards */}
+          <div className="md:hidden space-y-2">
+            {filtered.map((u,i)=>{
+              const roleObj=ROLES.find(r=>r.id===u.role)||ROLES[3];
+              const Icon=roleObj.icon;
+              return (
+                <motion.div key={u.id} initial={{opacity:0,y:8}} animate={{opacity:1,y:0,transition:{delay:i*0.03}}}
+                  className="bg-card border border-border rounded-2xl p-3.5 flex items-center gap-3">
+                  {u.avatar_url
+                    ? <img src={u.avatar_url} alt="" className="w-11 h-11 rounded-full object-cover shrink-0 ring-2 ring-primary/10"/>
+                    : <div className={`w-11 h-11 rounded-full ${roleObj.color} flex items-center justify-center text-white font-black text-base shrink-0`}>
+                        {(u.display_name||u.email||"?")[0].toUpperCase()}
+                      </div>
+                  }
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-sm leading-tight truncate">{u.display_name||u.email}</p>
+                    <p className="text-[10px] text-muted-foreground truncate">{u.email}</p>
+                    <span className={`inline-flex items-center gap-1 text-[9px] font-bold px-1.5 py-0.5 rounded-md mt-1 ${roleObj.badge}`}>
+                      <Icon className="w-2.5 h-2.5"/>{roleObj.label}
+                    </span>
                   </div>
-                </div>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <button onClick={()=>openEdit(u)} title="تعديل"
-                    className="w-8 h-8 rounded-xl bg-blue-500/10 text-blue-600 hover:bg-blue-500/20 flex items-center justify-center transition-colors">
-                    <Edit2 className="w-3.5 h-3.5"/>
-                  </button>
-                  {isDeveloper && u.user_id !== me?.id && (
-                    <button onClick={()=>setDelConfirm(u.user_id||u.id)} title="حذف"
-                      className="w-8 h-8 rounded-xl bg-red-500/10 text-red-500 hover:bg-red-500/20 flex items-center justify-center transition-colors">
+                  <div className="flex flex-col gap-1 shrink-0">
+                    <button onClick={()=>openEdit(u)}
+                      className="w-8 h-8 rounded-xl bg-muted hover:bg-primary/10 hover:text-primary flex items-center justify-center transition-colors">
+                      <Pencil className="w-3.5 h-3.5"/>
+                    </button>
+                    <button onClick={()=>setDelId(u.id)}
+                      className="w-8 h-8 rounded-xl bg-muted hover:bg-red-500/10 hover:text-red-500 flex items-center justify-center transition-colors">
                       <Trash2 className="w-3.5 h-3.5"/>
                     </button>
-                  )}
-                </div>
-              </motion.div>
-            );
-          })}
-          {users.length===0 && (
-            <div className="text-center py-12 text-muted-foreground">
-              <Users className="w-10 h-10 mx-auto mb-2 opacity-30"/>
-              <p>لا يوجد مستخدمون بعد</p>
-            </div>
-          )}
-        </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+            {filtered.length===0 && (
+              <div className="text-center py-16 text-muted-foreground text-sm">
+                <Users className="w-10 h-10 mx-auto mb-2 opacity-10"/>لا يوجد مستخدمون
+              </div>
+            )}
+          </div>
+        </>
       )}
 
-      {/* ─── Add User Modal ─── */}
+      {/* ────── Slide-over Panel ────── */}
       <AnimatePresence>
-        {showAdd && (
+        {panel!=="none" && (
           <>
             <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
-              className="fixed inset-0 bg-black/60 z-50" onClick={()=>!saving&&setShowAdd(false)}/>
-            <motion.div initial={{opacity:0,scale:.95,y:20}} animate={{opacity:1,scale:1,y:0}} exit={{opacity:0,scale:.95}}
-              className="fixed inset-x-3 top-1/2 -translate-y-1/2 z-50 bg-card rounded-3xl p-5 shadow-2xl max-w-md mx-auto border border-border overflow-y-auto max-h-[90vh]">
+              className="fixed inset-0 bg-black/50 z-40 backdrop-blur-sm" onClick={()=>setPanel("none")}/>
+            <motion.aside
+              initial={{x:language==="ar"?"-100%":"100%"}} animate={{x:0}} exit={{x:language==="ar"?"-100%":"100%"}}
+              transition={{type:"spring",stiffness:300,damping:30}}
+              className="fixed inset-y-0 start-0 w-full max-w-md bg-card border-e border-border z-50 flex flex-col shadow-2xl overflow-y-auto"
+              dir="rtl">
 
-              {addStep==="done" && createdInfo ? (
-                <div className="text-center py-4 space-y-4">
-                  <CheckCircle2 className="w-16 h-16 text-green-500 mx-auto"/>
-                  <div>
-                    <h3 className="text-xl font-black">تم إنشاء الحساب!</h3>
-                    <p className="text-sm text-muted-foreground mt-1">احتفظ ببيانات الدخول</p>
-                  </div>
-                  <div className="bg-muted rounded-2xl p-4 text-start space-y-3">
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">البريد الإلكتروني</p>
-                      <div className="flex items-center gap-2">
-                        <code className="flex-1 text-sm font-bold bg-background rounded-lg px-3 py-2 border border-border">{createdInfo.email}</code>
-                        <button onClick={()=>{navigator.clipboard.writeText(createdInfo.email);toast.success("نُسخ");}}
-                          className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center hover:bg-primary/20 transition-colors"><Copy className="w-3.5 h-3.5"/></button>
+              {/* Panel header */}
+              <div className="flex items-center justify-between p-5 border-b border-border shrink-0 sticky top-0 bg-card z-10">
+                <h2 className="text-lg font-black flex items-center gap-2">
+                  {panel==="add"
+                    ? <><Plus className="w-5 h-5 text-primary"/>مستخدم جديد</>
+                    : <><UserCog className="w-5 h-5 text-primary"/>تعديل: {selected?.display_name||selected?.email}</>
+                  }
+                </h2>
+                <button onClick={()=>setPanel("none")} className="w-8 h-8 rounded-full bg-muted hover:bg-muted/70 flex items-center justify-center transition-colors">
+                  <X className="w-4 h-4"/>
+                </button>
+              </div>
+
+              {/* ─── ADD FORM ─── */}
+              {panel==="add" && (
+                <div className="flex-1 p-5 space-y-4">
+                  {addStep==="form" ? (
+                    <>
+                      {/* Email */}
+                      <div>
+                        <label className="text-xs font-semibold text-muted-foreground block mb-1.5 flex items-center gap-1.5"><Mail className="w-3.5 h-3.5"/>البريد الإلكتروني *</label>
+                        <input type="email" value={addForm.email} onChange={e=>setAddForm(f=>({...f,email:e.target.value}))}
+                          placeholder="user@egstreet.com"
+                          className="w-full bg-muted border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"/>
                       </div>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground mb-1">كلمة المرور الأولية</p>
-                      <div className="flex items-center gap-2">
-                        <code className="flex-1 text-sm font-bold bg-background rounded-lg px-3 py-2 border border-border font-mono">{createdInfo.password}</code>
-                        <button onClick={()=>{navigator.clipboard.writeText(createdInfo.password);toast.success("نُسخت");}}
-                          className="w-8 h-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center hover:bg-primary/20 transition-colors"><Copy className="w-3.5 h-3.5"/></button>
+                      {/* Display name */}
+                      <div>
+                        <label className="text-xs font-semibold text-muted-foreground block mb-1.5">الاسم الكامل</label>
+                        <input value={addForm.displayName} onChange={e=>setAddForm(f=>({...f,displayName:e.target.value}))}
+                          placeholder="محمد أحمد"
+                          className="w-full bg-muted border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"/>
                       </div>
+                      {/* Username */}
+                      <div>
+                        <label className="text-xs font-semibold text-muted-foreground block mb-1.5">اسم المستخدم</label>
+                        <input value={addForm.username} onChange={e=>setAddForm(f=>({...f,username:e.target.value.toLowerCase().replace(/[^a-z0-9_]/g,"")}))}
+                          placeholder="m.ahmed" dir="ltr"
+                          className="w-full bg-muted border border-border rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/30"/>
+                      </div>
+                      {/* Password */}
+                      <div>
+                        <label className="text-xs font-semibold text-muted-foreground block mb-1.5 flex items-center gap-1.5"><Key className="w-3.5 h-3.5"/>كلمة المرور</label>
+                        <div className="flex items-center gap-2 mb-2">
+                          <button onClick={()=>setAddForm(f=>({...f,autoPass:true}))}
+                            className={`flex-1 text-xs py-1.5 rounded-xl border-2 font-bold transition-all ${addForm.autoPass?"border-primary bg-primary/5 text-primary":"border-border text-muted-foreground"}`}>
+                            توليد تلقائي
+                          </button>
+                          <button onClick={()=>setAddForm(f=>({...f,autoPass:false}))}
+                            className={`flex-1 text-xs py-1.5 rounded-xl border-2 font-bold transition-all ${!addForm.autoPass?"border-primary bg-primary/5 text-primary":"border-border text-muted-foreground"}`}>
+                            تحديد يدوي
+                          </button>
+                        </div>
+                        {!addForm.autoPass && (
+                          <div className="relative">
+                            <input type={addShowPass?"text":"password"} value={addForm.password}
+                              onChange={e=>setAddForm(f=>({...f,password:e.target.value}))}
+                              placeholder="8 أحرف على الأقل" dir="ltr"
+                              className="w-full bg-muted border border-border rounded-xl px-4 pe-10 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/30"/>
+                            <button type="button" onClick={()=>setAddShowPass(s=>!s)}
+                              className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                              {addShowPass?<EyeOff className="w-4 h-4"/>:<Eye className="w-4 h-4"/>}
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                      {/* Role */}
+                      <div>
+                        <label className="text-xs font-semibold text-muted-foreground block mb-2 flex items-center gap-1.5"><Shield className="w-3.5 h-3.5"/>الدور</label>
+                        <div className="grid grid-cols-2 gap-2">
+                          {visibleRoles.map(r=>(
+                            <button key={r.id} onClick={()=>setAddForm(f=>({...f,role:r.id}))}
+                              className={`p-3 rounded-xl border-2 text-start transition-all ${addForm.role===r.id?"border-primary bg-primary/5":"border-border hover:border-primary/30"}`}>
+                              <div className={`w-6 h-6 ${r.color} rounded-lg flex items-center justify-center mb-1.5`}>
+                                <r.icon className="w-3.5 h-3.5 text-white"/>
+                              </div>
+                              <div className="text-xs font-black leading-tight">{r.label}</div>
+                              <div className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{r.desc}</div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      {/* Avatar URL or upload */}
+                      <div>
+                        <label className="text-xs font-semibold text-muted-foreground block mb-1.5 flex items-center gap-1.5"><ImageIcon className="w-3.5 h-3.5"/>صورة الملف الشخصي</label>
+                        <input value={addForm.avatarUrl} onChange={e=>setAddForm(f=>({...f,avatarUrl:e.target.value}))}
+                          placeholder="https://... (اختياري)"
+                          className="w-full bg-muted border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 mb-2" dir="ltr"/>
+                        <ImageUploader
+                          bucket="media" folder="avatars"
+                          onUploaded={url=>setAddForm(f=>({...f,avatarUrl:url}))}
+                          label="أو ارفع صورة مباشرة"
+                        />
+                      </div>
+                      {/* Submit */}
+                      <button onClick={handleCreate} disabled={addLoading}
+                        className="w-full bg-primary text-white py-3 rounded-xl font-black text-sm hover:bg-primary/85 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2 mt-2">
+                        {addLoading ? <><Loader2 className="w-4 h-4 animate-spin"/>جارٍ الإنشاء...</> : <>إنشاء المستخدم</>}
+                      </button>
+                    </>
+                  ) : (
+                    /* Done step */
+                    <div className="flex flex-col items-center gap-5 py-8">
+                      <div className="w-20 h-20 rounded-full bg-green-500/10 flex items-center justify-center">
+                        <Check className="w-10 h-10 text-green-500"/>
+                      </div>
+                      <div className="text-center">
+                        <h3 className="text-xl font-black text-foreground mb-1">تم الإنشاء ✓</h3>
+                        <p className="text-sm text-muted-foreground">احتفظ ببيانات الدخول</p>
+                      </div>
+                      <div className="w-full bg-muted rounded-2xl p-4 space-y-3">
+                        <div>
+                          <p className="text-[10px] text-muted-foreground mb-1">البريد الإلكتروني</p>
+                          <div className="flex items-center gap-2">
+                            <code className="flex-1 text-sm font-mono bg-background border border-border rounded-xl px-3 py-2 text-foreground truncate">{createdInfo?.email}</code>
+                            <button onClick={()=>{navigator.clipboard.writeText(createdInfo?.email||"");toast.success("نُسخ");}}
+                              className="w-9 h-9 rounded-xl border border-border hover:bg-background flex items-center justify-center transition-colors shrink-0">
+                              <Copy className="w-3.5 h-3.5"/>
+                            </button>
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-[10px] text-muted-foreground mb-1">كلمة المرور</p>
+                          <div className="flex items-center gap-2">
+                            <code className="flex-1 text-sm font-mono bg-background border border-border rounded-xl px-3 py-2 text-foreground truncate">{createdInfo?.pass}</code>
+                            <button onClick={()=>{navigator.clipboard.writeText(createdInfo?.pass||"");toast.success("نُسخت");}}
+                              className="w-9 h-9 rounded-xl border border-border hover:bg-background flex items-center justify-center transition-colors shrink-0">
+                              <Copy className="w-3.5 h-3.5"/>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                      <button onClick={()=>setPanel("none")} className="w-full bg-muted hover:bg-muted/70 py-2.5 rounded-xl font-bold text-sm transition-colors">
+                        إغلاق
+                      </button>
                     </div>
-                    <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 flex items-start gap-2">
-                      <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5"/>
-                      <p className="text-xs text-amber-700 dark:text-amber-300">المستخدم سيُطلب منه تغيير كلمة المرور عند أول دخول</p>
-                    </div>
-                  </div>
-                  <button onClick={()=>setShowAdd(false)}
-                    className="w-full bg-primary text-white py-3 rounded-xl font-black text-sm">حسناً</button>
+                  )}
                 </div>
-              ) : (
-                <>
-                  <div className="flex items-center justify-between mb-5">
-                    <h3 className="text-lg font-black flex items-center gap-2">
-                      <Plus className="w-5 h-5 text-primary"/> إضافة مستخدم جديد
-                    </h3>
-                    <button onClick={()=>setShowAdd(false)} className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                      <X className="w-4 h-4"/>
-                    </button>
-                  </div>
-                  <div className="space-y-4">
-                    {/* Email */}
-                    <div>
-                      <label className="text-xs font-bold text-muted-foreground mb-1.5 block">البريد الإلكتروني *</label>
-                      <input type="email" value={form.email} onChange={e=>setForm(f=>({...f,email:e.target.value}))}
-                        placeholder="user@example.com" disabled={saving}
-                        className="w-full bg-muted border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground/40 disabled:opacity-50"/>
-                    </div>
-                    {/* Name */}
-                    <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <label className="text-xs font-bold text-muted-foreground mb-1.5 block">الاسم</label>
-                        <input type="text" value={form.displayName} onChange={e=>setForm(f=>({...f,displayName:e.target.value}))}
-                          placeholder="الاسم الكامل" disabled={saving}
-                          className="w-full bg-muted border border-border rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground/40 disabled:opacity-50"/>
-                      </div>
-                      <div>
-                        <label className="text-xs font-bold text-muted-foreground mb-1.5 block">اسم المستخدم</label>
-                        <input type="text" value={form.username} onChange={e=>setForm(f=>({...f,username:e.target.value.toLowerCase().replace(/\s+/g,"_")}))}
-                          placeholder="username" disabled={saving}
-                          className="w-full bg-muted border border-border rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground/40 disabled:opacity-50 font-mono"/>
-                      </div>
-                    </div>
-                    {/* Avatar */}
-                    <div className="space-y-2">
-                      <Label>صورة المستخدم</Label>
-                      <div className="flex items-center gap-3">
-                        <Input value={form.avatarUrl} onChange={e=>setForm(f=>({...f,avatarUrl:e.target.value}))} placeholder="رابط الصورة أو ارفع من المقالات" />
-                      </div>
-                    </div>
-
-                    {/* Password */}
-                    <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <label className="text-xs font-bold text-muted-foreground">كلمة المرور</label>
-                        <label className="flex items-center gap-1.5 text-xs cursor-pointer">
-                          <input type="checkbox" checked={form.autoPass} onChange={e=>setForm(f=>({...f,autoPass:e.target.checked}))}
-                            className="w-3.5 h-3.5 rounded accent-primary"/>
-                          توليد تلقائي
-                        </label>
-                      </div>
-                      {!form.autoPass && (
-                        <div className="relative">
-                          <input type={showPass?"text":"password"} value={form.password} onChange={e=>setForm(f=>({...f,password:e.target.value}))}
-                            placeholder="8 أحرف على الأقل" disabled={saving}
-                            className="w-full bg-muted border border-border rounded-xl px-4 pr-4 pl-10 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-50 font-mono"/>
-                          <button type="button" onClick={()=>setShowPass(s=>!s)}
-                            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                            {showPass?<EyeOff className="w-4 h-4"/>:<Eye className="w-4 h-4"/>}
-                          </button>
-                        </div>
-                      )}
-                      {form.autoPass && (
-                        <div className="bg-muted border border-dashed border-primary/30 rounded-xl px-4 py-2.5 text-xs text-muted-foreground flex items-center gap-2">
-                          <Key className="w-3.5 h-3.5 text-primary shrink-0"/>
-                          سيتم توليد كلمة مرور عشوائية آمنة
-                        </div>
-                      )}
-                    </div>
-                    {/* Role */}
-                    <div>
-                      <label className="text-xs font-bold text-muted-foreground mb-2 block">الدور الوظيفي</label>
-                      <div className="grid grid-cols-2 gap-2">
-                        {visibleRoles.map(role=>(
-                          <button key={role.id} onClick={()=>setForm(f=>({...f,role:role.id}))}
-                            className={`p-3 rounded-xl border-2 text-start transition-all ${form.role===role.id?"border-primary bg-primary/5":"border-border hover:border-primary/30"}`}>
-                            <div className={`w-7 h-7 ${role.color} rounded-lg flex items-center justify-center mb-1.5`}>
-                              <role.icon className="w-3.5 h-3.5 text-white"/>
-                            </div>
-                            <div className="text-xs font-black leading-tight">{role.label}</div>
-                            <div className="text-[10px] text-muted-foreground mt-0.5 leading-tight">{role.desc}</div>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <button onClick={handleCreate} disabled={saving||!form.email}
-                      className="w-full bg-primary text-white py-3 rounded-xl font-black text-sm flex items-center justify-center gap-2 disabled:opacity-50 hover:bg-primary/90 transition-all active:scale-95">
-                      {saving?<><Loader2 className="w-4 h-4 animate-spin"/>جاري الإنشاء...</>:<><Plus className="w-4 h-4"/>إنشاء الحساب</>}
-                    </button>
-                  </div>
-                </>
               )}
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
 
-      {/* ─── Edit User Bottom Sheet ─── */}
-      <AnimatePresence>
-        {editUser && (
-          <>
-            <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
-              className="fixed inset-0 bg-black/60 z-50" onClick={()=>!saving&&setEditUser(null)}/>
-            <motion.div initial={{y:"100%"}} animate={{y:0}} exit={{y:"100%"}}
-              transition={{type:"spring",damping:30,stiffness:300}}
-              className="fixed inset-x-0 bottom-0 z-50 bg-card rounded-t-3xl shadow-2xl max-h-[90vh] overflow-y-auto">
-              <div className="p-5">
-                <div className="w-10 h-1 bg-muted-foreground/20 rounded-full mx-auto mb-4"/>
-                <div className="flex items-center justify-between mb-5">
-                  <h3 className="font-black flex items-center gap-2"><Edit2 className="w-4 h-4 text-primary"/> تعديل المستخدم</h3>
-                  <button onClick={()=>setEditUser(null)} className="w-8 h-8 rounded-full bg-muted flex items-center justify-center"><X className="w-4 h-4"/></button>
-                </div>
-
-                <div className="space-y-4">
-                  {/* Basic info */}
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className="text-xs font-bold text-muted-foreground mb-1 block">الاسم</label>
-                      <input value={editForm.displayName||""} onChange={e=>setEditForm((f:any)=>({...f,displayName:e.target.value}))}
-                        className="w-full bg-muted border border-border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"/>
-                    </div>
-                    <div>
-                      <label className="text-xs font-bold text-muted-foreground mb-1 block">اسم المستخدم</label>
-                      <input value={editForm.username||""} onChange={e=>setEditForm((f:any)=>({...f,username:e.target.value}))}
-                        className="w-full bg-muted border border-border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 font-mono"/>
-                    </div>
-                  </div>
-                  <div>
-                    <label className="text-xs font-bold text-muted-foreground mb-1 block">البريد الإلكتروني</label>
-                    <input type="email" value={editForm.email||""} onChange={e=>setEditForm((f:any)=>({...f,email:e.target.value}))}
-                      className="w-full bg-muted border border-border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"/>
-                  </div>
-
-                  {/* New password */}
-                  <div>
-                    <label className="text-xs font-bold text-muted-foreground mb-1 block flex items-center gap-1"><Lock className="w-3 h-3"/>تغيير كلمة المرور (اختياري)</label>
-                    <div className="relative">
-                      <input type={editShowPass?"text":"password"} value={editForm.newPassword||""}
-                        onChange={e=>setEditForm((f:any)=>({...f,newPassword:e.target.value}))}
-                        placeholder="اتركه فارغاً للإبقاء على الحالي"
-                        className="w-full bg-muted border border-border rounded-xl px-4 pl-10 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 font-mono placeholder:font-sans"/>
-                      <button type="button" onClick={()=>setEditShowPass(s=>!s)}
-                        className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                        {editShowPass?<EyeOff className="w-4 h-4"/>:<Eye className="w-4 h-4"/>}
+              {/* ─── EDIT FORM ─── */}
+              {panel==="edit" && selected && (
+                <div className="flex-1 p-5 space-y-5">
+                  {/* Avatar */}
+                  <div className="flex items-center gap-4 p-4 bg-muted/40 rounded-2xl">
+                    {editForm.avatarUrl
+                      ? <img src={editForm.avatarUrl} alt="" className="w-16 h-16 rounded-full object-cover ring-2 ring-primary/20"/>
+                      : <div className={`w-16 h-16 rounded-full ${ROLES.find(r=>r.id===selected.role)?.color||"bg-primary"} flex items-center justify-center text-white font-black text-2xl`}>
+                          {(selected.display_name||selected.email||"?")[0].toUpperCase()}
+                        </div>
+                    }
+                    <div className="flex-1 min-w-0">
+                      <p className="font-black text-sm truncate">{selected.display_name||"—"}</p>
+                      <p className="text-xs text-muted-foreground truncate">{selected.email}</p>
+                      <button onClick={()=>setEditAvatarMode(m=>!m)}
+                        className="mt-1.5 text-xs text-primary font-bold hover:underline flex items-center gap-1">
+                        <ImageIcon className="w-3 h-3"/>تغيير الصورة
                       </button>
                     </div>
                   </div>
 
+                  {editAvatarMode && (
+                    <ImageUploader
+                      currentUrl={editForm.avatarUrl}
+                      bucket="media" folder="avatars"
+                      onUploaded={url=>{ setEditForm(f=>({...f,avatarUrl:url})); setEditAvatarMode(false); }}
+                      onCancel={()=>setEditAvatarMode(false)}
+                    />
+                  )}
+
+                  {/* Display name */}
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground block mb-1.5">الاسم الكامل</label>
+                    <input value={editForm.displayName} onChange={e=>setEditForm(f=>({...f,displayName:e.target.value}))}
+                      className="w-full bg-muted border border-border rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"/>
+                  </div>
+                  {/* Username */}
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground block mb-1.5">اسم المستخدم</label>
+                    <input value={editForm.username} dir="ltr"
+                      onChange={e=>setEditForm(f=>({...f,username:e.target.value.toLowerCase().replace(/[^a-z0-9_]/g,"")}))}
+                      className="w-full bg-muted border border-border rounded-xl px-4 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/30"/>
+                  </div>
+                  {/* New password */}
+                  <div>
+                    <label className="text-xs font-semibold text-muted-foreground block mb-1.5 flex items-center gap-1.5"><Lock className="w-3.5 h-3.5"/>كلمة مرور جديدة (اختياري)</label>
+                    <div className="relative">
+                      <input type={editShowPass?"text":"password"} value={editForm.newPassword}
+                        onChange={e=>setEditForm(f=>({...f,newPassword:e.target.value}))}
+                        placeholder="اترك فارغاً للإبقاء على الحالية" dir="ltr"
+                        className="w-full bg-muted border border-border rounded-xl px-4 pe-10 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/30"/>
+                      <button type="button" onClick={()=>setEditShowPass(s=>!s)}
+                        className="absolute end-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                        {editShowPass?<EyeOff className="w-4 h-4"/>:<Eye className="w-4 h-4"/>}
+                      </button>
+                    </div>
+                  </div>
                   {/* Role */}
                   <div>
-                    <label className="text-xs font-bold text-muted-foreground mb-2 block">الدور</label>
-                    <div className="flex flex-wrap gap-2">
+                    <label className="text-xs font-semibold text-muted-foreground block mb-2">الدور</label>
+                    <div className="flex flex-wrap gap-1.5">
                       {visibleRoles.map(r=>(
-                        <button key={r.id} onClick={()=>{setEditForm((f:any)=>({...f,role:r.id}));setEditPerms(ROLE_DEFAULTS[r.id]||{});}}
-                          className={`text-xs px-3 py-1.5 rounded-xl border-2 font-bold transition-all ${editForm.role===r.id?"border-primary bg-primary/5 text-primary":"border-border hover:border-primary/30 text-muted-foreground"}`}>
-                          {r.label}
+                        <button key={r.id} onClick={()=>{ setEditForm(f=>({...f,role:r.id,permissions:{...ROLE_DEFAULTS[r.id]}})); }}
+                          className={`flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl border-2 transition-all ${editForm.role===r.id?"border-primary bg-primary/5 text-primary":"border-border text-muted-foreground hover:border-primary/30"}`}>
+                          <r.icon className="w-3 h-3"/>{r.label}
                         </button>
                       ))}
                     </div>
                   </div>
-
                   {/* Permissions */}
                   <div>
-                    <label className="text-xs font-bold text-muted-foreground mb-2 block flex items-center gap-1"><Shield className="w-3 h-3"/>الصلاحيات المخصصة</label>
-                    <div className="grid grid-cols-2 gap-2">
+                    <label className="text-xs font-semibold text-muted-foreground block mb-2">الصلاحيات التفصيلية</label>
+                    <div className="grid grid-cols-2 gap-1.5">
                       {Object.entries(PERM_KEYS).map(([key,label])=>(
-                        <button key={key} onClick={()=>setEditPerms(p=>({...p,[key]:!p[key]}))}
-                          className={`flex items-center gap-2 p-2.5 rounded-xl border-2 text-xs font-bold transition-all text-start ${editPerms[key]?"border-primary bg-primary/5 text-primary":"border-border text-muted-foreground hover:border-primary/30"}`}>
-                          <div className={`w-2 h-2 rounded-full shrink-0 ${editPerms[key]?"bg-primary":"bg-muted-foreground/30"}`}/>
+                        <button key={key}
+                          onClick={()=>setEditForm(f=>({...f,permissions:{...f.permissions,[key]:!f.permissions[key]}}))}
+                          className={`flex items-center justify-between text-xs px-3 py-2 rounded-xl border-2 font-bold transition-all ${editForm.permissions[key]?"border-primary bg-primary/5 text-primary":"border-border text-muted-foreground hover:border-primary/20"}`}>
                           {label}
+                          <div className={`w-4 h-4 rounded flex items-center justify-center transition-all ${editForm.permissions[key]?"bg-primary":"bg-muted-foreground/20"}`}>
+                            {editForm.permissions[key] && <Check className="w-2.5 h-2.5 text-white"/>}
+                          </div>
                         </button>
                       ))}
                     </div>
                   </div>
-
-                  <button onClick={saveEdit} disabled={saving}
-                    className="w-full bg-primary text-white py-3 rounded-xl font-black text-sm flex items-center justify-center gap-2 disabled:opacity-50 hover:bg-primary/90 transition-all active:scale-95 mt-2">
-                    {saving?<><Loader2 className="w-4 h-4 animate-spin"/>جاري الحفظ...</>:<>حفظ التعديلات</>}
+                  {/* Submit */}
+                  <button onClick={handleEdit} disabled={editLoading}
+                    className="w-full bg-primary text-white py-3 rounded-xl font-black text-sm hover:bg-primary/85 active:scale-95 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+                    {editLoading ? <><Loader2 className="w-4 h-4 animate-spin"/>جارٍ الحفظ...</> : <>حفظ التعديلات</>}
                   </button>
+                </div>
+              )}
+
+            </motion.aside>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ── Delete Dialog ── */}
+      <AnimatePresence>
+        {delId && (
+          <>
+            <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
+              className="fixed inset-0 bg-black/50 z-50" onClick={()=>setDelId(null)}/>
+            <motion.div initial={{opacity:0,scale:.9}} animate={{opacity:1,scale:1}} exit={{opacity:0,scale:.9}}
+              className="fixed inset-x-4 top-1/2 -translate-y-1/2 max-w-sm mx-auto bg-card rounded-2xl p-6 z-50 shadow-2xl border border-border">
+              <div className="text-center space-y-3">
+                <div className="w-14 h-14 bg-red-500/10 rounded-full flex items-center justify-center mx-auto">
+                  <Trash2 className="w-7 h-7 text-red-500"/>
+                </div>
+                <h3 className="font-black text-lg">تأكيد الحذف</h3>
+                <p className="text-sm text-muted-foreground">سيتم حذف المستخدم وكل صلاحياته. هذا الإجراء لا يمكن التراجع عنه.</p>
+                <div className="flex gap-2 pt-2">
+                  <button onClick={()=>setDelId(null)} className="flex-1 border border-border py-2.5 rounded-xl font-bold text-sm hover:bg-muted transition-colors">إلغاء</button>
+                  <button onClick={handleDelete} className="flex-1 bg-red-500 hover:bg-red-600 text-white py-2.5 rounded-xl font-bold text-sm transition-colors">نعم، احذف</button>
                 </div>
               </div>
             </motion.div>
@@ -505,25 +639,6 @@ export default function UserManagement() {
         )}
       </AnimatePresence>
 
-      {/* ─── Delete Confirm ─── */}
-      <AnimatePresence>
-        {delConfirm && (
-          <>
-            <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
-              className="fixed inset-0 bg-black/60 z-50" onClick={()=>setDelConfirm(null)}/>
-            <motion.div initial={{scale:.9,opacity:0}} animate={{scale:1,opacity:1}} exit={{scale:.9,opacity:0}}
-              className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-50 bg-card rounded-2xl p-6 shadow-2xl max-w-sm mx-auto border border-border text-center">
-              <Trash2 className="w-12 h-12 text-red-500 mx-auto mb-3"/>
-              <h3 className="font-black text-lg">تأكيد الحذف</h3>
-              <p className="text-sm text-muted-foreground mt-1 mb-5">هل أنت متأكد من حذف هذا المستخدم؟ لا يمكن التراجع.</p>
-              <div className="flex gap-3">
-                <button onClick={()=>setDelConfirm(null)} className="flex-1 py-2.5 rounded-xl border border-border font-bold text-sm hover:bg-muted transition-colors">إلغاء</button>
-                <button onClick={()=>deleteUser(delConfirm)} className="flex-1 py-2.5 rounded-xl bg-red-500 text-white font-black text-sm hover:bg-red-600 transition-colors">حذف</button>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
