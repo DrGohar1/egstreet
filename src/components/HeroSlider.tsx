@@ -47,7 +47,7 @@ const HeroSlider = ({ articles }: { articles: HeroArticle[] }) => {
               : "";
             return (
               <div key={a.id} className="flex-none w-full min-w-0">
-                <Link to={`/article/${a.slug}`} className="block relative overflow-hidden min-h-[380px] md:min-h-[500px] bg-muted">
+                <Link to={`/article/${a.slug}`} className="block relative overflow-hidden min-h-[260px] sm:min-h-[380px] md:min-h-[500px] bg-muted">
                   {a.featured_image && (
                     <img
                       src={a.featured_image} alt={a.title}
@@ -85,11 +85,11 @@ const HeroSlider = ({ articles }: { articles: HeroArticle[] }) => {
 
       {/* Arrows */}
       <button onClick={() => emblaApi?.scrollPrev()}
-        className="absolute top-1/2 start-3 -translate-y-1/2 w-10 h-10 rounded-full bg-black/40 backdrop-blur-sm text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-primary z-10">
+        className="absolute top-1/2 start-3 -translate-y-1/2 w-10 h-10 rounded-full bg-black/40 backdrop-blur-sm text-white flex items-center justify-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all hover:bg-primary active:bg-primary z-10">
         {isRtl ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
       </button>
       <button onClick={() => emblaApi?.scrollNext()}
-        className="absolute top-1/2 end-3 -translate-y-1/2 w-10 h-10 rounded-full bg-black/40 backdrop-blur-sm text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all hover:bg-primary z-10">
+        className="absolute top-1/2 end-3 -translate-y-1/2 w-10 h-10 rounded-full bg-black/40 backdrop-blur-sm text-white flex items-center justify-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-all hover:bg-primary active:bg-primary z-10">
         {isRtl ? <ChevronLeft className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
       </button>
 
