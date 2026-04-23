@@ -1,410 +1,318 @@
-import { useEffect, useState, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { motion, AnimatePresence } from "framer-motion";
-import { toast } from "sonner";
 import {
-  Shield, Save, Loader2, CheckSquare, Square, Minus,
-  Plus, Trash2, X, Crown, Terminal, UserCheck, Users, Megaphone, Edit2
+  Shield, ShieldCheck, ShieldAlert, Star, Code2, Eye,
+  Save, RefreshCw, Check, Minus, ChevronDown, Plus, Trash2, Loader2
 } from "lucide-react";
+import { toast } from "sonner";
 
-/* ─── Roles visible in permission management (not developer — has all always) ─── */
-const MANAGED_ROLES = [
-  { key:"super_admin",     label:"سوبر أدمن",       color:"text-red-500",    bg:"bg-red-500/10",    icon:Crown     },
-  { key:"editor_in_chief", label:"رئيس التحرير",    color:"text-blue-500",   bg:"bg-blue-500/10",   icon:UserCheck },
-  { key:"journalist",      label:"صحفي",             color:"text-green-500",  bg:"bg-green-500/10",  icon:Users     },
-  { key:"ads_manager",     label:"مدير إعلانات",    color:"text-yellow-600", bg:"bg-yellow-500/10", icon:Megaphone },
-] as const;
-type RoleKey = typeof MANAGED_ROLES[number]["key"];
+const ROLES = [
+  { id:"super_admin",    label:"سوبر أدمن",    color:"text-rose-500",   bg:"bg-rose-500/10",   icon:ShieldAlert },
+  { id:"editor_in_chief",label:"رئيس التحرير", color:"text-amber-500",  bg:"bg-amber-500/10",  icon:ShieldCheck },
+  { id:"journalist",     label:"صحفي",         color:"text-blue-500",   bg:"bg-blue-500/10",   icon:Shield      },
+  { id:"ads_manager",    label:"مدير إعلانات", color:"text-green-500",  bg:"bg-green-500/10",  icon:Star        },
+  { id:"viewer",         label:"قارئ",          color:"text-gray-400",   bg:"bg-gray-500/10",   icon:Eye         },
+];
 
-/* ─── Predefined permission sections ─── */
 const SECTIONS = [
-  { group:"المحتوى", items:[
-    { key:"articles.view",    label:"عرض المقالات"          },
-    { key:"articles.create",  label:"كتابة مقال جديد"       },
-    { key:"articles.edit",    label:"تعديل مقالات الكل"     },
-    { key:"articles.delete",  label:"حذف المقالات"          },
-    { key:"articles.publish", label:"نشر / إيقاف"          },
-    { key:"breaking.manage",  label:"أخبار عاجلة"           },
-    { key:"comments.manage",  label:"التعليقات"             },
-    { key:"tags.manage",      label:"الوسوم"                },
+  { label:"المحتوى", perms:[
+    { key:"articles",   label:"المقالات",   desc:"إنشاء وتعديل وحذف المقالات" },
+    { key:"categories", label:"الأقسام",    desc:"إدارة أقسام الموقع" },
+    { key:"tags",       label:"الوسوم",     desc:"إدارة الوسوم والتصنيفات" },
+    { key:"breaking",   label:"عاجل",       desc:"نشر الأخبار العاجلة" },
   ]},
-  { group:"المستخدمون", items:[
-    { key:"users.view",         label:"عرض المستخدمين"       },
-    { key:"users.manage",       label:"إدارة المستخدمين"     },
-    { key:"subscribers.view",   label:"المشتركون"            },
+  { label:"الوسائط والإعلانات", perms:[
+    { key:"media",      label:"الوسائط",    desc:"رفع وإدارة الصور والفيديو" },
+    { key:"ads",        label:"الإعلانات",  desc:"إنشاء وتعديل الإعلانات" },
   ]},
-  { group:"الإعلانات", items:[
-    { key:"ads.view",   label:"عرض الإعلانات"  },
-    { key:"ads.manage", label:"إدارة الإعلانات"},
+  { label:"البيانات والنظام", perms:[
+    { key:"analytics",   label:"التحليلات", desc:"عرض تقارير الزيارات والأداء" },
+    { key:"users",       label:"المستخدمين",desc:"إضافة وتعديل المستخدمين" },
+    { key:"settings",    label:"الإعدادات", desc:"إعدادات الموقع العامة" },
+    { key:"permissions", label:"الصلاحيات", desc:"تعديل جدول الصلاحيات" },
   ]},
-  { group:"النظام", items:[
-    { key:"analytics.view",     label:"التحليلات"             },
-    { key:"settings.view",      label:"عرض الإعدادات"        },
-    { key:"settings.edit",      label:"تعديل الإعدادات"      },
-    { key:"categories.manage",  label:"الأقسام"              },
-    { key:"pages.manage",       label:"الصفحات"              },
-    { key:"backup.access",      label:"النسخ الاحتياطي"      },
-    { key:"ai.tools",           label:"أدوات AI"             },
-    { key:"permissions.manage", label:"إدارة الصلاحيات"      },
-  ]},
-] as const;
+];
+const ALL_PERM_KEYS = SECTIONS.flatMap(s=>s.perms.map(p=>p.key));
 
-type PermKey = typeof SECTIONS[number]["items"][number]["key"];
-const ALL_PERM_KEYS = SECTIONS.flatMap(s=>s.items.map(i=>i.key)) as PermKey[];
-
-const DEFAULTS: Record<RoleKey, PermKey[]> = {
-  super_admin:     ALL_PERM_KEYS,
-  editor_in_chief: ["articles.view","articles.create","articles.edit","articles.delete","articles.publish","breaking.manage","comments.manage","tags.manage","users.view","subscribers.view","ads.view","ads.manage","analytics.view","settings.view","categories.manage","pages.manage","ai.tools"] as PermKey[],
-  journalist:      ["articles.view","articles.create","comments.manage","tags.manage","subscribers.view"] as PermKey[],
-  ads_manager:     ["articles.view","ads.view","ads.manage","analytics.view"] as PermKey[],
+const DEFAULTS: Record<string,string[]> = {
+  super_admin:    ALL_PERM_KEYS,
+  editor_in_chief:["articles","categories","tags","breaking","media","analytics"],
+  journalist:     ["articles","categories","tags","media"],
+  ads_manager:    ["ads","media","analytics"],
+  viewer:         [],
 };
 
-type Matrix = Record<RoleKey, Set<PermKey>>;
-
-/* ─── Custom permission type ─── */
-interface CustomPerm { id:string; key:string; label:string; group:string; }
+type Matrix = Record<string, Set<string>>;
 
 export default function PermissionManagement() {
-  const { language } = useLanguage();
-  const { role: myRole } = usePermissions();
-  const isDeveloper = myRole === "developer";
-  const isSuperAdmin = myRole === "super_admin" || isDeveloper;
+  const { role:myRole } = usePermissions();
+  const isDeveloper  = myRole==="developer";
+  const isSuperAdmin = myRole==="super_admin" || isDeveloper;
 
-  const [matrix,   setMatrix]   = useState<Matrix>(()=>{
-    const m:any={};
-    MANAGED_ROLES.forEach(r=>{m[r.key]=new Set(DEFAULTS[r.key]);});
+  const [matrix, setMatrix] = useState<Matrix>(()=>{
+    const m:Matrix = {};
+    ROLES.forEach(r=>{ m[r.id]=new Set(DEFAULTS[r.id]||[]); });
     return m;
   });
-  const [loading,   setLoading]   = useState(true);
+  const [activeTab, setActiveTab] = useState("editor_in_chief");
+  const [loading,   setLoading]   = useState(false);
   const [saving,    setSaving]    = useState(false);
-  const [activeTab, setActiveTab] = useState<RoleKey>("editor_in_chief");
+  const [view,      setView]      = useState<"tabs"|"matrix">("tabs");
 
-  /* Custom permissions state */
-  const [customPerms,    setCustomPerms]    = useState<CustomPerm[]>([]);
-  const [showAddCustom,  setShowAddCustom]  = useState(false);
-  const [newPerm,        setNewPerm]        = useState({ key:"", label:"", group:"مخصص" });
-
-  /* Load from DB */
-  useEffect(()=>{
-    (async()=>{
-      try {
-        const { data } = await supabase
-          .from("role_permissions" as any)
-          .select("role,permission");
-        if (data && data.length>0) {
-          const m:any={};
-          MANAGED_ROLES.forEach(r=>{m[r.key]=new Set<PermKey>();});
-          data.forEach((row:any)=>{ if(m[row.role]) m[row.role].add(row.permission); });
-          setMatrix(m);
-        }
-      } catch{}
-      setLoading(false);
-    })();
-  },[]);
-
-  const toggle = (role:RoleKey, perm:string) => {
-    setMatrix(prev=>{
-      const next={...prev,[role]:new Set(prev[role])};
-      if((next[role] as Set<any>).has(perm)) (next[role] as Set<any>).delete(perm);
-      else (next[role] as Set<any>).add(perm as any);
-      return next;
-    });
+  /* ── Load from DB ── */
+  const load = async () => {
+    setLoading(true);
+    try {
+      const { data } = await supabase.from("role_permissions" as any).select("role,permission");
+      if (data && data.length > 0) {
+        const m:Matrix = {};
+        ROLES.forEach(r=>{ m[r.id]=new Set<string>(); });
+        data.forEach((row:any)=>{ if(m[row.role]) m[row.role].add(row.permission); });
+        setMatrix(m);
+      }
+    } catch {}
+    setLoading(false);
   };
+  useEffect(()=>{ load(); },[]);
 
-  const toggleAll = (perm:string) => {
-    const allChecked=MANAGED_ROLES.every(r=>(matrix[r.key] as Set<any>).has(perm));
-    setMatrix(prev=>{
-      const next={...prev};
-      MANAGED_ROLES.forEach(r=>{
-        next[r.key]=new Set(prev[r.key]);
-        if(allChecked)(next[r.key] as Set<any>).delete(perm);
-        else (next[r.key] as Set<any>).add(perm as any);
-      });
-      return next;
-    });
-  };
-
-  const toggleRole = (role:RoleKey) => {
-    const allPerms=[...ALL_PERM_KEYS,...customPerms.map(p=>p.key)];
-    const allChecked=allPerms.every(p=>(matrix[role] as Set<any>).has(p));
+  /* ── Toggle one perm for one role ── */
+  const toggle = (roleId:string, perm:string) => {
+    if (!isSuperAdmin) return;
     setMatrix(prev=>({
       ...prev,
-      [role]:allChecked ? new Set() : new Set(allPerms as any),
+      [roleId]: (() => {
+        const next = new Set(prev[roleId]);
+        if (next.has(perm)) next.delete(perm); else next.add(perm);
+        return next;
+      })()
     }));
   };
 
-  const resetDefaults = () => {
-    const m:any={};
-    MANAGED_ROLES.forEach(r=>{m[r.key]=new Set(DEFAULTS[r.key]);});
+  /* ── Toggle all perms for a role ── */
+  const toggleAll = (roleId:string) => {
+    if (!isSuperAdmin) return;
+    const allChecked = ALL_PERM_KEYS.every(p=>matrix[roleId]?.has(p));
+    setMatrix(prev=>({ ...prev, [roleId]: allChecked ? new Set() : new Set(ALL_PERM_KEYS) }));
+  };
+
+  /* ── Toggle perm across all roles ── */
+  const togglePerm = (perm:string) => {
+    if (!isSuperAdmin) return;
+    const allChecked = ROLES.every(r=>matrix[r.id]?.has(perm));
+    const next = {...matrix};
+    ROLES.forEach(r=>{ const s=new Set(matrix[r.id]); allChecked ? s.delete(perm) : s.add(perm); next[r.id]=s; });
+    setMatrix(next);
+  };
+
+  /* ── Reset to defaults ── */
+  const reset = () => {
+    const m:Matrix = {};
+    ROLES.forEach(r=>{ m[r.id]=new Set(DEFAULTS[r.id]||[]); });
     setMatrix(m);
-    toast.success("تم إعادة الضبط للافتراضي");
+    toast.info("تمت إعادة الضبط (لم تُحفظ بعد)");
   };
 
-  const addCustomPerm = () => {
-    if(!newPerm.key.trim()||!newPerm.label.trim()) return toast.error("أدخل المفتاح والتسمية");
-    const key=newPerm.key.toLowerCase().replace(/\s+/g,".");
-    if(customPerms.find(p=>p.key===key)||ALL_PERM_KEYS.includes(key as any))
-      return toast.error("المفتاح موجود بالفعل");
-    setCustomPerms(p=>[...p,{id:Date.now().toString(),key,label:newPerm.label,group:newPerm.group||"مخصص"}]);
-    setNewPerm({key:"",label:"",group:"مخصص"});
-    setShowAddCustom(false);
-    toast.success("تمت إضافة الصلاحية");
-  };
-
-  const removeCustomPerm = (id:string) => {
-    const perm=customPerms.find(p=>p.id===id);
-    if(!perm) return;
-    setCustomPerms(p=>p.filter(x=>x.id!==id));
-    setMatrix(prev=>{
-      const next={...prev};
-      MANAGED_ROLES.forEach(r=>{
-        next[r.key]=new Set(prev[r.key]);
-        (next[r.key] as Set<any>).delete(perm.key);
-      });
-      return next;
-    });
-  };
-
+  /* ── Save ── */
   const save = async () => {
     setSaving(true);
-    const rows:any[]=[];
-    MANAGED_ROLES.forEach(r=>{
-      (matrix[r.key] as Set<any>).forEach((perm:string)=>{
-        rows.push({role:r.key, permission:perm});
-      });
-    });
     try {
       await supabase.from("role_permissions" as any).delete().neq("role","developer");
-      if(rows.length>0){
-        const {error}=await supabase.from("role_permissions" as any).insert(rows);
-        if(error) throw error;
+      const rows:any[] = [];
+      ROLES.forEach(r=>{ matrix[r.id]?.forEach(p=>{ rows.push({role:r.id, permission:p}); }); });
+      if (rows.length) {
+        const { error } = await supabase.from("role_permissions" as any).insert(rows);
+        if (error) throw error;
       }
-      toast.success("✅ تم حفظ الصلاحيات");
-    } catch(err:any){
-      toast.error("خطأ في الحفظ: "+(err.message||""));
-    }
+      toast.success("تم حفظ الصلاحيات بنجاح");
+    } catch(e:any){ toast.error(e.message||"فشل الحفظ"); }
     setSaving(false);
   };
 
+  const activeRole = ROLES.find(r=>r.id===activeTab)!;
+  const Icon = activeRole?.icon||Shield;
+  const activePerms = matrix[activeTab]||new Set();
+  const totalPerms = ALL_PERM_KEYS.length;
+  const activeCount = activePerms.size;
+
   if (!isSuperAdmin) return (
-    <div className="flex flex-col items-center justify-center h-64 gap-3">
-      <Shield className="w-12 h-12 text-muted-foreground/30"/>
-      <p className="text-muted-foreground font-bold">غير مصرح لك بالوصول</p>
+    <div className="flex flex-col items-center justify-center py-32 gap-4 text-muted-foreground">
+      <Shield className="w-16 h-16 opacity-10"/>
+      <p className="font-bold text-lg">صلاحية مرفوضة</p>
     </div>
   );
 
-  const activeRole = MANAGED_ROLES.find(r=>r.key===activeTab)!;
-  const Icon = activeRole?.icon||Shield;
-
-  /* Combine built-in + custom for display */
-  const allSections = [
-    ...SECTIONS,
-    ...(customPerms.length>0 ? [{
-      group:"صلاحيات مخصصة",
-      items: customPerms.map(p=>({key:p.key as any, label:p.label}))
-    }] : [])
-  ];
-
   return (
-    <div className="space-y-5" dir="rtl">
+    <div className="space-y-5 pb-24" dir="rtl">
 
-      {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-3">
+      {/* ── Header ── */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-black flex items-center gap-2">
-            <Shield className="text-primary w-6 h-6"/> نظام الصلاحيات
+          <h1 className="text-xl sm:text-2xl font-black text-foreground flex items-center gap-2">
+            <ShieldCheck className="w-6 h-6 text-primary"/>إدارة الصلاحيات
           </h1>
-          <p className="text-sm text-muted-foreground">
-            تحكم في صلاحيات كل دور — Developer و super_admin لديهم كل الصلاحيات دائماً
-          </p>
+          <p className="text-xs text-muted-foreground mt-0.5">تحكّم في صلاحيات كل دور بشكل تفصيلي</p>
         </div>
         <div className="flex items-center gap-2">
-          <button onClick={resetDefaults} className="text-xs px-3 py-2 rounded-xl border border-border hover:bg-muted transition-colors font-bold">
-            إعادة للافتراضي
-          </button>
-          <button onClick={save} disabled={saving}
-            className="flex items-center gap-1.5 bg-primary text-white px-4 py-2 rounded-xl font-bold text-sm hover:bg-primary/90 disabled:opacity-50 transition-colors">
-            {saving?<Loader2 className="w-4 h-4 animate-spin"/>:<Save className="w-4 h-4"/>}
-            حفظ الصلاحيات
-          </button>
-        </div>
-      </div>
-
-      {/* Role tabs */}
-      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide">
-        {MANAGED_ROLES.map(r=>{
-          const Ic=r.icon;
-          return (
-            <button key={r.key} onClick={()=>setActiveTab(r.key)}
-              className={`shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold text-sm transition-all border-2 ${activeTab===r.key?`border-primary bg-primary/5 text-primary`:`border-border hover:border-primary/30 ${r.color}`}`}>
-              <Ic className="w-4 h-4 shrink-0"/>{r.label}
+          {/* View toggle */}
+          <div className="flex rounded-xl border border-border overflow-hidden text-xs font-bold">
+            <button onClick={()=>setView("tabs")} className={`px-3 py-1.5 transition-colors ${view==="tabs"?"bg-primary text-white":"bg-card text-muted-foreground hover:bg-muted"}`}>
+              أدوار
             </button>
-          );
-        })}
+            <button onClick={()=>setView("matrix")} className={`px-3 py-1.5 transition-colors ${view==="matrix"?"bg-primary text-white":"bg-card text-muted-foreground hover:bg-muted"}`}>
+              مصفوفة
+            </button>
+          </div>
+          <button onClick={reset} className="w-9 h-9 rounded-xl border border-border hover:bg-muted flex items-center justify-center transition-colors" title="إعادة الضبط">
+            <RefreshCw className="w-4 h-4 text-muted-foreground"/>
+          </button>
+        </div>
       </div>
 
-      {/* Role header card */}
-      <div className={`rounded-2xl p-4 border-2 border-primary/20 ${activeRole?.bg||""} flex items-center justify-between`}>
-        <div className="flex items-center gap-3">
-          <div className={`w-11 h-11 rounded-xl bg-primary/10 flex items-center justify-center`}>
-            <Icon className={`w-5 h-5 ${activeRole?.color}`}/>
-          </div>
-          <div>
-            <div className="font-black">{activeRole?.label}</div>
-            <div className="text-xs text-muted-foreground">
-              {Array.from(matrix[activeTab]).length} صلاحية من أصل {ALL_PERM_KEYS.length+customPerms.length}
+      {loading ? (
+        <div className="flex items-center justify-center py-20"><Loader2 className="w-8 h-8 animate-spin text-primary/40"/></div>
+      ) : (
+        <>
+          {/* ════════ TABS VIEW ════════ */}
+          {view==="tabs" && (
+            <>
+              {/* Role tabs */}
+              <div className="flex gap-1.5 flex-wrap">
+                {ROLES.map(r=>(
+                  <button key={r.id} onClick={()=>setActiveTab(r.id)}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold border-2 transition-all ${activeTab===r.id?`${r.bg} ${r.color} border-current`:"border-border text-muted-foreground hover:border-primary/30"}`}>
+                    <r.icon className="w-3 h-3"/>{r.label}
+                    <span className="opacity-60">({matrix[r.id]?.size||0}/{totalPerms})</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Role header card */}
+              <div className={`rounded-2xl p-4 border border-border ${activeRole.bg} flex items-center justify-between gap-3`}>
+                <div className="flex items-center gap-3">
+                  <div className={`w-12 h-12 rounded-xl bg-card/80 flex items-center justify-center`}>
+                    <Icon className={`w-6 h-6 ${activeRole.color}`}/>
+                  </div>
+                  <div>
+                    <p className={`font-black text-base ${activeRole.color}`}>{activeRole.label}</p>
+                    <p className="text-xs text-muted-foreground">{activeCount} صلاحية من {totalPerms}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  {/* Progress */}
+                  <div className="w-20 bg-muted rounded-full h-2 hidden sm:block">
+                    <div className="bg-primary h-2 rounded-full transition-all" style={{width:`${(activeCount/totalPerms)*100}%`}}/>
+                  </div>
+                  <button onClick={()=>toggleAll(activeTab)}
+                    className="text-xs font-bold px-3 py-1.5 rounded-xl border-2 border-current transition-all hover:bg-card/80">
+                    {activeCount===totalPerms?"سلب الكل":"منح الكل"}
+                  </button>
+                </div>
+              </div>
+
+              {/* Permissions by section */}
+              <div className="space-y-4">
+                {SECTIONS.map(section=>(
+                  <div key={section.label}>
+                    <p className="text-xs font-black text-muted-foreground mb-2 flex items-center gap-2">
+                      <span className="w-3 h-px bg-muted-foreground inline-block"/>
+                      {section.label}
+                      <span className="w-full h-px bg-border inline-block"/>
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {section.perms.map(perm=>{
+                        const has = activePerms.has(perm.key);
+                        return (
+                          <motion.button key={perm.key}
+                            onClick={()=>toggle(activeTab, perm.key)}
+                            whileTap={{scale:0.97}}
+                            className={`flex items-center justify-between p-3.5 rounded-xl border-2 text-start transition-all ${has?"border-primary bg-primary/5":"border-border bg-card hover:border-primary/30"}`}>
+                            <div className="min-w-0">
+                              <p className={`text-sm font-bold ${has?"text-primary":"text-foreground"}`}>{perm.label}</p>
+                              <p className="text-[10px] text-muted-foreground mt-0.5">{perm.desc}</p>
+                            </div>
+                            <div className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 ms-3 transition-all ${has?"bg-primary":"bg-muted"}`}>
+                              {has && <Check className="w-3.5 h-3.5 text-white"/>}
+                            </div>
+                          </motion.button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* ════════ MATRIX VIEW ════════ */}
+          {view==="matrix" && (
+            <div className="rounded-2xl border border-border overflow-hidden bg-card">
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="border-b border-border bg-muted/40">
+                      <th className="text-start px-4 py-3 font-black text-muted-foreground min-w-[140px]">الصلاحية</th>
+                      {ROLES.map(r=>(
+                        <th key={r.id} className="px-3 py-3 text-center">
+                          <button onClick={()=>toggleAll(r.id)} className="flex flex-col items-center gap-1 hover:opacity-80 transition-opacity mx-auto">
+                            <r.icon className={`w-4 h-4 ${r.color}`}/>
+                            <span className={`font-black ${r.color} whitespace-nowrap`}>{r.label}</span>
+                            <span className="text-muted-foreground font-normal">{matrix[r.id]?.size||0}/{totalPerms}</span>
+                          </button>
+                        </th>
+                      ))}
+                      <th className="px-3 py-3 text-center text-muted-foreground font-black">الكل</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {ALL_PERM_KEYS.map((perm,pi)=>{
+                      const label = SECTIONS.flatMap(s=>s.perms).find(p=>p.key===perm)?.label||perm;
+                      const allChecked = ROLES.every(r=>matrix[r.id]?.has(perm));
+                      const someChecked = ROLES.some(r=>matrix[r.id]?.has(perm));
+                      return (
+                        <tr key={perm} className={`border-b border-border/50 ${pi%2===0?"bg-card":"bg-muted/20"} hover:bg-primary/5 transition-colors`}>
+                          <td className="px-4 py-3 font-bold text-foreground">{label}</td>
+                          {ROLES.map(r=>{
+                            const has = matrix[r.id]?.has(perm);
+                            return (
+                              <td key={r.id} className="px-3 py-3 text-center">
+                                <button onClick={()=>toggle(r.id, perm)}
+                                  className={`w-6 h-6 rounded-lg mx-auto flex items-center justify-center border-2 transition-all ${has?"border-primary bg-primary":"border-border hover:border-primary/40 bg-card"}`}>
+                                  {has && <Check className="w-3.5 h-3.5 text-white"/>}
+                                </button>
+                              </td>
+                            );
+                          })}
+                          <td className="px-3 py-3 text-center">
+                            <button onClick={()=>togglePerm(perm)}
+                              className={`w-6 h-6 rounded-lg mx-auto flex items-center justify-center border-2 transition-all ${allChecked?"border-primary bg-primary":someChecked?"border-amber-400 bg-amber-400":"border-border hover:border-primary/40 bg-card"}`}>
+                              {allChecked && <Check className="w-3.5 h-3.5 text-white"/>}
+                              {!allChecked && someChecked && <Minus className="w-3 h-3 text-white"/>}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-        </div>
-        <button onClick={()=>toggleRole(activeTab)}
-          className="text-xs px-3 py-1.5 rounded-xl border border-border hover:bg-muted transition-colors font-bold">
-          {ALL_PERM_KEYS.concat(customPerms.map(p=>p.key) as any[]).every(p=>(matrix[activeTab] as Set<any>).has(p))
-            ? "إلغاء الكل" : "تحديد الكل"}
+          )}
+        </>
+      )}
+
+      {/* ── Sticky Save Bar ── */}
+      <div className="fixed bottom-0 start-0 end-0 lg:start-64 bg-card/95 backdrop-blur-md border-t border-border p-3 z-30 flex items-center justify-between gap-4">
+        <p className="text-xs text-muted-foreground hidden sm:block">
+          التغييرات لم تُحفظ حتى تضغط حفظ ✓
+        </p>
+        <button onClick={save} disabled={saving}
+          className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-primary hover:bg-primary/85 active:scale-95 text-white font-black px-6 py-2.5 rounded-xl text-sm transition-all disabled:opacity-50">
+          {saving ? <><Loader2 className="w-4 h-4 animate-spin"/>حفظ...</> : <><Save className="w-4 h-4"/>حفظ الصلاحيات</>}
         </button>
       </div>
 
-      {/* Permissions by section */}
-      {loading ? (
-        <div className="flex items-center justify-center py-20">
-          <Loader2 className="w-6 h-6 animate-spin text-primary"/>
-        </div>
-      ) : (
-        <div className="space-y-5">
-          {allSections.map(section=>(
-            <div key={section.group} className="bg-card border border-border rounded-2xl overflow-hidden">
-              <div className="bg-muted/50 px-4 py-2.5 border-b border-border">
-                <h3 className="text-xs font-black text-primary uppercase tracking-wider flex items-center gap-2">
-                  {section.group==="صلاحيات مخصصة" && <Plus className="w-3 h-3"/>}
-                  {section.group}
-                </h3>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-0 divide-y divide-border/50 sm:divide-y-0 sm:grid-rows-auto">
-                {section.items.map((perm,pi)=>{
-                  const checked=(matrix[activeTab] as Set<any>).has(perm.key);
-                  const isCustom=customPerms.some(p=>p.key===perm.key);
-                  return (
-                    <div key={perm.key}
-                      className={`flex items-center justify-between px-4 py-3 ${pi%2===0?"":"sm:border-r border-border/50"} hover:bg-muted/20 transition-colors`}>
-                      <div className="flex-1 min-w-0">
-                        <span className="text-sm font-medium">{perm.label}</span>
-                        <span className="block text-[10px] text-muted-foreground/50 font-mono">{perm.key}</span>
-                      </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        {isCustom && (
-                          <button onClick={()=>removeCustomPerm(customPerms.find(p=>p.key===perm.key)!.id)}
-                            className="w-5 h-5 rounded text-red-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center justify-center transition-colors">
-                            <Trash2 className="w-3 h-3"/>
-                          </button>
-                        )}
-                        <button onClick={()=>toggle(activeTab,perm.key as any)}
-                          className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all border-2 ${checked?"bg-primary border-primary text-white":"border-border hover:border-primary/40 bg-background"}`}>
-                          {checked && <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/></svg>}
-                        </button>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-
-          {/* Add custom permission */}
-          <button onClick={()=>setShowAddCustom(true)}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl border-2 border-dashed border-primary/30 text-primary font-bold text-sm hover:bg-primary/5 transition-colors">
-            <Plus className="w-4 h-4"/> إضافة صلاحية مخصصة
-          </button>
-        </div>
-      )}
-
-      {/* Cross-role matrix toggle at bottom */}
-      <div className="bg-card border border-border rounded-2xl p-4">
-        <h3 className="text-sm font-black mb-3 flex items-center gap-2"><Shield className="w-4 h-4 text-primary"/>مقارنة الأدوار دفعة واحدة</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="border-b border-border">
-                <th className="text-start py-2 px-3 font-bold text-muted-foreground w-48">الصلاحية</th>
-                {MANAGED_ROLES.map(r=>(
-                  <th key={r.key} className="py-2 px-2 text-center">
-                    <span className={`text-[10px] font-black ${r.color}`}>{r.label}</span>
-                  </th>
-                ))}
-                <th className="py-2 px-2 text-center text-[10px] text-muted-foreground">الكل</th>
-              </tr>
-            </thead>
-            <tbody>
-              {SECTIONS.flatMap(s=>s.items).slice(0,8).map((perm,i)=>(
-                <tr key={perm.key} className={`border-b border-border/40 hover:bg-muted/20 ${i%2?"bg-muted/10":""}`}>
-                  <td className="py-2 px-3 font-medium">{perm.label}</td>
-                  {MANAGED_ROLES.map(r=>{
-                    const checked=(matrix[r.key] as Set<any>).has(perm.key);
-                    return (
-                      <td key={r.key} className="py-2 px-2 text-center">
-                        <button onClick={()=>toggle(r.key, perm.key as any)}
-                          className={`w-5 h-5 rounded flex items-center justify-center mx-auto border-2 transition-all ${checked?"bg-primary border-primary text-white":"border-border hover:border-primary/40"}`}>
-                          {checked&&<svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/></svg>}
-                        </button>
-                      </td>
-                    );
-                  })}
-                  <td className="py-2 px-2 text-center">
-                    <button onClick={()=>toggleAll(perm.key as any)}
-                      className={`w-5 h-5 rounded flex items-center justify-center mx-auto border-2 transition-all ${MANAGED_ROLES.every(r=>(matrix[r.key] as Set<any>).has(perm.key))?"bg-emerald-500 border-emerald-500 text-white":MANAGED_ROLES.some(r=>(matrix[r.key] as Set<any>).has(perm.key))?"bg-amber-400 border-amber-400 text-white":"border-border hover:border-emerald-400"}`}>
-                      {MANAGED_ROLES.every(r=>(matrix[r.key] as Set<any>).has(perm.key))&&<svg className="w-2.5 h-2.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7"/></svg>}
-                      {!MANAGED_ROLES.every(r=>(matrix[r.key] as Set<any>).has(perm.key))&&MANAGED_ROLES.some(r=>(matrix[r.key] as Set<any>).has(perm.key))&&<Minus className="w-2.5 h-2.5"/>}
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          <p className="text-[10px] text-muted-foreground mt-2 px-1">يعرض أول 8 صلاحيات فقط — استخدم تبويبات الأدوار أعلاه للتحكم الكامل</p>
-        </div>
-      </div>
-
-      {/* Add custom permission modal */}
-      <AnimatePresence>
-        {showAddCustom && (
-          <>
-            <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
-              className="fixed inset-0 bg-black/60 z-50" onClick={()=>setShowAddCustom(false)}/>
-            <motion.div initial={{scale:.95,opacity:0}} animate={{scale:1,opacity:1}} exit={{scale:.95,opacity:0}}
-              className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-50 bg-card rounded-2xl p-5 shadow-2xl max-w-sm mx-auto border border-border">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-black flex items-center gap-2"><Plus className="w-4 h-4 text-primary"/> صلاحية مخصصة جديدة</h3>
-                <button onClick={()=>setShowAddCustom(false)} className="w-7 h-7 rounded-full bg-muted flex items-center justify-center"><X className="w-4 h-4"/></button>
-              </div>
-              <div className="space-y-3">
-                <div>
-                  <label className="text-xs font-bold text-muted-foreground mb-1 block">المفتاح (key)</label>
-                  <input value={newPerm.key} onChange={e=>setNewPerm(p=>({...p,key:e.target.value}))}
-                    placeholder="custom.feature_name"
-                    className="w-full bg-muted border border-border rounded-xl px-3 py-2.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-primary/30"/>
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-muted-foreground mb-1 block">التسمية (بالعربي)</label>
-                  <input value={newPerm.label} onChange={e=>setNewPerm(p=>({...p,label:e.target.value}))}
-                    placeholder="وصف الصلاحية"
-                    className="w-full bg-muted border border-border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"/>
-                </div>
-                <div>
-                  <label className="text-xs font-bold text-muted-foreground mb-1 block">المجموعة</label>
-                  <input value={newPerm.group} onChange={e=>setNewPerm(p=>({...p,group:e.target.value}))}
-                    placeholder="مخصص"
-                    className="w-full bg-muted border border-border rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"/>
-                </div>
-                <button onClick={addCustomPerm}
-                  className="w-full bg-primary text-white py-2.5 rounded-xl font-black text-sm hover:bg-primary/90 transition-all active:scale-95">
-                  إضافة الصلاحية
-                </button>
-              </div>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
