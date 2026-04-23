@@ -67,9 +67,9 @@ const CategoryManagement = () => {
   };
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
-        <h2 className="text-2xl font-bold text-foreground">{t("إدارة الأقسام", "Category Management")}</h2>
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-3">
+        <h2 className="text-xl sm:text-2xl font-bold text-foreground">{t("إدارة الأقسام", "Category Management")}</h2>
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button className="gap-2"><Plus className="w-4 h-4" />{t("قسم جديد", "New Category")}</Button>
