@@ -34,7 +34,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (!loading && !user) {
-      navigate("/auth", { state: { from: location.pathname }, replace: true });
+      navigate("/egstreet-admin", { state: { from: location.pathname }, replace: true });
     }
   }, [user, loading, navigate, location]);
 
