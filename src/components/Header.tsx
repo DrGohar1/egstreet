@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, Moon, Sun, User, LogIn, Bookmark, Menu, X, Newspaper, ChevronDown, Globe } from "lucide-react";
+import { Search, Moon, Sun, User, Bookmark, Menu, X, Newspaper, ChevronDown, Globe } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTheme } from "@/contexts/ThemeContext";
 
@@ -52,7 +52,7 @@ export default function Header() {
             </button>
             {user
               ? <Link to="/profile" className="hover:opacity-80 flex items-center gap-1"><User className="w-3 h-3"/>حسابي</Link>
-              : <Link to="/auth" className="hover:opacity-80 flex items-center gap-1"><LogIn className="w-3 h-3"/>تسجيل الدخول</Link>
+              : null
             }
           </div>
         </div>
@@ -104,11 +104,9 @@ export default function Header() {
               </Link>
               {user
                 ? <Link to="/profile" className="w-8 h-8 rounded-full bg-primary flex items-center justify-center text-white font-black text-sm hover:bg-primary/80 transition-colors">
-                    {profile?.display_name?.[0]?.toUpperCase()||profile?.username?.[0]?.toUpperCase()||"U"}
+                    {user?.user_metadata?.display_name?.[0]?.toUpperCase()||user?.user_metadata?.username?.[0]?.toUpperCase()||user?.email?.[0]?.toUpperCase()||"U"}
                   </Link>
-                : <Link to="/auth" className="text-xs font-black bg-primary text-white px-3 py-1.5 rounded-lg hover:bg-primary/80 transition-colors hidden sm:block">
-                    دخول
-                  </Link>
+                : null
               }
             </div>
           </div>
@@ -146,10 +144,7 @@ export default function Header() {
                 ))}
               </div>
               <div className="px-4 pb-3 flex items-center gap-2">
-                {!user && <Link to="/auth" onClick={()=>setMenuOpen(false)}
-                  className="flex-1 text-center text-xs font-black bg-primary text-white py-2.5 rounded-xl hover:bg-primary/80 transition-colors">
-                  تسجيل الدخول
-                </Link>}
+
                 {user && <button onClick={()=>{signOut();setMenuOpen(false);}}
                   className="flex-1 text-center text-xs font-bold border border-border py-2.5 rounded-xl hover:bg-muted transition-colors text-red-500">
                   تسجيل الخروج
