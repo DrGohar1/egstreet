@@ -61,7 +61,7 @@ export default function UserManagement() {
   const [delConfirm,setDelConfirm]= useState<string|null>(null);
 
   /* Add form */
-  const [form, setForm] = useState({ email:"", displayName:"", username:"", role:"journalist", password:"", autoPass:true });
+  const [form, setForm] = useState({ email:"", displayName:"", username:"", role:"journalist", password:"", autoPass:true, avatarUrl:"" });
   const [showPass, setShowPass]   = useState(false);
   const [addStep,  setAddStep]    = useState<"form"|"done">("form");
   const [createdInfo, setCreatedInfo] = useState<{email:string;password:string;role:string}|null>(null);
@@ -352,6 +352,14 @@ export default function UserManagement() {
                           className="w-full bg-muted border border-border rounded-xl px-3 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 placeholder:text-muted-foreground/40 disabled:opacity-50 font-mono"/>
                       </div>
                     </div>
+                    {/* Avatar */}
+                    <div className="space-y-2">
+                      <Label>صورة المستخدم</Label>
+                      <div className="flex items-center gap-3">
+                        <Input value={form.avatarUrl} onChange={e=>setForm(f=>({...f,avatarUrl:e.target.value}))} placeholder="رابط الصورة أو ارفع من المقالات" />
+                      </div>
+                    </div>
+
                     {/* Password */}
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
