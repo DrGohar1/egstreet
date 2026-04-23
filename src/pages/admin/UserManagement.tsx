@@ -6,20 +6,18 @@ import { useLanguage } from "@/contexts/LanguageContext";
 import ImageUploader from "@/components/ImageUploader";
 import {
   Users, Plus, Search, X, Pencil, Trash2, Eye, EyeOff,
-  Shield, ShieldCheck, ShieldAlert, Star, Code2, Loader2,
-  Copy, RefreshCw, Check, ChevronDown, Filter, Download,
-  Mail, Lock, UserCog, Image as ImageIcon, Key, MoreVertical
+  Shield, ShieldCheck, ShieldAlert, Star, Loader2,
+  Copy, RefreshCw, Check, Mail, Lock, UserCog, Image as ImageIcon, Key
 } from "lucide-react";
 import { toast } from "sonner";
 
 /* ── Role hierarchy ── */
+/* Roles exactly match the DB enum app_role: super_admin | editor_in_chief | journalist | ads_manager */
 const ROLES = [
-  { id:"developer",      label:"مطوّر",        desc:"تحكم كامل بلا قيود",        color:"bg-violet-600", badge:"bg-violet-500/20 text-violet-400", icon:Code2,      devOnly:true  },
-  { id:"super_admin",    label:"سوبر أدمن",    desc:"إدارة كاملة بما فيها المستخدمين", color:"bg-rose-600",   badge:"bg-rose-500/20 text-rose-400",    icon:ShieldAlert,devOnly:true  },
-  { id:"editor_in_chief",label:"رئيس التحرير", desc:"نشر وإدارة المحتوى كاملاً",  color:"bg-amber-600",  badge:"bg-amber-500/20 text-amber-400",  icon:ShieldCheck,devOnly:false },
-  { id:"journalist",     label:"صحفي",         desc:"كتابة وتحرير المقالات",       color:"bg-blue-600",   badge:"bg-blue-500/20 text-blue-400",    icon:Shield,     devOnly:false },
-  { id:"ads_manager",    label:"مدير إعلانات", desc:"إدارة الإعلانات والعروض",     color:"bg-green-600",  badge:"bg-green-500/20 text-green-400",  icon:Star,       devOnly:false },
-  { id:"viewer",         label:"قارئ",          desc:"عرض فقط",                     color:"bg-gray-500",   badge:"bg-gray-500/20 text-gray-400",    icon:Eye,        devOnly:false },
+  { id:"super_admin",    label:"سوبر أدمن",    desc:"إدارة كاملة بما فيها المستخدمين", color:"bg-rose-600",   badge:"bg-rose-500/20 text-rose-400",    icon:ShieldAlert },
+  { id:"editor_in_chief",label:"رئيس التحرير", desc:"نشر وإدارة المحتوى كاملاً",       color:"bg-amber-600",  badge:"bg-amber-500/20 text-amber-400",  icon:ShieldCheck },
+  { id:"journalist",     label:"صحفي",         desc:"كتابة وتحرير المقالات",            color:"bg-blue-600",   badge:"bg-blue-500/20 text-blue-400",    icon:Shield      },
+  { id:"ads_manager",    label:"مدير إعلانات", desc:"إدارة الإعلانات والعروض",          color:"bg-green-600",  badge:"bg-green-500/20 text-green-400",  icon:Star        },
 ];
 
 const PERM_KEYS: Record<string,string> = {
@@ -29,12 +27,10 @@ const PERM_KEYS: Record<string,string> = {
   settings:"الإعدادات", permissions:"الصلاحيات",
 };
 const ROLE_DEFAULTS: Record<string,Record<string,boolean>> = {
-  developer:      Object.fromEntries(Object.keys(PERM_KEYS).map(k=>[k,true])),
   super_admin:    Object.fromEntries(Object.keys(PERM_KEYS).map(k=>[k,true])),
   editor_in_chief:Object.fromEntries(Object.keys(PERM_KEYS).map(k=>[k,!["users","settings","permissions"].includes(k)])),
   journalist:     { articles:true, categories:true, tags:true, breaking:false, media:true, ads:false, analytics:false, users:false, settings:false, permissions:false },
   ads_manager:    { articles:false, categories:false, tags:false, breaking:false, media:true, ads:true, analytics:true, users:false, settings:false, permissions:false },
-  viewer:         Object.fromEntries(Object.keys(PERM_KEYS).map(k=>[k,false])),
 };
 function genPassword(len=14){ return Array.from(crypto.getRandomValues(new Uint8Array(len))).map(b=>"abcdefghijkmnpqrstuvwxyzABCDEFGHJKMNPQRSTUVWXYZ23456789@#$%"[b%60]).join(""); }
 const fmt=(d:string)=>new Date(d).toLocaleDateString("ar-EG",{day:"2-digit",month:"short",year:"numeric"});
@@ -48,8 +44,7 @@ type UserRow = {
 export default function UserManagement() {
   const { role:myRole } = usePermissions();
   const { t, language } = useLanguage();
-  const isDeveloper  = myRole==="developer";
-  const isSuperAdmin = myRole==="super_admin" || isDeveloper;
+  const isSuperAdmin = myRole==="super_admin";
   if (!isSuperAdmin) return (
     <div className="flex flex-col items-center justify-center py-32 gap-4 text-muted-foreground">
       <Shield className="w-16 h-16 opacity-10"/>
@@ -68,7 +63,7 @@ export default function UserManagement() {
   const [delId,      setDelId]      = useState<string|null>(null);
 
   /* ── add form ── */
-  const [addForm, setAddForm] = useState({ email:"", displayName:"", username:"", role:"journalist", password:"", autoPass:true, avatarUrl:"" });
+  const [addForm, setAddForm] = useState({ email:"", displayName:"", username:"", role:"journalist" as "super_admin"|"editor_in_chief"|"journalist"|"ads_manager", password:"", autoPass:true, avatarUrl:"" });
   const [addStep, setAddStep] = useState<"form"|"done">("form");
   const [addLoading, setAddLoading] = useState(false);
   const [addShowPass, setAddShowPass] = useState(false);
@@ -98,7 +93,7 @@ export default function UserManagement() {
         try { return typeof raw==="string" ? JSON.parse(raw) : raw; }
         catch { return ROLE_DEFAULTS["viewer"]; }
       })(),
-    })).filter(u=>isDeveloper||u.role!=="developer");
+    }));
     setUsers(merged);
     setLoading(false);
   };
@@ -194,8 +189,8 @@ export default function UserManagement() {
   };
 
   /* ── stats ── */
-  const stats = ROLES.filter(r=>!r.devOnly||isDeveloper).map(r=>({ ...r, count:users.filter(u=>u.role===r.id).length }));
-  const visibleRoles = ROLES.filter(r=>!r.devOnly||isDeveloper);
+  const stats = ROLES.map(r=>({ ...r, count:users.filter(u=>u.role===r.id).length }));
+  const visibleRoles = ROLES;
 
   /* ── render ── */
   return (
