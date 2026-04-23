@@ -1,18 +1,5 @@
 {
-  "version": 2,
-  "name": "egstreet",
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist",
-  "installCommand": "npm install",
-  "framework": "vite",
   "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
-  ],
-  "env": {
-    "VITE_BUILD_TIME": "1776876885",
-    "VITE_FORCE_REBUILD": "true"
-  }
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }
