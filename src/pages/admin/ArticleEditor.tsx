@@ -51,7 +51,7 @@ const ImagePicker = ({ onSelect, onClose }: { onSelect:(url:string)=>void; onClo
     try {
       const ext = file.name.split(".").pop();
       const path = `articles/${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("media").upload(path, file, { upsert:true });
+      const { error } = await supabase.storage.from("media").upload(path, file, { upsert:true, contentType: file.type });
       if (error) throw error;
       const { data } = supabase.storage.from("media").getPublicUrl(path);
       onSelect(data.publicUrl);
