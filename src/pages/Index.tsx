@@ -38,7 +38,7 @@ const readTime = (text: string) => Math.max(1, Math.ceil(text.split(/\s+/).lengt
 
 /* ── NewsCard variants ── */
 const HeroCard = ({ a, cat }: { a: Article; cat?: Category }) => (
-  <Link to={`/article/${a.slug}`} className="group relative block overflow-hidden rounded-2xl bg-black aspect-[16/9] md:aspect-[21/9]">
+  <Link to={`/article/${a.slug}`} className="group relative block overflow-hidden rounded-2xl bg-black aspect-[4/3] sm:aspect-[16/9] md:aspect-[21/9]">
     {a.featured_image
       ? <img src={a.featured_image} alt={a.title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"/>
       : <div className="absolute inset-0 bg-gradient-to-br from-gray-800 to-gray-900"/>
@@ -62,7 +62,7 @@ const MedCard = ({ a, cat }: { a: Article; cat?: Category }) => (
   <Link to={`/article/${a.slug}`}
     className="group flex gap-3 p-3 rounded-xl hover:bg-muted/50 transition-all border border-transparent hover:border-border">
     {a.featured_image
-      ? <img src={a.featured_image} alt={a.title} className="w-20 h-16 md:w-24 md:h-18 object-cover rounded-xl shrink-0 group-hover:scale-105 transition-transform"/>
+      ? <img src={a.featured_image} alt={a.title} className="w-20 h-16 sm:w-24 sm:h-18 object-cover rounded-xl shrink-0 group-hover:scale-105 transition-transform"/>
       : <div className="w-20 h-16 rounded-xl bg-muted shrink-0 flex items-center justify-center"><Newspaper className="w-5 h-5 text-muted-foreground/30"/></div>
     }
     <div className="flex-1 min-w-0">
@@ -294,7 +294,7 @@ export default function Index() {
       <Footer/>
 
       {/* ── Mobile bottom nav ── */}
-      <nav className="fixed bottom-0 inset-x-0 bg-card border-t border-border z-40 flex lg:hidden">
+      <nav className="fixed bottom-0 inset-x-0 bg-card/95 backdrop-blur-md border-t border-border z-40 flex lg:hidden shadow-lg shadow-black/5">
         {[
           { label:"الرئيسية", icon:"🏠", to:"/" },
           { label:"عاجل",     icon:"⚡", to:"/category/breaking" },
@@ -303,8 +303,8 @@ export default function Index() {
           { label:"حسابي",    icon:"👤", to:"/profile" },
         ].map(item => (
           <Link key={item.to} to={item.to}
-            className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-muted-foreground hover:text-primary transition-colors">
-            <span className="text-lg leading-none">{item.icon}</span>
+            className="flex-1 flex flex-col items-center justify-center py-2.5 gap-0.5 text-muted-foreground hover:text-primary active:scale-90 transition-all">
+            <span className="text-xl leading-none">{item.icon}</span>
             <span className="text-[9px] font-bold">{item.label}</span>
           </Link>
         ))}
