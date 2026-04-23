@@ -160,8 +160,8 @@ const AdvertisementManagement = () => {
   };
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-6">
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-3">
         <h2 className="text-2xl font-bold text-foreground flex items-center gap-2">
           <BarChart3 className="w-6 h-6 text-primary" />
           {t("إدارة الإعلانات", "Advertisement Management")}
