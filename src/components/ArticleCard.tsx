@@ -21,7 +21,7 @@ const ArticleCard = ({ title, excerpt, slug, featuredImage, categoryName, publis
     : "";
 
   if (variant === "hero") return (
-    <Link to={`/article/${slug}`} className="group block relative overflow-hidden rounded-2xl h-full min-h-[360px] md:min-h-[460px]">
+    <Link to={`/article/${slug}`} className="group block relative overflow-hidden rounded-2xl h-full min-h-[260px] sm:min-h-[360px] md:min-h-[460px]">
       <div className="absolute inset-0 bg-muted">
         {featuredImage && <img src={featuredImage} alt={title} loading="lazy" className="w-full h-full object-cover image-protected transition-transform duration-700 group-hover:scale-105"  onError={(e) => { (e.target as HTMLImageElement).src = "/placeholder.svg"; }} />}
         <div className="absolute inset-0 hero-gradient" />
@@ -97,7 +97,7 @@ const ArticleCard = ({ title, excerpt, slug, featuredImage, categoryName, publis
       ) : (
         <div className="aspect-[16/10] bg-muted/60 flex items-center justify-center"><span className="text-3xl opacity-20">📰</span></div>
       )}
-      <div className="p-4">
+      <div className="p-3 sm:p-4">
         {categoryName && <span className="text-[hsl(var(--primary))] text-[10px] font-black uppercase tracking-wider">{categoryName}</span>}
         <h3 className="text-base font-bold mt-1 leading-snug line-clamp-2 group-hover:text-[hsl(var(--primary))] transition-colors duration-200">{title}</h3>
         {excerpt && <p className="text-muted-foreground text-sm mt-2 line-clamp-2 leading-relaxed">{excerpt}</p>}
