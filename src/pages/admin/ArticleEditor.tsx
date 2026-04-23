@@ -49,20 +49,33 @@ const ImagePicker = ({ onSelect, onClose }: { onSelect:(url:string)=>void; onClo
   const handleUpload = async (file:File) => {
     setUploading(true);
     try {
-      const ext = file.name.split(".").pop();
-      const path = `articles/${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("media").upload(path, file, { upsert:true, contentType: file.type });
-      if (error) throw error;
+      if (!file.type.startsWith("image/")) throw new Error("الملف ليس صورة");
+      if (file.size > 10 * 1024 * 1024) throw new Error("الصورة أكبر من 10MB");
+      const ext  = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const path = `articles/${Date.now()}_${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error } = await supabase.storage
+        .from("media")
+        .upload(path, file, { upsert:true, contentType: file.type, cacheControl:"3600" });
+      if (error) {
+        // Bucket may not exist yet — use blob URL as temporary preview
+        if (error.message?.includes("bucket") || error.message?.includes("not found") || error.statusCode===404) {
+          const url = URL.createObjectURL(file);
+          onSelect(url);
+          toast.warning("الـ bucket غير موجود — تم الاختيار كـ preview مؤقت. أنشئ bucket باسم 'media' في Supabase Storage.");
+          return;
+        }
+        throw error;
+      }
       const { data } = supabase.storage.from("media").getPublicUrl(path);
       onSelect(data.publicUrl);
-      toast.success("تم رفع الصورة");
+      toast.success("تم رفع الصورة بنجاح ✓");
     } catch(e:any) {
-      // If storage not configured, use object URL as preview
       const url = URL.createObjectURL(file);
       onSelect(url);
-      toast.info("تم اختيار الصورة (سيتم الرفع لاحقاً)");
+      toast.error(`فشل الرفع: ${e.message}`);
+    } finally {
+      setUploading(false);
     }
-    setUploading(false);
   };
 
   useEffect(()=>{ searchUnsplash("مصر أخبار egypt news"); },[]);
