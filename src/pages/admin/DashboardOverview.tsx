@@ -10,7 +10,7 @@ const ADMIN = "/egstreet-admin";
 
 const Card = ({ icon: Icon, label, value, color, to }: any) => (
   <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-    className="bg-card border border-border rounded-2xl p-5 hover:shadow-lg transition-all hover:-translate-y-0.5 group">
+    className="bg-card border border-border rounded-2xl p-4 sm:p-5 hover:shadow-lg transition-all hover:-translate-y-0.5 group">
     <div className="flex items-start justify-between mb-3">
       <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shadow-sm ${color}`}>
         <Icon className="w-6 h-6 text-white" />
@@ -78,7 +78,7 @@ const DashboardOverview = () => {
         <div className="text-muted-foreground text-sm mt-1">
           {new Date().toLocaleDateString("ar-EG", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
         </div>
-        <div className="flex gap-4 mt-4 text-sm">
+        <div className="flex flex-wrap gap-2 mt-4 text-sm">
           <span className="flex items-center gap-1 bg-primary/10 text-primary px-3 py-1 rounded-full font-bold">
             <FileText className="w-3.5 h-3.5" /> {stats.articles} منشور
           </span>
@@ -106,7 +106,7 @@ const DashboardOverview = () => {
       </div>
 
       {/* Two-column layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
         {/* Recent */}
         <div className="bg-card border border-border rounded-2xl p-5">
           <div className="flex items-center justify-between mb-4">
