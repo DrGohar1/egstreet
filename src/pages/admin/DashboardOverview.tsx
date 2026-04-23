@@ -6,7 +6,7 @@ import { motion } from "framer-motion";
 import { FileText, Eye, Users, Zap, TrendingUp, Clock, Star, Globe, ArrowLeft } from "lucide-react";
 import { NavLink } from "react-router-dom";
 
-const ADMIN = "/Gadmin";
+const ADMIN = "/egstreet-admin";
 
 const Card = ({ icon: Icon, label, value, color, to }: any) => (
   <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
