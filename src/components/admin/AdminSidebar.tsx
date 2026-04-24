@@ -10,7 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
 import { cn } from "@/lib/utils";
 
-const ADMIN = "/egstreet-admin";
+const ADMIN = "/x7k9-control";
 
 const AdminSidebar = ({ open, onClose }: { open?:boolean; onClose?:()=>void }) => {
   const { t, language } = useLanguage();
