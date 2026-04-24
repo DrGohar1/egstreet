@@ -43,6 +43,7 @@ import ArchivePage from "./pages/ArchivePage";
 import ResetPassword from "./pages/ResetPassword";
 import UserProfile from "./pages/UserProfile";
 import Auth from "./pages/Auth";
+import ForceChangePassword from "./pages/ForceChangePassword";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -67,6 +68,7 @@ const AppContent = () => {
         <Route path="/author/:userId" element={<AuthorPage />} />
         <Route path="/tag/:slug" element={<TagPage />} />
         <Route path="/G63-admin/login" element={<Auth />} />
+        <Route path="/G63-admin/change-password" element={<ForceChangePassword />} />
         {/* Reset password via Supabase email only */}
         <Route path="/profile" element={<UserProfile />} />
         <Route path="/saved" element={<SavedArticlesPage />} />
