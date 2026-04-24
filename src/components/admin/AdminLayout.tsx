@@ -34,7 +34,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (!loading && !user) {
-      navigate("/x7k9-control", { state: { from: location.pathname }, replace: true });
+      navigate("/x7k9-control/login", { state: { from: location.pathname }, replace: true });
     }
   }, [user, loading, navigate, location]);
 
