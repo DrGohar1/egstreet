@@ -55,7 +55,7 @@ export default function Header() {
             </button>
             {user
               ? <>
-                  <Link to="/egstreet-admin" className="flex items-center gap-1 hover:opacity-80 transition-opacity font-bold">
+                  <Link to="/G63-admin" className="flex items-center gap-1 hover:opacity-80 transition-opacity font-bold">
                     <LayoutDashboard className="w-3 h-3"/>لوحة التحكم
                   </Link>
                   <button onClick={signOut} className="hover:opacity-80 transition-opacity text-white/70 hover:text-white">خروج</button>
@@ -127,7 +127,7 @@ export default function Header() {
 
               {/* Admin button — always visible when logged in */}
               {user
-                ? <Link to="/egstreet-admin"
+                ? <Link to="/G63-admin"
                     className="hidden sm:flex items-center gap-1.5 bg-primary text-white text-xs font-black px-3 py-1.5 rounded-xl hover:bg-primary/85 transition-colors shadow-sm">
                     <LayoutDashboard className="w-3.5 h-3.5"/>
                     <span className="hidden md:inline">لوحة التحكم</span>
@@ -195,7 +195,7 @@ export default function Header() {
                 </button>
                 {user
                   ? <>
-                      <Link to="/egstreet-admin" onClick={()=>setMenuOpen(false)}
+                      <Link to="/G63-admin" onClick={()=>setMenuOpen(false)}
                         className="flex-1 flex items-center justify-center gap-1.5 text-xs font-black py-2.5 rounded-xl bg-primary text-white hover:bg-primary/85 transition-colors">
                         <LayoutDashboard className="w-3.5 h-3.5"/>لوحة التحكم
                       </Link>
