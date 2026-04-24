@@ -86,12 +86,12 @@ export default function UserManagement() {
       display_name: p.display_name||"",
       username: p.username||"",
       avatar_url: p.avatar_url||"",
-      role: (roles||[]).find(r=>r.user_id===p.id)?.role||"viewer",
+      role: (roles||[]).find(r=>r.user_id===p.id)?.role||"journalist",
       permissions: (() => {
         const raw = (roles||[]).find(r=>r.user_id===p.id)?.permissions;
-        if (!raw) return ROLE_DEFAULTS["viewer"];
+        if (!raw) return ROLE_DEFAULTS["journalist"];
         try { return typeof raw==="string" ? JSON.parse(raw) : raw; }
-        catch { return ROLE_DEFAULTS["viewer"]; }
+        catch { return ROLE_DEFAULTS["journalist"]; }
       })(),
     }));
     setUsers(merged);
@@ -123,7 +123,7 @@ export default function UserManagement() {
       if (!uid && !res.ok) throw new Error(json?.error || json?.message || "فشل الإنشاء");
       const uidFinal = uid || json?.user?.id;
       if (uidFinal) {
-        const perms = ROLE_DEFAULTS[addForm.role] || ROLE_DEFAULTS["viewer"];
+        const perms = ROLE_DEFAULTS[addForm.role] || ROLE_DEFAULTS["journalist"];
         await supabase.from("user_roles").upsert({ user_id:uidFinal, role:addForm.role, permissions:JSON.stringify(perms) });
         await supabase.from("profiles").update({
           ...(addForm.avatarUrl ? { avatar_url:addForm.avatarUrl } : {}),
