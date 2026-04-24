@@ -168,6 +168,33 @@ const SiteSettings = () => {
                     <Label className="text-xs font-medium">{t("اسم الموقع (إنجليزي)", "Site Name (English)")}</Label>
                     <Input value={settings.site_name_en || ""} onChange={(e) => u("site_name_en", e.target.value)} placeholder="EgStreet News" className="mt-1" />
                   </div>
+                  {/* ── Domain / Site URL ── */}
+                  <div className="col-span-2 bg-primary/5 border border-primary/20 rounded-xl p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <Globe className="w-4 h-4 text-primary"/>
+                      <p className="text-sm font-bold">{t("رابط الموقع (الدومين)", "Site Domain / URL")}</p>
+                    </div>
+                    <div>
+                      <Label className="text-xs font-medium text-muted-foreground">{t("رابط الموقع الكامل","Site URL")}</Label>
+                      <Input
+                        value={settings.site_url || ""}
+                        onChange={(e) => u("site_url", e.target.value)}
+                        placeholder="https://www.egstreet.com"
+                        dir="ltr"
+                        className="mt-1 font-mono text-sm"
+                      />
+                      <p className="text-[10px] text-muted-foreground mt-1">
+                        {t("يُستخدم في روابط SEO والمشاركة — غيّره لما تربط دومينك الخاص","Used in SEO & share links — change when you connect your domain")}
+                      </p>
+                    </div>
+                    <div className="bg-amber-500/10 border border-amber-500/30 rounded-lg p-3 text-xs text-amber-700 space-y-1">
+                      <p className="font-bold flex items-center gap-1"><Globe className="w-3 h-3"/>كيفية ربط الدومين على Vercel:</p>
+                      <p>١. اشتري الدومين (Namecheap / GoDaddy / Egypt Domains)</p>
+                      <p>٢. افتح Vercel → Project → Settings → Domains</p>
+                      <p>٣. اكتب الدومين واتبع تعليمات الـ DNS</p>
+                      <p>٤. غيّر الرابط هنا للدومين الجديد</p>
+                    </div>
+                  </div>
                   <div>
                     <Label className="text-xs font-medium">{t("وصف الموقع (SEO)", "Site Description (SEO)")}</Label>
                     <Textarea value={settings.site_description || ""} onChange={(e) => u("site_description", e.target.value)} rows={3} placeholder={t("وصف مختصر للموقع...", "Brief site description...")} className="mt-1" />
