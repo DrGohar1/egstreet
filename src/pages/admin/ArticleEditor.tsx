@@ -286,7 +286,8 @@ const ImagePicker = ({ onSelect, onClose }: { onSelect:(url:string)=>void; onClo
 };
 
 // ── Text Format Toolbar ──
-const Toolbar = ({ onFormat }: { onFormat: (t:string, w?:boolean) => void }) => {
+const Toolbar = (props: { onFormat: (t:string, w?:boolean) => void }) => {
+  const { onFormat } = props;
   const btns = [
     { icon:<Bold className="w-4 h-4"/>,   label:"عريض",     cmd:"bold"    },
     { icon:<Italic className="w-4 h-4"/>, label:"مائل",     cmd:"italic"  },
