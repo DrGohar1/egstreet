@@ -324,10 +324,11 @@ const ArticleEditor = () => {
 
   const [form, setForm] = useState({
     title: "", slug: "", excerpt: "", content: "",
-    featured_image: "", category_id: "", status: "draft" as "draft"|"published",
+    featured_image: "", category_id: "", status: "draft" as "draft"|"published"|"scheduled",
     is_featured: false, is_breaking: false,
     meta_title: "", meta_description: "",
     custom_author_name: "",
+    scheduled_at: "",
   });
 
   useEffect(()=>{
@@ -341,6 +342,7 @@ const ArticleEditor = () => {
           is_featured:data.is_featured||false, is_breaking:false,
           meta_title:data.meta_title||"", meta_description:data.meta_description||"",
           custom_author_name:data.custom_author_name||"",
+          scheduled_at: data.scheduled_at ? new Date(data.scheduled_at).toISOString().slice(0,16) : "",
         });
       });
     }
@@ -398,6 +400,8 @@ const ArticleEditor = () => {
       ...form,
       status: finalStatus,
       published_at: finalStatus==="published" ? new Date().toISOString() : null,
+      scheduled_at: finalStatus==="scheduled" && form.scheduled_at ? new Date(form.scheduled_at).toISOString() : null,
+      status: finalStatus==="scheduled" ? "draft" : finalStatus,
       author_id: user?.id||null,
       slug: form.slug || genSlug(form.title),
       meta_description: form.meta_description || form.excerpt.slice(0,160),
@@ -613,6 +617,24 @@ const ArticleEditor = () => {
               {saving?<Loader2 className="w-4 h-4 animate-spin"/>:<Send className="w-4 h-4"/>}
               نشر المقال الآن
             </button>
+            {/* Scheduled publish */}
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-muted-foreground flex items-center gap-1">
+                <Clock className="w-3 h-3"/> جدولة النشر
+              </label>
+              <input
+                type="datetime-local"
+                value={form.scheduled_at}
+                onChange={e=>setForm(f=>({...f,scheduled_at:e.target.value}))}
+                className="w-full bg-muted border border-border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
+              {form.scheduled_at && (
+                <button onClick={()=>save("scheduled")} disabled={saving}
+                  className="w-full bg-amber-500 text-white py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-amber-600 disabled:opacity-50 transition-colors">
+                  <Clock className="w-4 h-4"/> جدولة النشر
+                </button>
+              )}
+            </div>
             <button onClick={()=>save("draft")} disabled={saving}
               className="w-full border border-border py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-muted disabled:opacity-50 transition-colors">
               <Save className="w-4 h-4"/> حفظ كمسودة
