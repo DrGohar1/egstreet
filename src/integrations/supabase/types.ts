@@ -437,29 +437,53 @@ export type Database = {
         Row: {
           avatar_url: string | null
           bio: string | null
-          created_at: string
-          display_name: string
+          created_at: string | null
+          display_name: string | null
+          email: string | null
+          facebook: string | null
+          followers_count: number | null
+          articles_count: number | null
           id: string
-          updated_at: string
-          user_id: string
+          must_change_password: boolean | null
+          twitter: string | null
+          updated_at: string | null
+          user_id: string | null
+          username: string | null
+          website: string | null
         }
         Insert: {
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
-          display_name?: string
+          display_name?: string | null
+          email?: string | null
+          facebook?: string | null
+          followers_count?: number | null
+          articles_count?: number | null
           id?: string
+          must_change_password?: boolean | null
+          twitter?: string | null
           updated_at?: string
-          user_id: string
+          user_id?: string | null
+          username?: string | null
+          website?: string | null
         }
         Update: {
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
-          display_name?: string
+          display_name?: string | null
+          email?: string | null
+          facebook?: string | null
+          followers_count?: number | null
+          articles_count?: number | null
           id?: string
+          must_change_password?: boolean | null
+          twitter?: string | null
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
+          username?: string | null
+          website?: string | null
         }
         Relationships: []
       }
