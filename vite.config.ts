@@ -15,10 +15,12 @@ export default defineConfig(({ mode }) => ({
     mode === "development" && componentTagger(),
     VitePWA({
       registerType: "autoUpdate",
+      injectRegister: "auto",
       includeAssets: ["favicon.ico", "pwa-192.png", "pwa-512.png"],
       workbox: {
         navigateFallbackDenylist: [/^\/~oauth/],
         globPatterns: ["**/*.{js,css,html,ico,svg,woff2}"],
+        globIgnores: ["**/og-image*", "**/og-*.png", "**/*.png", "**/src/**"],
         // exclude large images from precache
         globIgnores: ["**/og-image*", "**/og-*.png", "**/*.png"],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3 MiB
@@ -51,6 +53,9 @@ export default defineConfig(({ mode }) => ({
       },
     }),
   ].filter(Boolean),
+  esbuild: {
+    target: "es2020",
+  },
   resolve: {
     alias: { "@": path.resolve(__dirname, "./src") },
   },
