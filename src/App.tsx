@@ -66,7 +66,7 @@ const AppContent = () => {
         <Route path="/page/:slug" element={<StaticPage />} />
         <Route path="/author/:userId" element={<AuthorPage />} />
         <Route path="/tag/:slug" element={<TagPage />} />
-        {/* Public auth disabled — admin uses secret path */}
+        <Route path="/x7k9-control/login" element={<Auth />} />
         {/* Reset password via Supabase email only */}
         <Route path="/profile" element={<UserProfile />} />
         <Route path="/saved" element={<SavedArticlesPage />} />
