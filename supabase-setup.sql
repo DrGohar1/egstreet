@@ -241,17 +241,16 @@ CREATE TABLE IF NOT EXISTS comments (
   id          UUID    PRIMARY KEY DEFAULT gen_random_uuid(),
   article_id  UUID    REFERENCES articles(id) ON DELETE CASCADE,
   user_id     UUID    REFERENCES auth.users(id) ON DELETE SET NULL,
-  guest_name  TEXT,
-  guest_email TEXT,
   content     TEXT    NOT NULL,
   is_approved BOOLEAN DEFAULT false,
-  parent_id   UUID    REFERENCES comments(id) ON DELETE CASCADE,
   likes       INTEGER DEFAULT 0,
   created_at  TIMESTAMPTZ DEFAULT NOW()
 );
 
-ALTER TABLE comments ADD COLUMN IF NOT EXISTS likes INTEGER DEFAULT 0;
-ALTER TABLE comments ADD COLUMN IF NOT EXISTS parent_id UUID REFERENCES comments(id) ON DELETE CASCADE;
+-- Add columns safely (won't fail if they already exist)
+ALTER TABLE comments ADD COLUMN IF NOT EXISTS guest_name  TEXT;
+ALTER TABLE comments ADD COLUMN IF NOT EXISTS guest_email TEXT;
+ALTER TABLE comments ADD COLUMN IF NOT EXISTS parent_id   UUID REFERENCES comments(id) ON DELETE CASCADE;
 
 ALTER TABLE comments ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Public read approved comments" ON comments;
