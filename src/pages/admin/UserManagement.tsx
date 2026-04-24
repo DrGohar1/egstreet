@@ -439,6 +439,20 @@ export default function UserManagement() {
                           </div>
                         )}
                       </div>
+                      {/* Must change password toggle */}
+                      <button type="button" onClick={()=>setAddForm(f=>({...f,mustChangePass:!f.mustChangePass}))}
+                        className={`w-full flex items-center justify-between p-3 rounded-xl border-2 transition-all ${addForm.mustChangePass?"border-amber-500 bg-amber-500/10":"border-border hover:border-muted-foreground"}`}>
+                        <div className="flex items-center gap-2 text-start">
+                          <Key className={`w-4 h-4 ${addForm.mustChangePass?"text-amber-500":"text-muted-foreground"}`}/>
+                          <div>
+                            <p className={`text-xs font-bold ${addForm.mustChangePass?"text-amber-600":"text-muted-foreground"}`}>تغيير كلمة المرور عند أول دخول</p>
+                            <p className="text-[10px] text-muted-foreground">المستخدم مجبور يغيّر الباسورد</p>
+                          </div>
+                        </div>
+                        <div className={`w-8 h-4 rounded-full transition-all flex items-center px-0.5 ${addForm.mustChangePass?"bg-amber-500 justify-end":"bg-muted justify-start"}`}>
+                          <div className="w-3 h-3 bg-white rounded-full shadow"/>
+                        </div>
+                      </button>
                       {/* Role */}
                       <div>
                         <label className="text-xs font-semibold text-muted-foreground block mb-2 flex items-center gap-1.5"><Shield className="w-3.5 h-3.5"/>الدور</label>
