@@ -57,7 +57,27 @@ export default function Auth() {
 
     try {
       let loginEmail = email.trim();
-      if (!loginEmail.includes("@")) loginEmail = loginEmail + "@egstreet.com";
+
+      // If username entered (no @), look up email from profiles
+      if (!loginEmail.includes("@")) {
+        const { data: profileData } = await supabase
+          .from("profiles")
+          .select("email")
+          .eq("username", loginEmail)
+          .maybeSingle();
+        if (!profileData?.email) {
+          const newAttempts = attempts + 1;
+          setAttempts(newAttempts);
+          if (newAttempts >= MAX_ATTEMPTS) {
+            const until = Date.now() + LOCKOUT_MS;
+            setLockUntil(until);
+            localStorage.setItem("_auth_lock", JSON.stringify({ until, tries: newAttempts }));
+          }
+          setError(`اسم المستخدم غير موجود. المحاولات المتبقية: ${MAX_ATTEMPTS - newAttempts}`);
+          setLoading(false); return;
+        }
+        loginEmail = profileData.email;
+      }
 
       const { data, error: e1 } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
 
@@ -134,11 +154,11 @@ export default function Auth() {
               <input type="text" name="_hp" style={{display:"none"}} tabIndex={-1} autoComplete="off" />
 
               <div>
-                <label className="text-xs font-bold text-muted-foreground mb-1 block">البريد الإلكتروني أو اسم المستخدم</label>
+                <label className="text-xs font-bold text-muted-foreground mb-1 block">اسم المستخدم</label>
                 <input
                   type="text" value={email} onChange={e=>setEmail(e.target.value)}
                   className="w-full bg-muted border border-border rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
-                  placeholder="admin@egstreet.com" autoComplete="username" required
+                  placeholder="اسم المستخدم أو البريد الإلكتروني" autoComplete="username" required
                 />
               </div>
               <div>
