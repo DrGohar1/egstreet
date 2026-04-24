@@ -128,14 +128,12 @@ export default function ArticlePage() {
         title={article.meta_title||article.title}
         description={article.meta_description||article.excerpt||""}
         image={article.featured_image||undefined}
-        url={`/article/${article.slug}`}
+        url={url}
         type="article"
         publishedAt={article.published_at||undefined}
         authorName={article.custom_author_name||undefined}
         categoryName={category?.name_ar||undefined}
         keywords={[article.title.split(" ").slice(0,4).join(","), category?.name_ar||"", "أخبار مصر"]}
-        image={article.featured_image||""}
-        url={url}
       />
       <Header/>
 
