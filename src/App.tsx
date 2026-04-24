@@ -50,7 +50,7 @@ const queryClient = new QueryClient({
   },
 });
 
-const ADMIN = "/egstreet-admin";
+const ADMIN = "/x7k9-control";
 
 const AppContent = () => {
   useContentProtection();
@@ -66,8 +66,8 @@ const AppContent = () => {
         <Route path="/page/:slug" element={<StaticPage />} />
         <Route path="/author/:userId" element={<AuthorPage />} />
         <Route path="/tag/:slug" element={<TagPage />} />
-        <Route path="/auth" element={<Auth />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
+        {/* Public auth disabled — admin uses secret path */}
+        {/* Reset password via Supabase email only */}
         <Route path="/profile" element={<UserProfile />} />
         <Route path="/saved" element={<SavedArticlesPage />} />
         <Route path="/archive" element={<ArchivePage />} />
