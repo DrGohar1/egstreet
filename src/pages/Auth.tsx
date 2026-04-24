@@ -91,6 +91,18 @@ export default function Auth() {
         setLoading(false); return;
       }
 
+      // Check must_change_password
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("must_change_password")
+        .eq("id", data.user.id)
+        .maybeSingle();
+
+      if (profileData?.must_change_password) {
+        navigate("/x7k9-control/change-password", { replace: true });
+        return;
+      }
+
       navigate(from.startsWith(ADMIN_PATH) ? from : ADMIN_PATH, { replace: true });
     } catch {
       setError("حدث خطأ، حاول مرة أخرى");
