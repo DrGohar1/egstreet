@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Loader2, Lock, Eye, EyeOff, ShieldCheck } from "lucide-react";
 
-const ADMIN_PATH = "/x7k9-control";
+const ADMIN_PATH = "/G63-admin";
 const MAX_ATTEMPTS = 5;
 const LOCKOUT_MS = 15 * 60 * 1000; // 15 minutes
 
@@ -119,7 +119,7 @@ export default function Auth() {
         .maybeSingle();
 
       if (profileData?.must_change_password) {
-        navigate("/x7k9-control/change-password", { replace: true });
+        navigate("/G63-admin/change-password", { replace: true });
         return;
       }
 
