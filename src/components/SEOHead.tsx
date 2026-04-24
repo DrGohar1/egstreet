@@ -15,7 +15,7 @@ interface Props {
 }
 
 const SITE_NAME = "الشارع المصري";
-const SITE_URL  = "https://egst.vercel.app";
+const SITE_URL  = import.meta.env.VITE_SITE_URL || "https://egst.vercel.app";
 const DEFAULT_IMAGE = "https://neojditfucitnovcfspw.supabase.co/storage/v1/object/public/media/og-default.jpg";
 
 export default function SEOHead({
