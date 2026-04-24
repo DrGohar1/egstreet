@@ -39,7 +39,7 @@ export default function ForceChangePassword() {
         await supabase.from("profiles").update({ must_change_password: false }).eq("id", user.id);
       }
       toast.success("تم تغيير كلمة المرور بنجاح ✅");
-      navigate("/x7k9-control", { replace: true });
+      navigate("/G63-admin", { replace: true });
     } catch (e: any) {
       toast.error(e.message || "حدث خطأ");
     }
