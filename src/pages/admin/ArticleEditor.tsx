@@ -415,7 +415,7 @@ const ArticleEditor = () => {
         if (error) throw error;
       }
       toast.success(finalStatus==="published"?"✅ تم النشر!":"✅ تم الحفظ كمسودة");
-      navigate("/egstreet-admin/articles");
+      navigate("/G63-admin/articles");
     } catch(e:any) {
       toast.error("خطأ: " + e.message);
     }
@@ -432,7 +432,7 @@ const ArticleEditor = () => {
       {/* Top bar */}
       <div className="sticky top-0 z-40 bg-card border-b border-border px-4 py-3 flex items-center justify-between gap-3 shadow-sm">
         <div className="flex items-center gap-2">
-          <button onClick={()=>navigate("/egstreet-admin/articles")}
+          <button onClick={()=>navigate("/G63-admin/articles")}
             className="w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center transition-colors">
             <ArrowRight className="w-4 h-4"/>
           </button>
