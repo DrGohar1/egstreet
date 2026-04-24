@@ -27,7 +27,7 @@ export default function SetPassword() {
     });
 
     if (e1) { setError(e1.message); setLoading(false); return; }
-    navigate("/egstreet-admin", { replace: true });
+    navigate("/G63-admin", { replace: true });
   }
 
   return (
