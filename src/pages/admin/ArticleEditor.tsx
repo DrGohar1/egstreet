@@ -324,7 +324,7 @@ const ArticleEditor = () => {
 
   const [form, setForm] = useState({
     title: "", slug: "", excerpt: "", content: "",
-    featured_image: "", category_id: "", status: "draft" as "draft"|"published"|"scheduled",
+    featured_image: "", category_id: "", status: "draft" as "draft"|"published",
     is_featured: false, is_breaking: false,
     meta_title: "", meta_description: "",
     custom_author_name: "",
@@ -400,8 +400,7 @@ const ArticleEditor = () => {
       ...form,
       status: finalStatus,
       published_at: finalStatus==="published" ? new Date().toISOString() : null,
-      scheduled_at: finalStatus==="scheduled" && form.scheduled_at ? new Date(form.scheduled_at).toISOString() : null,
-      status: finalStatus==="scheduled" ? "draft" : finalStatus,
+      scheduled_at: form.scheduled_at ? new Date(form.scheduled_at).toISOString() : null,
       author_id: user?.id||null,
       slug: form.slug || genSlug(form.title),
       meta_description: form.meta_description || form.excerpt.slice(0,160),
@@ -629,7 +628,7 @@ const ArticleEditor = () => {
                 className="w-full bg-muted border border-border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/30"
               />
               {form.scheduled_at && (
-                <button onClick={()=>save("scheduled")} disabled={saving}
+                <button onClick={()=>save("draft")} disabled={saving}
                   className="w-full bg-amber-500 text-white py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-amber-600 disabled:opacity-50 transition-colors">
                   <Clock className="w-4 h-4"/> جدولة النشر
                 </button>
