@@ -63,7 +63,7 @@ export default function UserManagement() {
   const [delId,      setDelId]      = useState<string|null>(null);
 
   /* ── add form ── */
-  const [addForm, setAddForm] = useState({ email:"", displayName:"", username:"", role:"journalist" as "super_admin"|"editor_in_chief"|"journalist"|"ads_manager", password:"", autoPass:true, avatarUrl:"" });
+  const [addForm, setAddForm] = useState({ email:"", displayName:"", username:"", role:"journalist" as "super_admin"|"editor_in_chief"|"journalist"|"ads_manager", password:"", autoPass:true, avatarUrl:"", mustChangePass:true });
   const [addStep, setAddStep] = useState<"form"|"done">("form");
   const [addLoading, setAddLoading] = useState(false);
   const [addShowPass, setAddShowPass] = useState(false);
@@ -116,7 +116,7 @@ export default function UserManagement() {
     try {
       const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL||"https://neojditfucitnovcfspw.supabase.co"}/functions/v1/create-user`, {
         method:"POST", headers:{"Content-Type":"application/json", Authorization:`Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`},
-        body: JSON.stringify({ email:addForm.email.trim(), password:pass, display_name:addForm.displayName.trim()||null, username:addForm.username.trim().toLowerCase()||null, avatar_url:addForm.avatarUrl||null })
+        body: JSON.stringify({ email:addForm.email.trim(), password:pass, display_name:addForm.displayName.trim()||null, username:addForm.username.trim().toLowerCase()||null, avatar_url:addForm.avatarUrl||null, must_change_password:addForm.mustChangePass })
       });
       const json = await res.json();
       const uid = json?.user?.id || json?.id;
@@ -125,9 +125,10 @@ export default function UserManagement() {
       if (uidFinal) {
         const perms = ROLE_DEFAULTS[addForm.role] || ROLE_DEFAULTS["viewer"];
         await supabase.from("user_roles").upsert({ user_id:uidFinal, role:addForm.role, permissions:JSON.stringify(perms) });
-        if (addForm.avatarUrl) {
-          await supabase.from("profiles").update({ avatar_url:addForm.avatarUrl }).eq("id", uidFinal);
-        }
+        await supabase.from("profiles").update({
+          ...(addForm.avatarUrl ? { avatar_url:addForm.avatarUrl } : {}),
+          must_change_password: addForm.mustChangePass,
+        }).eq("id", uidFinal);
       }
       setCreatedInfo({ email:addForm.email.trim(), pass });
       setAddStep("done");
