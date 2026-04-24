@@ -197,6 +197,12 @@ const SiteSettings = () => {
                     settingKey="favicon"
                     onUploaded={(url) => u("favicon_url", url)}
                   />
+                  <LogoUploader
+                    label={t("صورة المشاركة الافتراضية (OG Image)", "Default OG Image")}
+                    currentUrl={settings.og_default_image || ""}
+                    settingKey="og-default"
+                    onUploaded={(url) => u("og_default_image", url)}
+                  />
                 </CardContent>
               </Card>
 
@@ -425,6 +431,14 @@ const SiteSettings = () => {
                 <div>
                   <Label className="text-xs font-medium">{t("نص الشريك", "Partner Credit")}</Label>
                   <Input value={settings.partner_credit || ""} onChange={(e) => u("partner_credit", e.target.value)} placeholder={t("بالتعاون مع شركة الكينج للانتاج الفني", "In partnership with...")} className="mt-1" />
+                </div>
+                <div>
+                  <Label className="text-xs font-medium">{t("اسم المطور (يظهر في أسفل الموقع)", "Developer Name")}</Label>
+                  <Input value={settings.developer_name || ""} onChange={(e) => u("developer_name", e.target.value)} placeholder="GoharTech" className="mt-1" />
+                </div>
+                <div>
+                  <Label className="text-xs font-medium">{t("رابط المطور", "Developer URL")}</Label>
+                  <Input value={settings.developer_url || ""} onChange={(e) => u("developer_url", e.target.value)} placeholder="https://wa.me/201001234567" className="mt-1" dir="ltr" />
                 </div>
                 <div>
                   <Label className="text-xs font-medium">{t("رسالة أسفل الموقع (HTML)", "Footer Message (HTML)")}</Label>
