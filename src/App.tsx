@@ -50,7 +50,7 @@ const queryClient = new QueryClient({
   },
 });
 
-const ADMIN = "/x7k9-control";
+const ADMIN = "/G63-admin";
 
 const AppContent = () => {
   useContentProtection();
@@ -66,7 +66,7 @@ const AppContent = () => {
         <Route path="/page/:slug" element={<StaticPage />} />
         <Route path="/author/:userId" element={<AuthorPage />} />
         <Route path="/tag/:slug" element={<TagPage />} />
-        <Route path="/x7k9-control/login" element={<Auth />} />
+        <Route path="/G63-admin/login" element={<Auth />} />
         {/* Reset password via Supabase email only */}
         <Route path="/profile" element={<UserProfile />} />
         <Route path="/saved" element={<SavedArticlesPage />} />
