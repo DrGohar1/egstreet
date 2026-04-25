@@ -282,6 +282,8 @@ const ImagePicker = ({ onSelect, onClose }) => {
         </div>
       </motion.div>
     </>
+    </div>
+  </>
   );
 };
 
