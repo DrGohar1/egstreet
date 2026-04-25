@@ -1,51 +1,65 @@
-import { useAuth } from "@/contexts/AuthContext";
-import { useEffect, useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/contexts/AuthContext";
 
-interface Permissions {
-  articles: boolean; categories: boolean; breaking: boolean;
-  users: boolean; settings: boolean; ads: boolean;
-  analytics: boolean; pages: boolean; subscribers: boolean;
-  comments: boolean; ai: boolean; backup: boolean;
-  tags: boolean; permissions: boolean;
+export type PermissionKey =
+  | "dashboard" | "articles" | "articles.write" | "articles.review"
+  | "categories" | "users" | "comments" | "analytics" | "settings"
+  | "subscribers" | "breaking_news" | "ads" | "pages" | "tags"
+  | "scraper" | "ai_tools" | "backup" | "automation";
+
+interface Permission {
+  permission_key: PermissionKey;
+  granted: boolean;
 }
 
-const DEFAULT_PERMS: Permissions = {
-  articles: false, categories: false, breaking: false,
-  users: false, settings: false, ads: false,
-  analytics: false, pages: false, subscribers: false,
-  comments: false, ai: false, backup: false,
-  tags: false, permissions: false,
-};
+// Super admin has ALL permissions always
+const SUPER_ADMIN_PERMISSIONS: PermissionKey[] = [
+  "dashboard","articles","articles.write","articles.review",
+  "categories","users","comments","analytics","settings",
+  "subscribers","breaking_news","ads","pages","tags",
+  "scraper","ai_tools","backup","automation"
+];
 
 export function usePermissions() {
   const { user } = useAuth();
-  const [role, setRole] = useState<string>("");
-  const [perms, setPerms] = useState<Permissions>(DEFAULT_PERMS);
+  const [permissions, setPermissions] = useState<PermissionKey[]>([]);
+  const [role, setRole] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!user) { setLoading(false); return; }
-    supabase
-      .from("user_roles")
-      .select("role, permissions")
-      .eq("user_id", user.id)
-      .single()
-      .then(({ data }) => {
-        if (data) {
-          setRole(data.role);
-          const p = typeof data.permissions === "string"
-            ? JSON.parse(data.permissions)
-            : (data.permissions as any) || {};
-          setPerms({ ...DEFAULT_PERMS, ...p });
-        }
-        setLoading(false);
-      });
+  const fetchPermissions = useCallback(async () => {
+    if (!user) { setPermissions([]); setLoading(false); return; }
+    try {
+      // Get role
+      const { data: roleData } = await supabase
+        .from("user_roles").select("role").eq("user_id", user.id).single();
+      const userRole = roleData?.role || null;
+      setRole(userRole);
+
+      // Super admin gets everything
+      if (userRole === "super_admin") {
+        setPermissions(SUPER_ADMIN_PERMISSIONS);
+        setLoading(false); return;
+      }
+
+      // Get explicit permissions from DB
+      const { data: perms } = await supabase
+        .from("permissions").select("permission_key, granted")
+        .eq("user_id", user.id).eq("granted", true);
+
+      setPermissions((perms || []).map((p: Permission) => p.permission_key));
+    } catch { setPermissions([]); }
+    finally { setLoading(false); }
   }, [user]);
 
-  const isSuperAdmin = role === "super_admin";  // top role in app_role enum
-  const isEditor = role === "editor_in_chief" || isSuperAdmin;
-  const can = (key: keyof Permissions) => isSuperAdmin || perms[key] === true;
+  useEffect(() => { fetchPermissions(); }, [fetchPermissions]);
 
-  return { role, perms, loading, isSuperAdmin, isEditor, can };
+  const can = useCallback((key: PermissionKey): boolean => {
+    if (role === "super_admin") return true;
+    return permissions.includes(key);
+  }, [permissions, role]);
+
+  const isSuperAdmin = role === "super_admin";
+
+  return { permissions, role, loading, can, isSuperAdmin, refetch: fetchPermissions };
 }
