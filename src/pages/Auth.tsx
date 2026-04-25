@@ -58,23 +58,12 @@ export default function Auth() {
     try {
       let loginEmail = email.trim();
 
-      // If username entered (no @), look up email by username OR display_name
+      // If username entered (no @), look up email via RPC (SECURITY DEFINER — bypasses RLS)
       if (!loginEmail.includes("@")) {
-        // Try username field first, then display_name as fallback
-        let { data: profileData } = await supabase
-          .from("profiles")
-          .select("email")
-          .eq("username", loginEmail)
-          .maybeSingle();
-        if (!profileData?.email) {
-          const { data: byName } = await supabase
-            .from("profiles")
-            .select("email")
-            .ilike("display_name", loginEmail)
-            .maybeSingle();
-          profileData = byName;
-        }
-        if (!profileData?.email) {
+        const { data: emailResult, error: rpcErr } = await supabase
+          .rpc("get_email_by_username", { p_username: loginEmail });
+
+        if (rpcErr || !emailResult) {
           const newAttempts = attempts + 1;
           setAttempts(newAttempts);
           if (newAttempts >= MAX_ATTEMPTS) {
@@ -85,7 +74,7 @@ export default function Auth() {
           setError(`اسم المستخدم غير موجود. المحاولات المتبقية: ${MAX_ATTEMPTS - newAttempts}`);
           setLoading(false); return;
         }
-        loginEmail = profileData.email;
+        loginEmail = emailResult;
       }
 
       const { data, error: e1 } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
