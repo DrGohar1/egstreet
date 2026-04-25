@@ -31,44 +31,44 @@ const AdminSidebar = ({ open, onClose }: { open?:boolean; onClose?:()=>void }) =
     {
       label: "الرئيسية",
       items: [
-        { key:"dashboard", label:t("لوحة التحكم","Dashboard"), url:ADMIN,                     icon:LayoutDashboard, always:true, end:true },
-        { key:"analytics", label:t("التحليلات","Analytics"),   url:`${ADMIN}/analytics`,       icon:BarChart3 },
+        { key:"dashboard", perm:"dashboard", label:t("لوحة التحكم","Dashboard"), url:ADMIN,                     icon:LayoutDashboard, always:true, end:true },
+        { key:"analytics",  perm:"analytics", label:t("التحليلات","Analytics"),   url:`${ADMIN}/analytics`,       icon:BarChart3 },
       ]
     },
     {
       label: "المحتوى",
       items: [
-        { key:"articles",   label:t("المقالات","Articles"),     url:`${ADMIN}/articles`,       icon:FileText },
-        { key:"articles",   label:t("مقال جديد","New Article"), url:`${ADMIN}/articles/new`,   icon:Plus, accent:true },
-        { key:"categories", label:t("الأقسام","Categories"),    url:`${ADMIN}/categories`,     icon:Layers },
-        { key:"tags",       label:t("الوسوم","Tags"),           url:`${ADMIN}/tags`,           icon:Tag },
-        { key:"breaking",   label:t("أخبار عاجلة","Breaking"),  url:`${ADMIN}/breaking`,       icon:Zap },
-        { key:"pages",      label:t("الصفحات","Pages"),         url:`${ADMIN}/pages`,          icon:FileCode },
+        { key:"articles",   perm:"articles",   label:t("المقالات","Articles"),     url:`${ADMIN}/articles`,       icon:FileText },
+        { key:"articles.write", perm:"articles.write", label:t("مقال جديد","New Article"), url:`${ADMIN}/articles/new`,   icon:Plus, accent:true },
+        { key:"categories", perm:"categories", label:t("الأقسام","Categories"),    url:`${ADMIN}/categories`,     icon:Layers },
+        { key:"tags",       perm:"tags",       label:t("الوسوم","Tags"),           url:`${ADMIN}/tags`,           icon:Tag },
+        { key:"breaking",   perm:"breaking_news",   label:t("أخبار عاجلة","Breaking"),  url:`${ADMIN}/breaking`,       icon:Zap },
+        { key:"pages",      perm:"pages",      label:t("الصفحات","Pages"),         url:`${ADMIN}/pages`,          icon:FileCode },
       ]
     },
     {
       label: "التواصل",
       items: [
-        { key:"comments",     label:t("التعليقات","Comments"),     url:`${ADMIN}/comments`,     icon:MessageSquare },
-        { key:"subscribers",  label:t("المشتركون","Subscribers"),  url:`${ADMIN}/subscribers`,  icon:Mail },
-        { key:"ads",          label:t("الإعلانات","Ads"),          url:`${ADMIN}/advertisements`,icon:Megaphone },
+        { key:"comments",   perm:"comments",     label:t("التعليقات","Comments"),     url:`${ADMIN}/comments`,     icon:MessageSquare },
+        { key:"subscribers", perm:"subscribers",  label:t("المشتركون","Subscribers"),  url:`${ADMIN}/subscribers`,  icon:Mail },
+        { key:"ads",        perm:"ads",          label:t("الإعلانات","Ads"),          url:`${ADMIN}/advertisements`,icon:Megaphone },
       ]
     },
     {
       label: "الأدوات",
       items: [
-        { key:"ai",    label:t("سحب RSS","RSS Scraper"),        url:`${ADMIN}/ai/scraper`,    icon:Rss },
-        { key:"ai",    label:t("أدوات AI","AI Tools"),         url:`${ADMIN}/ai/tools`,      icon:Brain },
-        { key:"ai",    label:t("الأتمتة","Automation"),        url:`${ADMIN}/automation`,    icon:Cog },
+        { key:"scraper", perm:"scraper", label:t("سحب RSS","RSS Scraper"),        url:`${ADMIN}/ai/scraper`,    icon:Rss },
+        { key:"ai_tools", perm:"ai_tools", label:t("أدوات AI","AI Tools"),         url:`${ADMIN}/ai/tools`,      icon:Brain },
+        { key:"automation", perm:"automation", label:t("الأتمتة","Automation"),        url:`${ADMIN}/automation`,    icon:Cog },
       ]
     },
     {
       label: "الإدارة",
       items: [
-        { key:"users",       label:t("المستخدمون","Users"),    url:`${ADMIN}/users`,         icon:Users },
-        { key:"permissions", label:t("الصلاحيات","Permissions"),url:`${ADMIN}/permissions`,  icon:Shield },
-        { key:"backup",      label:t("النسخ الاحتياطي","Backup"),url:`${ADMIN}/backup`,      icon:Database },
-        { key:"settings",    label:t("الإعدادات","Settings"),   url:`${ADMIN}/settings`,     icon:Settings },
+        { key:"users",      perm:"users",       label:t("المستخدمون","Users"),    url:`${ADMIN}/users`,         icon:Users },
+        { key:"permissions", perm:"users", label:t("الصلاحيات","Permissions"),url:`${ADMIN}/permissions`,  icon:Shield },
+        { key:"backup",     perm:"backup",      label:t("النسخ الاحتياطي","Backup"),url:`${ADMIN}/backup`,      icon:Database },
+        { key:"settings",   perm:"settings",    label:t("الإعدادات","Settings"),   url:`${ADMIN}/settings`,     icon:Settings },
       ]
     },
   ];
