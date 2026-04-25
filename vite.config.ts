@@ -20,7 +20,6 @@ export default defineConfig(({ mode }) => ({
       workbox: {
         navigateFallbackDenylist: [/^\/~oauth/],
         globPatterns: ["**/*.{js,css,html,ico,svg,woff2}"],
-        globIgnores: ["**/og-image*", "**/og-*.png", "**/*.png", "**/src/**"],
         // exclude large images from precache
         globIgnores: ["**/og-image*", "**/og-*.png", "**/*.png"],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024, // 3 MiB
