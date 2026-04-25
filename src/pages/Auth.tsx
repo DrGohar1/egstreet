@@ -58,13 +58,22 @@ export default function Auth() {
     try {
       let loginEmail = email.trim();
 
-      // If username entered (no @), look up email from profiles
+      // If username entered (no @), look up email by username OR display_name
       if (!loginEmail.includes("@")) {
-        const { data: profileData } = await supabase
+        // Try username field first, then display_name as fallback
+        let { data: profileData } = await supabase
           .from("profiles")
           .select("email")
           .eq("username", loginEmail)
           .maybeSingle();
+        if (!profileData?.email) {
+          const { data: byName } = await supabase
+            .from("profiles")
+            .select("email")
+            .ilike("display_name", loginEmail)
+            .maybeSingle();
+          profileData = byName;
+        }
         if (!profileData?.email) {
           const newAttempts = attempts + 1;
           setAttempts(newAttempts);
