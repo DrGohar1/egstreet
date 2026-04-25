@@ -15,7 +15,7 @@ interface Article {
   id:string; title:string; slug:string; content:string|null; excerpt:string|null;
   featured_image:string|null; published_at:string|null; views:number|null;
   custom_author_name:string|null; category_id:string|null; meta_title:string|null;
-  meta_description:string|null; author_id:string|null;
+  meta_description:string|null; author_id:string|null; article_number:number|null;
 }
 interface Category { id:string; name_ar:string; slug:string; }
 
@@ -33,7 +33,7 @@ const timeAgo = (d:string|null) => {
 const readTime = (t:string) => Math.max(1, Math.ceil(t.split(/\s+/).length/200));
 
 export default function ArticlePage() {
-  const { slug } = useParams<{slug:string}>();
+  const { slug, categorySlug, articleNumber } = useParams<{slug?:string; categorySlug?:string; articleNumber?:string}>();
   const navigate  = useNavigate();
   const bodyRef   = useRef<HTMLDivElement>(null);
   const [article,   setArticle]   = useState<Article|null>(null);
@@ -44,9 +44,14 @@ export default function ArticlePage() {
   const [loading,   setLoading]   = useState(true);
 
   useEffect(()=>{
-    if (!slug) return;
+    const idOrSlug = slug || articleNumber;
+    if (!idOrSlug && !categorySlug) return;
     setLoading(true);
-    supabase.from("articles").select("*").eq("slug",slug).eq("status","published").maybeSingle()
+    // Support both: /article/:slug AND /:category/:articleNumber
+    const query = articleNumber && !isNaN(Number(articleNumber))
+      ? supabase.from("articles").select("*").eq("article_number", Number(articleNumber)).eq("status","published").maybeSingle()
+      : supabase.from("articles").select("*").eq("slug", idOrSlug!).eq("status","published").maybeSingle();
+    query
       .then(({data})=>{
         if (!data) { navigate("/404"); return; }
         setArticle(data as Article);
@@ -120,7 +125,11 @@ export default function ArticlePage() {
   if (!article) return null;
 
   const rt = readTime(article.content||"");
-  const url = `${window.location.origin}/article/${article.slug}`;
+  const catSlug = category?.slug;
+  const artNum = article.article_number;
+  const url = catSlug && artNum
+    ? `${window.location.origin}/${catSlug}/${artNum}`
+    : `${window.location.origin}/article/${article.slug}`;
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
