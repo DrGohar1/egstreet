@@ -63,6 +63,7 @@ const AppContent = () => {
         {/* Public */}
         <Route path="/" element={<Index />} />
         <Route path="/article/:slug" element={<ArticlePage />} />
+        <Route path="/:categorySlug/:articleNumber" element={<ArticlePage />} />
         <Route path="/category/:slug" element={<CategoryPage />} />
         <Route path="/search" element={<SearchPage />} />
         <Route path="/page/:slug" element={<StaticPage />} />
