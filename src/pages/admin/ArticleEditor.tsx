@@ -19,7 +19,7 @@ interface Category { id:string; name_ar:string; name_en:string; slug:string; }
 /* ── Image Crop Helper ── */
 type CropBox = { x:number; y:number; w:number; h:number };
 
-const ImageCropModal = ({ src, onDone, onCancel }:{src:string; onDone:(url:string)=>void; onCancel:()=>void}) => {
+const ImageCropModal = ({ src, onDone, onCancel }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
   const [crop, setCrop] = useState<CropBox>({x:0,y:0,w:100,h:100});
@@ -97,7 +97,7 @@ const ImageCropModal = ({ src, onDone, onCancel }:{src:string; onDone:(url:strin
   );
 };
 
-const ImagePicker = ({ onSelect, onClose }: { onSelect:(url:string)=>void; onClose:()=>void }) => {
+const ImagePicker = ({ onSelect, onClose }) => {
   const [tab,       setTab]       = useState<"unsplash"|"upload"|"url">("unsplash");
   const [query,     setQuery]     = useState("egypt news");
   const [images,    setImages]    = useState<any[]>([]);
@@ -286,8 +286,7 @@ const ImagePicker = ({ onSelect, onClose }: { onSelect:(url:string)=>void; onClo
 };
 
 // ── Text Format Toolbar ──
-const Toolbar = (props: { onFormat: (t:string, w?:boolean) => void }) => {
-  const { onFormat } = props;
+const Toolbar = ({ onFormat }) => {
   const btns = [
     { icon:<Bold className="w-4 h-4"/>,   label:"عريض",     cmd:"bold"    },
     { icon:<Italic className="w-4 h-4"/>, label:"مائل",     cmd:"italic"  },
