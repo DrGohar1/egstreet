@@ -120,7 +120,7 @@ const AdminSidebar = ({ open, onClose }: { open?:boolean; onClose?:()=>void }) =
         {/* Nav groups */}
         <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-4">
           {groups.map(group=>{
-            const visible = group.items.filter(item=>(item as any).always || can(item.key as any));
+            const visible = group.items.filter(item=>(item as any).always || can(((item as any).perm || item.key) as any));
             if (!visible.length) return null;
             return (
               <div key={group.label}>
