@@ -19,6 +19,7 @@ import AuthorPage from "./pages/AuthorPage";
 import TagPage from "./pages/TagPage";
 import NotFound from "./pages/NotFound";
 import AdminLayout from "./components/admin/AdminLayout";
+import { AdminGuard } from "./components/admin/AdminGuard";
 import DashboardOverview from "./pages/admin/DashboardOverview";
 import UserManagement from "./pages/admin/UserManagement";
 import ArticleManagement from "./pages/admin/ArticleManagement";
