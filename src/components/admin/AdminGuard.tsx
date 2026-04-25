@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { usePermissions, PermissionKey } from "@/hooks/usePermissions";
 import { Loader2, ShieldOff } from "lucide-react";
 
@@ -9,16 +9,7 @@ interface AdminGuardProps {
 }
 
 export function AdminGuard({ children, permission }: AdminGuardProps) {
-  const { can, loading, role } = usePermissions();
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  useEffect(() => {
-    if (!loading && !can(permission)) {
-      // Hard redirect — no back navigation to blocked page
-      navigate("/G63-admin", { replace: true });
-    }
-  }, [loading, can, permission, navigate]);
+  const { can, loading } = usePermissions();
 
   if (loading) {
     return (
@@ -30,10 +21,10 @@ export function AdminGuard({ children, permission }: AdminGuardProps) {
 
   if (!can(permission)) {
     return (
-      <div className="flex flex-col items-center justify-center h-64 gap-4">
-        <ShieldOff className="w-16 h-16 text-destructive/50"/>
-        <p className="text-xl font-black text-destructive">غير مصرح بالوصول</p>
-        <p className="text-sm text-muted-foreground">ليس لديك صلاحية الوصول لهذه الصفحة</p>
+      <div className="flex flex-col items-center justify-center h-64 gap-4 select-none">
+        <ShieldOff className="w-16 h-16 text-destructive/40"/>
+        <p className="text-lg font-black text-destructive">غير مصرح بالوصول</p>
+        <p className="text-sm text-muted-foreground">ليس لديك صلاحية لهذه الصفحة</p>
       </div>
     );
   }
