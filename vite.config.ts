@@ -12,7 +12,6 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     mode === "development" && componentTagger(),
-,
   ].filter(Boolean),
   esbuild: {
     target: "es2020",
