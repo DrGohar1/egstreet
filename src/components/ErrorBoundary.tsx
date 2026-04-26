@@ -25,8 +25,11 @@ export class ErrorBoundary extends React.Component<
         <div className="flex flex-col items-center justify-center min-h-screen gap-4 p-8 text-center">
           <div className="text-6xl">⚠️</div>
           <h2 className="text-xl font-bold text-foreground">حدث خطأ في تحميل الصفحة</h2>
-          <p className="text-sm text-muted-foreground max-w-md">
+          <p className="text-xs text-red-500 max-w-sm break-all">
             {this.state.error?.message || "Unknown error"}
+          </p>
+          <p className="text-xs text-muted-foreground max-w-sm break-all" style={{fontSize:"10px"}}>
+            {this.state.error?.stack?.split("\n").slice(0,3).join(" | ")}
           </p>
           <button
             onClick={() => { this.setState({ hasError: false }); window.location.reload(); }}
