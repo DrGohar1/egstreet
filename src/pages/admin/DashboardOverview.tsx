@@ -39,7 +39,7 @@ const DashboardOverview = () => {
     const h = new Date().getHours();
     setGreeting(h < 12 ? "صباح الخير" : h < 17 ? "مساء النور" : "مساء الخير");
     if (user) {
-      supabase.from("profiles").select("display_name").eq("id", user.id).single()
+      supabase.from("profiles").select("display_name").eq("user_id", user.id).single()
         .then(({ data }) => setDisplayName(data?.display_name || user.email?.split("@")[0] || ""));
     }
     loadStats();
