@@ -15,8 +15,6 @@ interface Advertisement {
   id: string;
   title_ar: string;
   title_en: string;
-  description_ar: string | null;
-  description_en: string | null;
   image_url: string;
   link_url: string | null;
   position: string;
@@ -81,8 +79,6 @@ const AdvertisementManagement = () => {
     setEditing(ad);
     setFormTitleAr(ad.title_ar);
     setFormTitleEn(ad.title_en);
-    setFormDescAr(ad.description_ar || "");
-    setFormDescEn(ad.description_en || "");
     setFormImageUrl(ad.image_url);
     setFormLinkUrl(ad.link_url || "");
     setFormPosition(ad.position);
@@ -99,8 +95,6 @@ const AdvertisementManagement = () => {
     const payload = {
       title_ar: formTitleAr,
       title_en: formTitleEn,
-      description_ar: formDescAr || null,
-      description_en: formDescEn || null,
       image_url: formImageUrl,
       link_url: formLinkUrl || null,
       position: formPosition,
