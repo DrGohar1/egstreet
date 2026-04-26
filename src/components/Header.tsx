@@ -3,7 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
-import { Search, Moon, Sun, Bookmark, Menu, X, Newspaper, Globe, LogIn, LayoutDashboard } from "lucide-react";
+import { Search, Moon, Sun, Bookmark, Menu, X, Newspaper, Globe, LayoutDashboard } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useTheme } from "@/contexts/ThemeContext";
 
@@ -53,17 +53,7 @@ export default function Header() {
             <button onClick={()=>setLanguage(language==="ar"?"en":"ar")} className="flex items-center gap-1 hover:opacity-80 transition-opacity">
               <Globe className="w-3 h-3"/>{language==="ar"?"English":"العربية"}
             </button>
-            {user
-              ? <>
-                  <Link to="/G63-admin" className="flex items-center gap-1 hover:opacity-80 transition-opacity font-bold">
-                    <LayoutDashboard className="w-3 h-3"/>لوحة التحكم
-                  </Link>
-                  <button onClick={signOut} className="hover:opacity-80 transition-opacity text-white/70 hover:text-white">خروج</button>
-                </>
-              : <Link to="/auth" className="flex items-center gap-1 hover:opacity-80 transition-opacity font-bold">
-                  <LogIn className="w-3 h-3"/>دخول الفريق
-                </Link>
-            }
+            
           </div>
         </div>
       </div>
