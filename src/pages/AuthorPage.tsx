@@ -108,8 +108,8 @@ const AuthorPage = () => {
         )}
       </main>
       
+    <Footer />
     </div>
-      <Footer />
   );
 };
 
