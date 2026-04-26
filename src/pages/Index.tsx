@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 import BreakingTicker from "@/components/BreakingTicker";
 import SEOHead from "@/components/SEOHead";
 import { Eye, Clock, ChevronLeft, ChevronRight, Flame, ArrowLeft, Share2, Bookmark, TrendingUp, Radio, Newspaper } from "lucide-react";
@@ -293,24 +292,6 @@ export default function Index() {
       </main>
       
 
-      {/* ── Mobile bottom nav ── */}
-      <nav className="fixed bottom-0 inset-x-0 bg-card/95 backdrop-blur-md border-t border-border z-40 flex lg:hidden shadow-lg shadow-black/5">
-        {[
-          { label:"الرئيسية", icon:"🏠", to:"/" },
-          { label:"عاجل",     icon:"⚡", to:"/category/breaking" },
-          { label:"بحث",      icon:"🔍", to:"/search" },
-          { label:"محفوظ",    icon:"🔖", to:"/saved" },
-          { label:"حسابي",    icon:"👤", to:"/profile" },
-        ].map(item => (
-          <Link key={item.to} to={item.to}
-            className="flex-1 flex flex-col items-center justify-center py-2.5 gap-0.5 text-muted-foreground hover:text-primary active:scale-90 transition-all">
-            <span className="text-xl leading-none">{item.icon}</span>
-            <span className="text-[9px] font-bold">{item.label}</span>
-          </Link>
-        ))}
-      </nav>
-      <div className="h-16 lg:hidden"/>
-    <Footer />
     </div>
   );
 }
