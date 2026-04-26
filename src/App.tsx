@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { PermissionsProvider } from "@/hooks/usePermissions";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { useContentProtection } from "@/hooks/useContentProtection";
 import { useVisitorTracking } from "@/hooks/useVisitorTracking";
@@ -110,6 +111,7 @@ const App = () => (
       <ThemeProvider>
         <LanguageProvider>
           <AuthProvider>
+      <PermissionsProvider>
             <TooltipProvider>
               <Toaster />
               <Sonner />
@@ -117,7 +119,8 @@ const App = () => (
                 <AppContent />
               </BrowserRouter>
             </TooltipProvider>
-          </AuthProvider>
+          </PermissionsProvider>
+      </AuthProvider>
         </LanguageProvider>
       </ThemeProvider>
     </QueryClientProvider>
