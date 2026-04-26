@@ -3,7 +3,6 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 import BreakingTicker from "@/components/BreakingTicker";
 import SEOHead from "@/components/SEOHead";
 import { Eye, Clock, ChevronLeft, ChevronRight, Flame, ArrowLeft, Share2, Bookmark, TrendingUp, Radio, Newspaper } from "lucide-react";
@@ -291,7 +290,7 @@ export default function Index() {
         ))}
 
       </main>
-      <Footer/>
+      
 
       {/* ── Mobile bottom nav ── */}
       <nav className="fixed bottom-0 inset-x-0 bg-card/95 backdrop-blur-md border-t border-border z-40 flex lg:hidden shadow-lg shadow-black/5">
