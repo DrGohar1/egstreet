@@ -68,8 +68,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // ── Sign In with username ──────────────────────────────
   const signIn = async (username: string, password: string) => {
-    const email = toEmail(username);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    // Try to resolve email from username/displayName via RPC
+    let loginEmail = username.trim();
+    if (!loginEmail.includes("@")) {
+      const { data: resolved } = await supabase.rpc("get_email_by_username", { p_username: loginEmail });
+      if (resolved) loginEmail = resolved;
+      else return { error: "اسم المستخدم غير موجود" };
+    }
+    const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
     if (error) {
       if (error.message.includes("Invalid login")) return { error: "اسم المستخدم أو كلمة السر غلط" };
       if (error.message.includes("Email not confirmed")) return { error: "الحساب لم يتم تفعيله بعد" };
