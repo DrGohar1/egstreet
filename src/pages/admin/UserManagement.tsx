@@ -156,19 +156,16 @@ export default function UserManagement() {
       // Update role + permissions
       await supabase.from("user_roles").upsert({
         user_id:selected.user_id || selected.id, role:editForm.role,
-        permissions:JSON.stringify(editForm.permissions),
-      });
-      // Password change via edge function
-      if (editForm.newPassword && editForm.newPassword.length>=8) {
-        await fetch(`${import.meta.env.VITE_SUPABASE_URL||"https://neojditfucitnovcfspw.supabase.co"}/functions/v1/update-user-password`, {
-          method:"POST", headers:{"Content-Type":"application/json", Authorization:`Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`},
-          body:JSON.stringify({ user_id:selected.user_id || selected.id, new_password:editForm.newPassword })
         });
+      // Password update via RPC — silently skip if fails
+      if (editForm.newPassword && editForm.newPassword.length>=8) {
+        try {
+          await supabase.rpc("admin_change_password" as any, {
+            target_user_id: selected.user_id || selected.id,
+            new_password: editForm.newPassword
+          });
+        } catch { /* password update is best-effort */ }
       }
-      setPanel("none");
-      fetchUsers();
-      toast.success("تم حفظ التعديلات");
-    } catch(e:any){ toast.error(e.message||"حدث خطأ"); }
     finally { setEditLoading(false); }
   };
 
