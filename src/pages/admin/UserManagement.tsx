@@ -63,7 +63,7 @@ export default function UserManagement() {
   const [delId,      setDelId]      = useState<string|null>(null);
 
   /* ── add form ── */
-  const [addForm, setAddForm] = useState({ email:"", displayName:"", username:"", role:"journalist" as "super_admin"|"editor_in_chief"|"journalist"|"ads_manager", password:"", autoPass:true, avatarUrl:"", mustChangePass:true });
+  const [addForm, setAddForm] = useState({ email:"", displayName:"", username:"", role:"journalist" as "super_admin"|"editor_in_chief"|"journalist"|"ads_manager", password:"", autoPass:true, avatarUrl:"", mustChangePass:false });
   const [addStep, setAddStep] = useState<"form"|"done">("form");
   const [addLoading, setAddLoading] = useState(false);
   const [addShowPass, setAddShowPass] = useState(false);
@@ -114,7 +114,7 @@ export default function UserManagement() {
         p_password: pass,
         p_display_name: addForm.displayName.trim() || addForm.email.split("@")[0],
         p_role: addForm.role,
-        p_must_change_password: addForm.mustChangePass ?? true,
+        p_must_change_password: addForm.mustChangePass ?? false,
       });
       if (rpcErr) throw new Error(rpcErr.message);
       const uidFinal = rpcData?.user_id || rpcData;
