@@ -79,7 +79,7 @@ export default function UserManagement() {
     setLoading(true);
     const [{ data:profiles }, { data:roles }] = await Promise.all([
       supabase.from("profiles").select("id,email,created_at,display_name,username,avatar_url"),
-      supabase.from("user_roles").select("user_id,role,permissions"),
+      supabase.from("user_roles").select("user_id,role"),
     ]);
     const merged = (profiles||[]).map(p=>({
       ...p,
@@ -87,12 +87,7 @@ export default function UserManagement() {
       username: p.username||"",
       avatar_url: p.avatar_url||"",
       role: (roles||[]).find(r=>r.user_id===p.id)?.role||"journalist",
-      permissions: (() => {
-        const raw = (roles||[]).find(r=>r.user_id===p.id)?.permissions;
-        if (!raw) return ROLE_DEFAULTS["journalist"];
-        try { return typeof raw==="string" ? JSON.parse(raw) : raw; }
-        catch { return ROLE_DEFAULTS["journalist"]; }
-      })(),
+      permissions: ROLE_DEFAULTS[(roles||[]).find(r=>r.user_id===p.id)?.role||"journalist"] || ROLE_DEFAULTS["journalist"],
     }));
     setUsers(merged);
     setLoading(false);
