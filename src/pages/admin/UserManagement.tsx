@@ -78,7 +78,7 @@ export default function UserManagement() {
   const fetchUsers = async () => {
     setLoading(true);
     const [{ data:profiles }, { data:roles }] = await Promise.all([
-      supabase.from("profiles").select("id,email,created_at,display_name,username,avatar_url"),
+      supabase.from("profiles").select("id,user_id,email,created_at,display_name,username,avatar_url"),
       supabase.from("user_roles").select("user_id,role"),
     ]);
     const merged = (profiles||[]).map(p=>({
@@ -86,8 +86,8 @@ export default function UserManagement() {
       display_name: p.display_name||"",
       username: p.username||"",
       avatar_url: p.avatar_url||"",
-      role: (roles||[]).find(r=>r.user_id===p.id)?.role||"journalist",
-      permissions: ROLE_DEFAULTS[(roles||[]).find(r=>r.user_id===p.id)?.role||"journalist"] || ROLE_DEFAULTS["journalist"],
+      role: (roles||[]).find(r=>r.user_id===p.user_id)?.role||"journalist",
+      permissions: ROLE_DEFAULTS[(roles||[]).find(r=>r.user_id===p.user_id)?.role||"journalist"] || ROLE_DEFAULTS["journalist"],
     }));
     setUsers(merged);
     setLoading(false);
@@ -119,11 +119,11 @@ export default function UserManagement() {
       const uidFinal = uid || json?.user?.id;
       if (uidFinal) {
         const perms = ROLE_DEFAULTS[addForm.role] || ROLE_DEFAULTS["journalist"];
-        await supabase.from("user_roles").upsert({ user_id:uidFinal, role:addForm.role, permissions:JSON.stringify(perms) });
+        await supabase.from("user_roles").upsert({ user_id:uidFinal, role:addForm.role /*, permissions removed */, //permissions:JSON.stringify(perms) });
         await supabase.from("profiles").update({
           ...(addForm.avatarUrl ? { avatar_url:addForm.avatarUrl } : {}),
           must_change_password: addForm.mustChangePass,
-        }).eq("id", uidFinal);
+        }).eq("user_id", uidFinal);
       }
       setCreatedInfo({ email:addForm.email.trim(), pass });
       setAddStep("done");
@@ -152,17 +152,17 @@ export default function UserManagement() {
         display_name: editForm.displayName.trim()||null,
         username: editForm.username.trim().toLowerCase()||null,
         avatar_url: editForm.avatarUrl||null,
-      }).eq("id", selected.id);
+      }).eq("user_id", selected.user_id || selected.id);
       // Update role + permissions
       await supabase.from("user_roles").upsert({
-        user_id:selected.id, role:editForm.role,
+        user_id:selected.user_id || selected.id, role:editForm.role,
         permissions:JSON.stringify(editForm.permissions),
       });
       // Password change via edge function
       if (editForm.newPassword && editForm.newPassword.length>=8) {
         await fetch(`${import.meta.env.VITE_SUPABASE_URL||"https://neojditfucitnovcfspw.supabase.co"}/functions/v1/update-user-password`, {
           method:"POST", headers:{"Content-Type":"application/json", Authorization:`Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`},
-          body:JSON.stringify({ user_id:selected.id, new_password:editForm.newPassword })
+          body:JSON.stringify({ user_id:selected.user_id || selected.id, new_password:editForm.newPassword })
         });
       }
       setPanel("none");
@@ -176,7 +176,7 @@ export default function UserManagement() {
   const handleDelete = async () => {
     if (!delId) return;
     try {
-      await supabase.from("profiles").delete().eq("id",delId);
+      await supabase.from("profiles").delete().eq("user_id",delId);
       await supabase.from("user_roles").delete().eq("user_id",delId);
       setUsers(u=>u.filter(x=>x.id!==delId));
       setDelId(null);
