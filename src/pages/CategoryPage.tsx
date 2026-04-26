@@ -103,7 +103,7 @@ export default function CategoryPage() {
         )}
       </main>
       
+    <Footer />
     </div>
-      <Footer />
   );
 }
