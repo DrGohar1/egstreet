@@ -4,7 +4,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useNavigate } from "react-router-dom";
 import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 import SEOHead from "@/components/SEOHead";
 import ArticleCard from "@/components/ArticleCard";
 import { Bookmark } from "lucide-react";
@@ -126,7 +125,7 @@ const SavedArticlesPage = () => {
         )}
       </main>
 
-      <Footer />
+      
     </div>
   );
 };
