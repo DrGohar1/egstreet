@@ -310,7 +310,7 @@ export default function Index() {
         ))}
       </nav>
       <div className="h-16 lg:hidden"/>
+    <Footer />
     </div>
-      <Footer />
   );
 }
