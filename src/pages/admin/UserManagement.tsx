@@ -109,28 +109,23 @@ export default function UserManagement() {
     if (pass.length < 8) return toast.error("كلمة المرور 8 أحرف على الأقل");
     setAddLoading(true);
     try {
-      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL||"https://neojditfucitnovcfspw.supabase.co"}/functions/v1/create-user`, {
-        method:"POST", headers:{"Content-Type":"application/json", Authorization:`Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`},
-        body: JSON.stringify({ email:addForm.email.trim(), password:pass, display_name:addForm.displayName.trim()||null, username:addForm.username.trim().toLowerCase()||null, avatar_url:addForm.avatarUrl||null, must_change_password:addForm.mustChangePass })
+      const { data: rpcData, error: rpcErr } = await (supabase as any).rpc("admin_create_user", {
+        p_email: addForm.email.trim(),
+        p_password: pass,
+        p_display_name: addForm.displayName.trim() || addForm.email.split("@")[0],
+        p_role: addForm.role,
+        p_must_change_password: addForm.mustChangePass ?? true,
       });
-      const json = await res.json();
-      const uid = json?.user?.id || json?.id;
-      if (!uid && !res.ok) throw new Error(json?.error || json?.message || "فشل الإنشاء");
-      const uidFinal = uid || json?.user?.id;
-      if (uidFinal) {
-        const perms = ROLE_DEFAULTS[addForm.role] || ROLE_DEFAULTS["journalist"];
-        await supabase.from("user_roles").upsert({ user_id:uidFinal, role:addForm.role /*, permissions removed */, //permissions:JSON.stringify(perms) });
-        await supabase.from("profiles").update({
-          ...(addForm.avatarUrl ? { avatar_url:addForm.avatarUrl } : {}),
-          must_change_password: addForm.mustChangePass,
-        }).eq("user_id", uidFinal);
+      if (rpcErr) throw new Error(rpcErr.message);
+      const uidFinal = rpcData?.user_id || rpcData;
+      if (uidFinal && addForm.avatarUrl) {
+        await supabase.from("profiles").update({ avatar_url: addForm.avatarUrl }).eq("user_id", uidFinal);
       }
-      setCreatedInfo({ email:addForm.email.trim(), pass });
+      setCreatedInfo({ email: addForm.email.trim(), pass });
       setAddStep("done");
       fetchUsers();
-      toast.success("تم إنشاء المستخدم بنجاح");
-    } catch(e:any){
-      // Fallback: try direct insert to profiles
+      toast.success("تم إنشاء المستخدم بنجاح ✅");
+    } catch(e:any) {
       toast.error(e.message || "فشل إنشاء المستخدم");
     } finally { setAddLoading(false); }
   };
@@ -147,26 +142,27 @@ export default function UserManagement() {
     if (!selected) return;
     setEditLoading(true);
     try {
-      // Update profile
-      await supabase.from("profiles").update({
-        display_name: editForm.displayName.trim()||null,
-        username: editForm.username.trim().toLowerCase()||null,
-        avatar_url: editForm.avatarUrl||null,
-      }).eq("user_id", selected.user_id || selected.id);
-      // Update role + permissions
-      await supabase.from("user_roles").upsert({
-        user_id:selected.user_id || selected.id, role:editForm.role,
-        });
-      // Password update via RPC — silently skip if fails
-      if (editForm.newPassword && editForm.newPassword.length>=8) {
-        try {
-          await supabase.rpc("admin_change_password" as any, {
-            target_user_id: selected.user_id || selected.id,
-            new_password: editForm.newPassword
-          });
-        } catch { /* password update is best-effort */ }
+      const uid = selected.user_id || selected.id;
+      const { error: profErr } = await supabase.from("profiles").update({
+        display_name: editForm.displayName.trim() || null,
+        username: editForm.username.trim().toLowerCase() || null,
+        avatar_url: editForm.avatarUrl || null,
+      }).eq("user_id", uid);
+      if (profErr) throw new Error(profErr.message);
+      const { error: roleErr } = await supabase.from("user_roles")
+        .upsert({ user_id: uid, role: editForm.role }, { onConflict: "user_id" });
+      if (roleErr) throw new Error(roleErr.message);
+      if (editForm.newPassword && editForm.newPassword.length >= 8) {
+        await (supabase as any).rpc("admin_change_password", {
+          target_user_id: uid, new_password: editForm.newPassword,
+        }).catch(() => {});
       }
-    finally { setEditLoading(false); }
+      toast.success("تم الحفظ ✅");
+      setPanel("none");
+      fetchUsers();
+    } catch(e:any) {
+      toast.error(e.message || "فشل الحفظ");
+    } finally { setEditLoading(false); }
   };
 
   /* ── delete user ── */
