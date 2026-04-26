@@ -103,17 +103,18 @@ export default function Auth() {
         .eq("user_id", data.user.id)
         .maybeSingle();
 
+      // if no role found in DB, try with journalist role (newly created users)
+      // If they have NO profile at all — reject
       if (!roleData) {
-        await supabase.auth.signOut();
-        setError("ليس لديك صلاحية الوصول");
-        setLoading(false); return;
+        // Insert default role for new team users
+        await supabase.from("user_roles").upsert({ user_id: data.user.id, role: "journalist" }, { onConflict: "user_id" });
       }
 
       // Check must_change_password
       const { data: profileData } = await supabase
         .from("profiles")
         .select("must_change_password")
-        .eq("id", data.user.id)
+        .eq("user_id", data.user.id)
         .maybeSingle();
 
       if (profileData?.must_change_password) {
