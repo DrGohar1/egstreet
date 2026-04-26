@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 
 const SUPABASE_URL  = "https://neojditfucitnovcfspw.supabase.co";
 const SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5lb2pkaXRmdWNpdG5vdmNmc3B3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY1MzgxNDgsImV4cCI6MjA5MjExNDE0OH0.blzJAGGj0ggCNnL46ZayHx0UhjQNJkfX6PncGNXIcgU";
-const SITE_URL      = "https://egst.vercel.app";
+const SITE_URL      = "https://egstreetnews.com";
 const SITE_NAME     = "الشارع المصري";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
