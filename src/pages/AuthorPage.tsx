@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 import SEOHead from "@/components/SEOHead";
 import ArticleCard from "@/components/ArticleCard";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -108,6 +109,7 @@ const AuthorPage = () => {
       </main>
       
     </div>
+      <Footer />
   );
 };
 
