@@ -3,6 +3,7 @@ import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 import SEOHead from "@/components/SEOHead";
 import { ArrowRight } from "lucide-react";
 
@@ -74,6 +75,7 @@ const StaticPage = () => {
       </main>
       
     </div>
+      <Footer />
   );
 };
 
