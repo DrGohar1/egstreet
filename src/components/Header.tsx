@@ -123,7 +123,6 @@ export default function Header() {
                     <span className="hidden md:inline">لوحة التحكم</span>
                   </Link>
                 : null
-                  </Link>
               }
 
               {/* Avatar */}
@@ -192,7 +191,6 @@ export default function Header() {
                       </button>
                     </>
                   : null
-                    </Link>
                 }
               </div>
             </motion.div>
