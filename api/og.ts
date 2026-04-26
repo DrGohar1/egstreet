@@ -6,7 +6,7 @@ const SITE_URL      = "https://egstreetnews.com";
 const SITE_NAME     = "الشارع المصري";
 // ← ارفع اللوجو في Supabase Storage → media/og-default.jpg
 // ثم استبدل الـ URL ده بـ URL اللوجو
-const DEFAULT_IMAGE = `${SUPABASE_URL}/storage/v1/object/public/media/og-default.jpg`;
+const DEFAULT_IMAGE = "https://neojditfucitnovcfspw.supabase.co/storage/v1/object/public/site-assets/og-default.jpg.png";
 const DEFAULT_DESC  = "جريدة الشارع المصري — أخبار مصر والعالم العربي لحظة بلحظة";
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
