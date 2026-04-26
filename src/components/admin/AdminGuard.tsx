@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { usePermissions, PermissionKey } from "@/hooks/usePermissions";
+import { usePermissions } from "@/hooks/usePermissions";
+import type { PermissionKey } from "@/contexts/PermissionsContext";
 import { Loader2, ShieldOff } from "lucide-react";
 
 interface AdminGuardProps {
