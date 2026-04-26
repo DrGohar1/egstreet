@@ -122,10 +122,7 @@ export default function Header() {
                     <LayoutDashboard className="w-3.5 h-3.5"/>
                     <span className="hidden md:inline">لوحة التحكم</span>
                   </Link>
-                : <Link to="/auth"
-                    className="hidden sm:flex items-center gap-1.5 border border-primary/40 text-primary text-xs font-bold px-3 py-1.5 rounded-xl hover:bg-primary/5 transition-colors">
-                    <LogIn className="w-3.5 h-3.5"/>
-                    <span className="hidden md:inline">دخول</span>
+                : null
                   </Link>
               }
 
@@ -194,9 +191,7 @@ export default function Header() {
                         خروج
                       </button>
                     </>
-                  : <Link to="/auth" onClick={()=>setMenuOpen(false)}
-                      className="flex-1 flex items-center justify-center gap-1.5 text-xs font-bold py-2.5 rounded-xl border border-primary/40 text-primary hover:bg-primary/5 transition-colors">
-                      <LogIn className="w-3.5 h-3.5"/>دخول الفريق
+                  : null
                     </Link>
                 }
               </div>
