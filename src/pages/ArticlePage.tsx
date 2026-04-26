@@ -273,7 +273,7 @@ export default function ArticlePage() {
       </main>
       
       <div className="h-16 lg:hidden"/>
+    <Footer />
     </div>
-      <Footer />
   );
 }
