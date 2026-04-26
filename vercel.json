@@ -1,13 +1,6 @@
 {
   "installCommand": "pnpm install --no-frozen-lockfile",
   "buildCommand": "pnpm run build",
-  "redirects": [
-    {
-      "source": "https://www.egstreetnews.com/(.*)",
-      "destination": "https://egstreetnews.com/$1",
-      "permanent": true
-    }
-  ],
   "rewrites": [
     {
       "source": "/article/:slug",
