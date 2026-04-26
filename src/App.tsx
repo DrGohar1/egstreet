@@ -7,7 +7,7 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { PermissionsProvider } from "@/hooks/usePermissions";
+import { PermissionsProvider } from "@/contexts/PermissionsContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { useContentProtection } from "@/hooks/useContentProtection";
 import { useVisitorTracking } from "@/hooks/useVisitorTracking";
