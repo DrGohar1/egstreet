@@ -3,7 +3,6 @@ import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 import SEOHead from "@/components/SEOHead";
 import ArticleCard from "@/components/ArticleCard";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -58,7 +57,7 @@ const AuthorPage = () => {
           <h2 className="text-2xl font-bold text-foreground mb-2">{t("الكاتب غير موجود", "Author Not Found")}</h2>
           <Link to="/" className="text-primary hover:underline">{t("العودة للرئيسية", "Back to Home")}</Link>
         </div>
-        <Footer />
+        
       </div>
     );
   }
@@ -107,7 +106,7 @@ const AuthorPage = () => {
           <p className="text-center py-12 text-muted-foreground">{t("لا توجد مقالات", "No articles yet")}</p>
         )}
       </main>
-      <Footer />
+      
     </div>
   );
 };
