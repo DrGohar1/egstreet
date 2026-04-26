@@ -16,7 +16,7 @@ interface Props {
 
 const SITE_NAME = "الشارع المصري";
 const SITE_URL  = import.meta.env.VITE_SITE_URL || "https://egstreetnews.com";
-const DEFAULT_IMAGE = "https://neojditfucitnovcfspw.supabase.co/storage/v1/object/public/media/og-default.jpg";
+const DEFAULT_IMAGE = "https://neojditfucitnovcfspw.supabase.co/storage/v1/object/public/site-assets/og-default.jpg.png";
 
 export default function SEOHead({
   title, description, image, url, type = "website",
