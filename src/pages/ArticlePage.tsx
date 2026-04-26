@@ -2,7 +2,6 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 import SocialShareButtons from "@/components/SocialShareButtons";
 import SEOHead from "@/components/SEOHead";
 import { motion, AnimatePresence } from "framer-motion";
@@ -272,8 +271,6 @@ export default function ArticlePage() {
 
       </main>
       
-      <div className="h-16 lg:hidden"/>
-    <Footer />
     </div>
   );
 }
