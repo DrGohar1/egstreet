@@ -74,8 +74,8 @@ const StaticPage = () => {
         </article>
       </main>
       
+    <Footer />
     </div>
-      <Footer />
   );
 };
 
