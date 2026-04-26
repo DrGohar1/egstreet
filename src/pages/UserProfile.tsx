@@ -3,7 +3,6 @@ import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 import { User, Edit3, BookOpen, Eye, Clock, Save } from "lucide-react";
 
 export default function UserProfile() {
@@ -157,7 +156,7 @@ export default function UserProfile() {
         )}
 
       </main>
-      <Footer/>
+      
     </div>
   );
 }
