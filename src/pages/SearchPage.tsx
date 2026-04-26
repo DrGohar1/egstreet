@@ -146,8 +146,8 @@ const SearchPage = () => {
         )}
       </main>
       
+    <Footer />
     </div>
-      <Footer />
   );
 };
 
