@@ -3,7 +3,6 @@ import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useLanguage } from "@/contexts/LanguageContext";
 import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 import SEOHead from "@/components/SEOHead";
 import { ArrowRight } from "lucide-react";
 
@@ -50,7 +49,7 @@ const StaticPage = () => {
           <h2 className="text-2xl font-bold text-foreground mb-2">{t("الصفحة غير موجودة", "Page Not Found")}</h2>
           <Link to="/" className="text-primary hover:underline">{t("العودة للرئيسية", "Back to Home")}</Link>
         </div>
-        <Footer />
+        
       </div>
     );
   }
@@ -73,7 +72,7 @@ const StaticPage = () => {
           />
         </article>
       </main>
-      <Footer />
+      
     </div>
   );
 };
