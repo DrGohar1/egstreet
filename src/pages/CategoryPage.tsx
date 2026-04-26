@@ -2,7 +2,6 @@ import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
-import Footer from "@/components/Footer";
 import SEOHead from "@/components/SEOHead";
 import { Clock, Eye, Newspaper, Loader2 } from "lucide-react";
 
@@ -102,7 +101,7 @@ export default function CategoryPage() {
           </div>
         )}
       </main>
-      <Footer/>
+      
     </div>
   );
 }
