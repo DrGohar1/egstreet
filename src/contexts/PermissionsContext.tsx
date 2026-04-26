@@ -8,13 +8,26 @@ export type PermissionKey =
   | "subscribers" | "breaking_news" | "ads" | "pages" | "tags"
   | "scraper" | "ai_tools" | "backup" | "automation";
 
-const ALL_PERMISSIONS: PermissionKey[] = [
+export const ALL_PERMISSIONS: PermissionKey[] = [
   "dashboard","articles","articles.write","articles.review","categories","users",
   "comments","analytics","settings","subscribers","breaking_news","ads","pages",
   "tags","scraper","ai_tools","backup","automation",
 ];
 
-const SUPER_ADMIN_UID = "50919c52-81ab-4b98-9a25-66cdaa405c16";
+// Default permissions per role (used as fallback when DB has no entry)
+export const ROLE_DEFAULTS: Record<string, PermissionKey[]> = {
+  super_admin:    ALL_PERMISSIONS,
+  editor_in_chief: [
+    "dashboard","articles","articles.write","articles.review",
+    "categories","tags","breaking_news","comments","analytics","pages","subscribers",
+  ],
+  journalist: [
+    "dashboard","articles","articles.write","categories","tags","breaking_news",
+  ],
+  ads_manager: [
+    "dashboard","ads","analytics","media",
+  ] as PermissionKey[],
+};
 
 interface PermCtx {
   permissions: PermissionKey[];
@@ -38,27 +51,40 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
   const [lastUid, setLastUid]         = useState<string | null>(null);
 
   const fetchPerms = useCallback(async (uid: string) => {
-    if (uid === SUPER_ADMIN_UID) {
-      setRole("super_admin");
-      setPermissions(ALL_PERMISSIONS);
-      setLoading(false);
-      setLastUid(uid);
-      return;
-    }
     try {
-      const [{ data: roleData }, { data: permsData }] = await Promise.all([
-        supabase.from("user_roles").select("role").eq("user_id", uid).maybeSingle(),
-        supabase.from("permissions").select("permission_key").eq("user_id", uid).eq("granted", true),
-      ]);
-      const r = roleData?.role || null;
-      setRole(r);
-      setPermissions(
-        r === "super_admin"
-          ? ALL_PERMISSIONS
-          : (permsData || []).map((p: any) => p.permission_key as PermissionKey)
-      );
+      // 1. Get user role
+      const { data: roleData } = await supabase
+        .from("user_roles")
+        .select("role")
+        .eq("user_id", uid)
+        .maybeSingle();
+
+      const userRole = roleData?.role || "journalist";
+      setRole(userRole);
+
+      // 2. super_admin gets everything immediately
+      if (userRole === "super_admin") {
+        setPermissions(ALL_PERMISSIONS);
+        setLoading(false);
+        setLastUid(uid);
+        return;
+      }
+
+      // 3. Load role permissions from DB
+      const { data: rolePerms } = await supabase
+        .from("role_permissions")
+        .select("permission")
+        .eq("role", userRole);
+
+      if (rolePerms && rolePerms.length > 0) {
+        setPermissions(rolePerms.map((p: any) => p.permission as PermissionKey));
+      } else {
+        // Fallback to hardcoded defaults if DB has no entries yet
+        setPermissions(ROLE_DEFAULTS[userRole] || ["dashboard"]);
+      }
     } catch {
-      /* keep empty on error */
+      // On error: give basic dashboard access only
+      setPermissions(["dashboard"]);
     } finally {
       setLoading(false);
       setLastUid(uid);
@@ -77,18 +103,18 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
       setLoading(true);
       fetchPerms(user.id);
     }
-  }, [user?.id]);  // eslint-disable-line
+  }, [user?.id]); // eslint-disable-line
 
   const can = useCallback(
     (key: PermissionKey): boolean => {
       if (!user) return false;
-      if (user.id === SUPER_ADMIN_UID || role === "super_admin") return true;
+      if (role === "super_admin") return true;
       return permissions.includes(key);
     },
-    [user?.id, role, permissions]  // eslint-disable-line
+    [user?.id, role, permissions] // eslint-disable-line
   );
 
-  const isSuperAdmin = !!(user && (user.id === SUPER_ADMIN_UID || role === "super_admin"));
+  const isSuperAdmin = !!(user && role === "super_admin");
 
   return (
     <PermissionsContext.Provider
