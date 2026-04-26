@@ -87,8 +87,8 @@ const TagPage = () => {
         )}
       </main>
       
+    <Footer />
     </div>
-      <Footer />
   );
 };
 
