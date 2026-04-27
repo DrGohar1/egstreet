@@ -15,7 +15,7 @@ const Footer = () => {
   useEffect(() => {
     supabase.from("categories").select("id,name_ar,slug").order("sort_order").limit(8)
       .then(({ data }) => setCategories(data || []));
-    supabase.from("pages").select("id,title_ar,slug").eq("is_published", true).limit(5)
+    supabase.from("pages").select("id,title_ar,slug").eq("is_active", true).limit(5)
       .then(({ data }) => setPages(data || []));
   }, []);
 
