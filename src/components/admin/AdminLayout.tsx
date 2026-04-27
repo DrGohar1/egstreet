@@ -41,6 +41,13 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
     if (!loading && !user) navigate("/G63-admin/login", { state: { from: location.pathname }, replace: true });
   }, [user, loading, navigate, location]);
 
+  // 🔒 إجبار تغيير الباسورد — يمنع أي وصول للوحة التحكم
+  useEffect(() => {
+    if (!loading && user && profile?.must_change_password) {
+      navigate("/G63-admin/change-password", { replace: true });
+    }
+  }, [user, loading, profile, navigate]);
+
   if (loading) return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-background gap-3">
       <Loader2 className="h-8 w-8 animate-spin text-primary"/>
