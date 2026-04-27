@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
-import { Facebook, Twitter, Youtube, Instagram, Send, Rss, ArrowUp } from "lucide-react";
+import { Facebook, X as TwitterIcon, Youtube, Instagram, Send, Rss, ArrowUp } from "lucide-react";
 
 const Footer = () => {
   const { settings } = useSiteSettings();
@@ -41,7 +41,7 @@ const Footer = () => {
       color:"hover:bg-gradient-to-br hover:from-purple-500 hover:to-pink-500" },
     { key:"youtube_url",   icon:<Youtube   className="w-4 h-4"/>, label:"YouTube",
       color:"hover:bg-red-600" },
-    { key:"twitter_url",   icon:<Twitter   className="w-4 h-4"/>, label:"Twitter / X",
+    { key:"twitter_url",   icon:<TwitterIcon   className="w-4 h-4"/>, label:"Twitter / X",
       color:"hover:bg-black" },
     { key:"facebook_url",  icon:<Facebook  className="w-4 h-4"/>, label:"Facebook",
       color:"hover:bg-blue-600" },
