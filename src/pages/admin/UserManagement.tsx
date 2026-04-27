@@ -87,7 +87,14 @@ export default function UserManagement() {
       username: p.username||"",
       avatar_url: p.avatar_url||"",
       role: (roles||[]).find(r=>r.user_id===p.user_id)?.role||"journalist",
-      permissions: ROLE_DEFAULTS[(roles||[]).find(r=>r.user_id===p.user_id)?.role||"journalist"] || ROLE_DEFAULTS["journalist"],
+      permissions: (() => {
+              const savedRole = (roles||[]).find(r=>r.user_id===p.user_id)?.role || "journalist";
+              try {
+                const notes = p.notes ? JSON.parse(p.notes) : null;
+                if (notes?.custom_permissions) return notes.custom_permissions;
+              } catch {}
+              return ROLE_DEFAULTS[savedRole] || ROLE_DEFAULTS["journalist"];
+            })(),
     }));
     setUsers(merged);
     setLoading(false);
@@ -143,21 +150,35 @@ export default function UserManagement() {
     setEditLoading(true);
     try {
       const uid = selected.user_id || selected.id;
+
+      // Save profile data
       const { error: profErr } = await supabase.from("profiles").update({
         display_name: editForm.displayName.trim() || null,
         username: editForm.username.trim().toLowerCase() || null,
         avatar_url: editForm.avatarUrl || null,
+        notes: JSON.stringify({ custom_permissions: editForm.permissions }),
       }).eq("user_id", uid);
       if (profErr) throw new Error(profErr.message);
+
+      // Save role
       const { error: roleErr } = await supabase.from("user_roles")
         .upsert({ user_id: uid, role: editForm.role }, { onConflict: "user_id" });
       if (roleErr) throw new Error(roleErr.message);
+
+      // Change password if provided
       if (editForm.newPassword && editForm.newPassword.length >= 8) {
-        await (supabase as any).rpc("admin_change_password", {
-          target_user_id: uid, new_password: editForm.newPassword,
-        }).catch(() => {});
+        const { error: passErr } = await (supabase as any).rpc("admin_update_password", {
+          p_user_id: uid, p_new_password: editForm.newPassword,
+        });
+        if (passErr) {
+          // fallback: try old name
+          await (supabase as any).rpc("admin_change_password", {
+            target_user_id: uid, new_password: editForm.newPassword,
+          }).catch(() => {});
+        }
       }
-      toast.success("تم الحفظ ✅");
+
+      toast.success("تم حفظ التعديلات والصلاحيات ✅");
       setPanel("none");
       fetchUsers();
     } catch(e:any) {
