@@ -397,13 +397,13 @@ const SiteSettings = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 {[
-                  { key: "social_facebook", label: "Facebook", placeholder: "https://facebook.com/..." },
-                  { key: "social_twitter", label: "Twitter / X", placeholder: "https://x.com/..." },
-                  { key: "social_youtube", label: "YouTube", placeholder: "https://youtube.com/..." },
-                  { key: "social_instagram", label: "Instagram", placeholder: "https://instagram.com/..." },
-                  { key: "social_tiktok", label: "TikTok", placeholder: "https://tiktok.com/..." },
-                  { key: "social_telegram", label: "Telegram", placeholder: "https://t.me/..." },
-                  { key: "social_whatsapp", label: "WhatsApp", placeholder: "https://wa.me/..." },
+                  { key: "facebook_url", label: "Facebook", placeholder: "https://facebook.com/..." },
+                  { key: "twitter_url", label: "Twitter / X", placeholder: "https://x.com/..." },
+                  { key: "youtube_url", label: "YouTube", placeholder: "https://youtube.com/..." },
+                  { key: "instagram_url", label: "Instagram", placeholder: "https://instagram.com/..." },
+                  { key: "tiktok_url", label: "TikTok", placeholder: "https://tiktok.com/..." },
+                  { key: "telegram_url", label: "Telegram", placeholder: "https://t.me/..." },
+                  { key: "whatsapp_url", label: "WhatsApp", placeholder: "https://wa.me/..." },
                 ].map((social) => (
                   <div key={social.key}>
                     <Label className="text-xs font-medium">{social.label}</Label>
@@ -446,34 +446,39 @@ const SiteSettings = () => {
 
         {/* Footer Tab */}
         <TabsContent value="footer">
-          <motion.div variants={fadeIn}>
-            <Card className="max-w-2xl">
+          <motion.div variants={fadeIn} initial="hidden" animate="visible" className="space-y-4">
+            <Card>
               <CardHeader>
                 <CardTitle className="text-base flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-primary" />
-                  {t("التذييل والحقوق", "Footer & Legal")}
+                  <Layout className="h-4 w-4 text-primary"/>
+                  إعدادات الفوتر
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div>
-                  <Label className="text-xs font-medium">{t("نص حقوق الملكية", "Copyright Text")}</Label>
-                  <Input value={settings.copyright_text || ""} onChange={(e) => u("copyright_text", e.target.value)} placeholder={t("جميع الحقوق محفوظة © 2026", "All rights reserved © 2026")} className="mt-1" />
+                <div className="space-y-2">
+                  <Label>نص حقوق النشر</Label>
+                  <Input value={settings.footer_text_ar || ""} onChange={e => u("footer_text_ar", e.target.value)}
+                    placeholder={`© ${new Date().getFullYear()} جريدة الشارع المصري — جميع الحقوق محفوظة`}/>
                 </div>
-                <div>
-                  <Label className="text-xs font-medium">{t("نص الشريك", "Partner Credit")}</Label>
-                  <Input value={settings.partner_credit || ""} onChange={(e) => u("partner_credit", e.target.value)} placeholder={t("بالتعاون مع شركة الكينج للانتاج الفني", "In partnership with...")} className="mt-1" />
+                <div className="space-y-2">
+                  <Label>نص النشرة البريدية (الفوتر)</Label>
+                  <Input value={settings.newsletter_text || ""} onChange={e => u("newsletter_text", e.target.value)}
+                    placeholder="اشترك واحصل على أحدث الأخبار مباشرة في بريدك"/>
                 </div>
-                <div>
-                  <Label className="text-xs font-medium">{t("اسم المطور (يظهر في أسفل الموقع)", "Developer Name")}</Label>
-                  <Input value={settings.developer_name || ""} onChange={(e) => u("developer_name", e.target.value)} placeholder="GoharTech" className="mt-1" />
+                <div className="space-y-2">
+                  <Label>وصف الموقع (الفوتر)</Label>
+                  <Textarea value={settings.site_description_ar || ""} onChange={e => u("site_description_ar", e.target.value)}
+                    placeholder="أخبار مصر والعالم العربي لحظة بلحظة" rows={2}/>
                 </div>
-                <div>
-                  <Label className="text-xs font-medium">{t("رابط المطور", "Developer URL")}</Label>
-                  <Input value={settings.developer_url || ""} onChange={(e) => u("developer_url", e.target.value)} placeholder="https://wa.me/201001234567" className="mt-1" dir="ltr" />
-                </div>
-                <div>
-                  <Label className="text-xs font-medium">{t("رسالة أسفل الموقع (HTML)", "Footer Message (HTML)")}</Label>
-                  <Textarea value={settings.footer_message || ""} onChange={(e) => u("footer_message", e.target.value)} rows={3} className="mt-1" />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>اسم المطوّر</Label>
+                    <Input value={settings.developer_name || ""} onChange={e => u("developer_name", e.target.value)} placeholder="GoharTech"/>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>رابط المطوّر</Label>
+                    <Input value={settings.developer_url || ""} onChange={e => u("developer_url", e.target.value)} placeholder="https://..." dir="ltr"/>
+                  </div>
                 </div>
               </CardContent>
             </Card>
