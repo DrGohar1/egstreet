@@ -48,12 +48,25 @@ export default function Header() {
       {/* Top bar */}
       <div className="bg-primary text-white text-[10px] hidden md:block">
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between py-1.5">
-          <span className="font-medium">{today}</span>
+          {/* Left: date + social */}
           <div className="flex items-center gap-3">
-            {settings?.facebook_url  && <a href={settings.facebook_url}  target="_blank" rel="noopener noreferrer" className="hover:opacity-70 transition-opacity">فيسبوك</a>}
-            {settings?.twitter_url   && <a href={settings.twitter_url}   target="_blank" rel="noopener noreferrer" className="hover:opacity-70 transition-opacity">تويتر</a>}
-            {settings?.youtube_url   && <a href={settings.youtube_url}   target="_blank" rel="noopener noreferrer" className="hover:opacity-70 transition-opacity">يوتيوب</a>}
-            {settings?.instagram_url && <a href={settings.instagram_url} target="_blank" rel="noopener noreferrer" className="hover:opacity-70 transition-opacity">إنستغرام</a>}
+            <span className="font-medium opacity-90">{today}</span>
+            <span className="opacity-40">|</span>
+            {settings?.facebook_url  ? <a href={settings.facebook_url}  target="_blank" rel="noopener noreferrer" className="hover:opacity-70 transition-opacity">ف</a> : <span className="opacity-50">ف</span>}
+            {settings?.twitter_url   ? <a href={settings.twitter_url}   target="_blank" rel="noopener noreferrer" className="hover:opacity-70 transition-opacity">X</a> : <span className="opacity-50">X</span>}
+            {settings?.instagram_url ? <a href={settings.instagram_url} target="_blank" rel="noopener noreferrer" className="hover:opacity-70 transition-opacity">◎</a> : <span className="opacity-50">◎</span>}
+            {settings?.youtube_url   ? <a href={settings.youtube_url}   target="_blank" rel="noopener noreferrer" className="hover:opacity-70 transition-opacity">▶</a> : <span className="opacity-50">▶</span>}
+            {settings?.tiktok_url    ? <a href={settings.tiktok_url}    target="_blank" rel="noopener noreferrer" className="hover:opacity-70 transition-opacity">♪</a> : null}
+          </div>
+          {/* Right: page links */}
+          <div className="flex items-center gap-3 font-bold">
+            <Link to="/page/about"     className="hover:opacity-75 transition-opacity">من نحن</Link>
+            <span className="opacity-30">|</span>
+            <Link to="/page/contact"   className="hover:opacity-75 transition-opacity">اتصل بنا</Link>
+            <span className="opacity-30">|</span>
+            <Link to="/page/advertise" className="hover:opacity-75 transition-opacity">أعلن معنا</Link>
+            <span className="opacity-30">|</span>
+            <Link to="/page/privacy"   className="hover:opacity-75 transition-opacity">سياسة الخصوصية</Link>
           </div>
         </div>
       </div>
@@ -98,7 +111,11 @@ export default function Header() {
 
             {/* Desktop nav */}
             <nav className="hidden lg:flex items-center gap-0.5 flex-1 justify-center overflow-x-auto scrollbar-hide px-2">
-              {categories.slice(0,8).map(c=>(
+              <Link to="/"
+                className="text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-muted hover:text-primary transition-all shrink-0 text-foreground whitespace-nowrap">
+                الرئيسية
+              </Link>
+              {categories.map(c=>(
                 <Link key={c.id} to={`/category/${c.slug}`}
                   className="text-xs font-bold px-3 py-1.5 rounded-lg hover:bg-muted hover:text-primary transition-all shrink-0 text-muted-foreground whitespace-nowrap">
                   {c.name_ar}
