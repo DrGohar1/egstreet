@@ -78,24 +78,24 @@ const AppContent = () => {
         <Route path="/archive" element={<ArchivePage />} />
         {/* Admin */}
         <Route path={ADMIN} element={<AdminLayout><DashboardOverview /></AdminLayout>} />
-        <Route path={`${ADMIN}/users`} element={<AdminLayout><UserManagement /></AdminLayout>} />
-        <Route path={`${ADMIN}/articles/new`} element={<AdminLayout><ArticleEditor /></AdminLayout>} />
-        <Route path={`${ADMIN}/articles/edit/:id`} element={<AdminLayout><ArticleEditor /></AdminLayout>} />
-        <Route path={`${ADMIN}/articles`} element={<AdminLayout><ArticleManagement /></AdminLayout>} />
-        <Route path={`${ADMIN}/categories`} element={<AdminLayout><CategoryManagement /></AdminLayout>} />
-        <Route path={`${ADMIN}/breaking`} element={<AdminLayout><BreakingNewsManagement /></AdminLayout>} />
-        <Route path={`${ADMIN}/settings`} element={<AdminLayout><SiteSettings /></AdminLayout>} />
-        <Route path={`${ADMIN}/subscribers`} element={<AdminLayout><SubscriberManagement /></AdminLayout>} />
-        <Route path={`${ADMIN}/comments`} element={<AdminLayout><CommentManagement /></AdminLayout>} />
-        <Route path={`${ADMIN}/analytics`} element={<AdminLayout><AnalyticsDashboard /></AdminLayout>} />
-        <Route path={`${ADMIN}/pages`} element={<AdminLayout><PageManagement /></AdminLayout>} />
-        <Route path={`${ADMIN}/tags`} element={<AdminLayout><TagManagement /></AdminLayout>} />
-        <Route path={`${ADMIN}/advertisements`} element={<AdminLayout><AdvertisementManagement /></AdminLayout>} />
-        <Route path={`${ADMIN}/permissions`} element={<AdminLayout><PermissionManagement /></AdminLayout>} />
-        <Route path={`${ADMIN}/ai/scraper`} element={<AdminLayout><NewsScraperPage /></AdminLayout>} />
-        <Route path={`${ADMIN}/ai/tools`} element={<AdminLayout><AIToolsPage /></AdminLayout>} />
-        <Route path={`${ADMIN}/automation`} element={<AdminLayout><AutomationPage /></AdminLayout>} />
-        <Route path={`${ADMIN}/backup`} element={<AdminLayout><BackupRestore /></AdminLayout>} />
+        <Route path={`${ADMIN}/users`} element={<AdminLayout><AdminGuard permission="users"><UserManagement /></AdminGuard></AdminLayout>} />
+        <Route path={`${ADMIN}/articles/new`} element={<AdminLayout><AdminGuard permission="articles.write"><ArticleEditor /></AdminGuard></AdminLayout>} />
+        <Route path={`${ADMIN}/articles/edit/:id`} element={<AdminLayout><AdminGuard permission="articles"><ArticleEditor /></AdminGuard></AdminLayout>} />
+        <Route path={`${ADMIN}/articles`} element={<AdminLayout><AdminGuard permission="articles"><ArticleManagement /></AdminGuard></AdminLayout>} />
+        <Route path={`${ADMIN}/categories`} element={<AdminLayout><AdminGuard permission="categories"><CategoryManagement /></AdminGuard></AdminLayout>} />
+        <Route path={`${ADMIN}/breaking`} element={<AdminLayout><AdminGuard permission="breaking_news"><BreakingNewsManagement /></AdminGuard></AdminLayout>} />
+        <Route path={`${ADMIN}/settings`} element={<AdminLayout><AdminGuard permission="settings"><SiteSettings /></AdminGuard></AdminLayout>} />
+        <Route path={`${ADMIN}/subscribers`} element={<AdminLayout><AdminGuard permission="subscribers"><SubscriberManagement /></AdminGuard></AdminLayout>} />
+        <Route path={`${ADMIN}/comments`} element={<AdminLayout><AdminGuard permission="comments"><CommentManagement /></AdminGuard></AdminLayout>} />
+        <Route path={`${ADMIN}/analytics`} element={<AdminLayout><AdminGuard permission="analytics"><AnalyticsDashboard /></AdminGuard></AdminLayout>} />
+        <Route path={`${ADMIN}/pages`} element={<AdminLayout><AdminGuard permission="pages"><PageManagement /></AdminGuard></AdminLayout>} />
+        <Route path={`${ADMIN}/tags`} element={<AdminLayout><AdminGuard permission="tags"><TagManagement /></AdminGuard></AdminLayout>} />
+        <Route path={`${ADMIN}/advertisements`} element={<AdminLayout><AdminGuard permission="ads"><AdvertisementManagement /></AdminGuard></AdminLayout>} />
+        <Route path={`${ADMIN}/permissions`} element={<AdminLayout><AdminGuard permission="permissions"><PermissionManagement /></AdminGuard></AdminLayout>} />
+        <Route path={`${ADMIN}/ai/scraper`} element={<AdminLayout><AdminGuard permission="scraper"><NewsScraperPage /></AdminGuard></AdminLayout>} />
+        <Route path={`${ADMIN}/ai/tools`} element={<AdminLayout><AdminGuard permission="ai_tools"><AIToolsPage /></AdminGuard></AdminLayout>} />
+        <Route path={`${ADMIN}/automation`} element={<AdminLayout><AdminGuard permission="automation"><AutomationPage /></AdminGuard></AdminLayout>} />
+        <Route path={`${ADMIN}/backup`} element={<AdminLayout><AdminGuard permission="backup"><BackupRestore /></AdminGuard></AdminLayout>} />
 
         <Route path="*" element={<NotFound />} />
       </Routes>
