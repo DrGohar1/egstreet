@@ -3,7 +3,7 @@ import {
   LayoutDashboard, FileText, Layers, Tag, Zap, Users, Shield,
   MessageSquare, Mail, Megaphone, Rss, Brain, BarChart3,
   FileCode, Database, Settings, X, LogOut, Newspaper,
-  Plus, Cog, Lock, Image
+  Plus, Cog, Image
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePermissions } from "@/hooks/usePermissions";
