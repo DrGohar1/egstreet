@@ -1,7 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useLanguage } from "@/contexts/LanguageContext";
 import Header from "@/components/Header";
 import BreakingTicker from "@/components/BreakingTicker";
 import SEOHead from "@/components/SEOHead";
@@ -127,7 +126,6 @@ const CategorySection = ({ title, articles, cats, color = "bg-primary" }: any) =
 
 /* ══════════ MAIN PAGE ══════════ */
 export default function Index() {
-  const { t, language } = useLanguage();
   const [articles,   setArticles]   = useState<Article[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading,    setLoading]    = useState(true);
