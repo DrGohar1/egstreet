@@ -84,7 +84,7 @@ DROP POLICY IF EXISTS "pages_insert" ON public.pages;
 DROP POLICY IF EXISTS "pages_update" ON public.pages;
 DROP POLICY IF EXISTS "pages_delete" ON public.pages;
 
-CREATE POLICY "pages_read"   ON public.pages FOR SELECT USING (is_published = true OR public.is_admin());
+CREATE POLICY "pages_read"   ON public.pages FOR SELECT USING (is_active = true OR public.is_admin());
 CREATE POLICY "pages_insert" ON public.pages FOR INSERT WITH CHECK (public.is_admin());
 CREATE POLICY "pages_update" ON public.pages FOR UPDATE USING (public.is_admin()) WITH CHECK (public.is_admin());
 CREATE POLICY "pages_delete" ON public.pages FOR DELETE USING (public.is_admin());
