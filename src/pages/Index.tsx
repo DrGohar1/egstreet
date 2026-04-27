@@ -6,7 +6,7 @@ import BreakingTicker from "@/components/BreakingTicker";
 import Footer from "@/components/Footer";
 import SEOHead from "@/components/SEOHead";
 import AdSlot from "@/components/AdSlot";
-import { Eye, Clock, ChevronLeft, Flame, Newspaper, Facebook, Youtube, Twitter, Instagram } from "lucide-react";
+import { Eye, Clock, ChevronLeft, Flame, Newspaper, Facebook, Youtube, X as XIcon, Instagram } from "lucide-react";
 
 /* ─── Types ─── */
 interface Article {
@@ -233,7 +233,7 @@ export default function Index() {
               <p className="text-xs font-black text-muted-foreground mb-2.5">يتابعونا</p>
               <div className="grid grid-cols-2 gap-2">
                 <SocialCount icon={Facebook} label="فيسبوك"   count="1.2M"  color="bg-[#1877F2]"/>
-                <SocialCount icon={Twitter}  label="تويتر X"  count="850K"  color="bg-[#000000]"/>
+                <SocialCount icon={XIcon}    label="تويتر X"  count="850K"  color="bg-[#000000]"/>
                 <SocialCount icon={Youtube}  label="يوتيوب"   count="650K"  color="bg-[#FF0000]"/>
                 <SocialCount icon={Instagram} label="انستقرام" count="480K"  color="bg-gradient-to-br from-purple-500 to-pink-500"/>
               </div>
