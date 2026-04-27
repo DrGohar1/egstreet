@@ -21,7 +21,7 @@ export default function Header() {
   const [scrolled,    setScrolled]    = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  const logoUrl  = settings?.site_logo || "";
+  const logoUrl  = settings?.logo_url || settings?.site_logo || "";
   const siteName = settings?.site_name_ar || "الشارع المصري";
 
   useEffect(()=>{
