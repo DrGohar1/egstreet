@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useLanguage } from "@/contexts/LanguageContext";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SEOHead from "@/components/SEOHead";
@@ -9,7 +8,6 @@ import { ArrowRight } from "lucide-react";
 
 const StaticPage = () => {
   const { slug } = useParams<{ slug: string }>();
-  const { t, language } = useLanguage();
   const [page, setPage] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -28,8 +26,8 @@ const StaticPage = () => {
     if (slug) fetch();
   }, [slug]);
 
-  const title = page ? (language === "ar" ? page.title_ar : page.title_en) : "";
-  const content = page ? (language === "ar" ? page.content_ar : page.content_en) : "";
+  const title = page ? (page.title_ar) : "";
+  const content = page ? (page.content_ar) : "";
 
   if (loading) {
     return (
@@ -47,8 +45,8 @@ const StaticPage = () => {
       <div className="min-h-screen bg-background">
         <Header />
         <div className="container py-20 text-center">
-          <h2 className="text-2xl font-bold text-foreground mb-2">{t("الصفحة غير موجودة", "Page Not Found")}</h2>
-          <Link to="/" className="text-primary hover:underline">{t("العودة للرئيسية", "Back to Home")}</Link>
+          <h2 className="text-2xl font-bold text-foreground mb-2">{"الصفحة غير موجودة"}</h2>
+          <Link to="/" className="text-primary hover:underline">{"العودة للرئيسية"}</Link>
         </div>
         
       </div>
@@ -61,7 +59,7 @@ const StaticPage = () => {
       <Header />
       <main className="container py-8">
         <nav className="flex items-center gap-2 text-xs text-muted-foreground mb-6">
-          <Link to="/" className="hover:text-primary">{t("الرئيسية", "Home")}</Link>
+          <Link to="/" className="hover:text-primary">{"الرئيسية"}</Link>
           <ArrowRight className="w-3 h-3 rtl:rotate-180" />
           <span className="text-foreground">{title}</span>
         </nav>
