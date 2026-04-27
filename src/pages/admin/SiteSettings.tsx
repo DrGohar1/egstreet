@@ -15,7 +15,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import {
   Save, Globe, Palette, Mail, Share2, FileText, Image, Shield,
-  Layout, Bell, Code, Eye, ChevronRight, Sparkles, Check, ToggleLeft, Power
+  Layout, Bell, Code, Eye, ChevronRight, Sparkles, Check, ToggleLeft, Power, Users
 } from "lucide-react";
 import LogoUploader from "@/components/admin/LogoUploader";
 import { motion } from "framer-motion";
@@ -115,7 +115,7 @@ const SiteSettings = () => {
 
       <Tabs defaultValue="branding" className="space-y-6">
         <motion.div variants={fadeIn}>
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 h-auto p-1 bg-muted/50">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 lg:grid-cols-4 lg:grid-cols-8 h-auto p-1 bg-muted/50">
             <TabsTrigger value="branding" className="gap-1.5 text-xs">
               <Globe className="h-3.5 w-3.5" />
               {t("الهوية", "Branding")}
@@ -139,6 +139,10 @@ const SiteSettings = () => {
             <TabsTrigger value="footer" className="gap-1.5 text-xs">
               <FileText className="h-3.5 w-3.5" />
               {t("التذييل", "Footer")}
+            </TabsTrigger>
+            <TabsTrigger value="staff" className="gap-1.5 text-xs">
+              <Users className="h-3.5 w-3.5"/>
+              <span className="hidden sm:inline">الإدارة</span>
             </TabsTrigger>
             <TabsTrigger value="killswitch" className="gap-1.5 text-xs">
               <Power className="h-3.5 w-3.5" />
@@ -516,6 +520,62 @@ const SiteSettings = () => {
             </Card>
           </motion.div>
         </TabsContent>
+      
+        {/* ── Staff / Newspaper Management ── */}
+        <TabsContent value="staff">
+          <motion.div variants={fadeIn} initial="hidden" animate="visible" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-primary"/>
+                  الهيئة الإدارية والتحريرية
+                </CardTitle>
+                <CardDescription>أسماء تظهر في رأس الجريدة وفي صفحة التعريف</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>رئيس مجلس الإدارة</Label>
+                    <Input value={settings.board_chairman || ""} onChange={e => u("board_chairman", e.target.value)} placeholder="د/هشام القربي"/>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>رئيس التحرير</Label>
+                    <Input value={settings.editor_in_chief_name || ""} onChange={e => u("editor_in_chief_name", e.target.value)} placeholder="سيد بغدادي"/>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>نائب رئيس مجلس الإدارة</Label>
+                    <Input value={settings.vice_chairman || ""} onChange={e => u("vice_chairman", e.target.value)} placeholder="د/محمود توفيق عليوة"/>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>نائب رئيس التحرير</Label>
+                    <Input value={settings.deputy_editor || ""} onChange={e => u("deputy_editor", e.target.value)} placeholder=""/>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>المدير العام</Label>
+                    <Input value={settings.general_manager || ""} onChange={e => u("general_manager", e.target.value)} placeholder=""/>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>المدير المالي</Label>
+                    <Input value={settings.financial_director || ""} onChange={e => u("financial_director", e.target.value)} placeholder=""/>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>شعار الجريدة (السطر تحت الاسم)</Label>
+                  <Input value={settings.newspaper_slogan || ""} onChange={e => u("newspaper_slogan", e.target.value)} placeholder="صحافة تضرم عقلك"/>
+                </div>
+                <div className="space-y-2">
+                  <Label>عنوان مقر التحرير</Label>
+                  <Input value={settings.editorial_address || ""} onChange={e => u("editorial_address", e.target.value)} placeholder="القاهرة - مصر"/>
+                </div>
+                <div className="space-y-2">
+                  <Label>ترخيص الجريدة / رقم القيد</Label>
+                  <Input value={settings.press_license || ""} onChange={e => u("press_license", e.target.value)} placeholder="رقم الترخيص"/>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </TabsContent>
+
       </Tabs>
     </motion.div>
   );
