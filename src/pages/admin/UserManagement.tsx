@@ -169,12 +169,19 @@ export default function UserManagement() {
   const handleDelete = async () => {
     if (!delId) return;
     try {
-      await supabase.from("profiles").delete().eq("user_id",delId);
-      await supabase.from("user_roles").delete().eq("user_id",delId);
-      setUsers(u=>u.filter(x=>x.id!==delId));
+      const { error } = await (supabase as any).rpc("admin_delete_user", { p_user_id: delId });
+      if (error) throw new Error(error.message);
+      setUsers(u => u.filter(x => (x.user_id || x.id) !== delId));
       setDelId(null);
-      toast.success("تم حذف المستخدم");
-    } catch(e:any){ toast.error(e.message||"فشل الحذف"); }
+      toast.success("تم حذف المستخدم نهائياً ✅");
+    } catch(e:any) {
+      // fallback: delete from public tables only
+      await supabase.from("user_roles").delete().eq("user_id", delId);
+      await supabase.from("profiles").delete().eq("user_id", delId);
+      setUsers(u => u.filter(x => (x.user_id || x.id) !== delId));
+      setDelId(null);
+      toast.success("تم الحذف من الجداول (تحتاج تشغيل K_admin_user_functions.sql لحذف كامل)");
+    }
   };
 
   /* ── stats ── */
