@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useLanguage } from "@/contexts/LanguageContext";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SEOHead from "@/components/SEOHead";
@@ -11,7 +10,6 @@ import { User, FileText } from "lucide-react";
 
 const AuthorPage = () => {
   const { userId } = useParams<{ userId: string }>();
-  const { t, language } = useLanguage();
   const [profile, setProfile] = useState<any>(null);
   const [articles, setArticles] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
@@ -36,7 +34,7 @@ const AuthorPage = () => {
   const getCategoryName = (catId: string | null) => {
     if (!catId) return undefined;
     const cat = categories.find((c: any) => c.id === catId);
-    return cat ? (language === "ar" ? cat.name_ar : cat.name_en) : undefined;
+    return cat ? (cat.name_ar) : undefined;
   };
 
   if (loading) {
@@ -55,8 +53,8 @@ const AuthorPage = () => {
       <div className="min-h-screen bg-background">
         <Header />
         <div className="container py-20 text-center">
-          <h2 className="text-2xl font-bold text-foreground mb-2">{t("الكاتب غير موجود", "Author Not Found")}</h2>
-          <Link to="/" className="text-primary hover:underline">{t("العودة للرئيسية", "Back to Home")}</Link>
+          <h2 className="text-2xl font-bold text-foreground mb-2">{"الكاتب غير موجود"}</h2>
+          <Link to="/" className="text-primary hover:underline">{"العودة للرئيسية"}</Link>
         </div>
         
       </div>
@@ -84,7 +82,7 @@ const AuthorPage = () => {
             {profile.bio && <p className="text-sm text-muted-foreground mt-1">{profile.bio}</p>}
             <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
               <FileText className="w-3 h-3" />
-              {articles.length} {t("مقال", "articles")}
+              {articles.length} {"مقال"}
             </div>
           </div>
         </div>
@@ -104,7 +102,7 @@ const AuthorPage = () => {
           ))}
         </div>
         {articles.length === 0 && (
-          <p className="text-center py-12 text-muted-foreground">{t("لا توجد مقالات", "No articles yet")}</p>
+          <p className="text-center py-12 text-muted-foreground">{"لا توجد مقالات"}</p>
         )}
       </main>
       
