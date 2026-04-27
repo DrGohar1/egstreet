@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useLanguage } from "@/contexts/LanguageContext";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SEOHead from "@/components/SEOHead";
@@ -10,7 +9,6 @@ import { Tag } from "lucide-react";
 
 const TagPage = () => {
   const { slug } = useParams<{ slug: string }>();
-  const { t, language } = useLanguage();
   const [tag, setTag] = useState<any>(null);
   const [articles, setArticles] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
@@ -44,10 +42,10 @@ const TagPage = () => {
   const getCategoryName = (catId: string | null) => {
     if (!catId) return undefined;
     const cat = categories.find((c: any) => c.id === catId);
-    return cat ? (language === "ar" ? cat.name_ar : cat.name_en) : undefined;
+    return cat ? (cat.name_ar) : undefined;
   };
 
-  const tagName = tag ? (language === "ar" ? tag.name_ar : tag.name_en) : "";
+  const tagName = tag ? (tag.name_ar) : "";
 
   if (loading) {
     return (
@@ -62,7 +60,7 @@ const TagPage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <SEOHead title={tagName} description={`${t("مقالات بوسم", "Articles tagged")} ${tagName}`} />
+      <SEOHead title={tagName} description={`${"مقالات بوسم"} ${tagName}`} />
       <Header />
       <main className="container py-8">
         <h1 className="text-2xl font-black text-foreground mb-6 flex items-center gap-2">
@@ -83,7 +81,7 @@ const TagPage = () => {
           ))}
         </div>
         {articles.length === 0 && (
-          <p className="text-center py-12 text-muted-foreground">{t("لا توجد مقالات بهذا الوسم", "No articles with this tag")}</p>
+          <p className="text-center py-12 text-muted-foreground">{"لا توجد مقالات بهذا الوسم"}</p>
         )}
       </main>
       
