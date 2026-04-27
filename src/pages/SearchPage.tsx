@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { useLanguage } from "@/contexts/LanguageContext";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import SEOHead from "@/components/SEOHead";
@@ -12,7 +11,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search, SlidersHorizontal } from "lucide-react";
 
 const SearchPage = () => {
-  const { t, language } = useLanguage();
   const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery] = useState(searchParams.get("q") || "");
   const [categoryFilter, setCategoryFilter] = useState(searchParams.get("cat") || "all");
@@ -63,43 +61,43 @@ const SearchPage = () => {
   const getCategoryName = (catId: string | null) => {
     if (!catId) return undefined;
     const cat = categories.find((c: any) => c.id === catId);
-    return cat ? (language === "ar" ? cat.name_ar : cat.name_en) : undefined;
+    return cat ? (cat.name_ar) : undefined;
   };
 
   return (
     <div className="min-h-screen bg-background">
-      <SEOHead title={t("البحث", "Search")} description={t("ابحث في الأخبار", "Search news")} />
+      <SEOHead title={"البحث"} description={"ابحث في الأخبار"} />
       <Header />
       <main className="container py-8">
         <h1 className="text-2xl font-black text-foreground mb-6 flex items-center gap-2">
           <Search className="w-6 h-6 text-primary" />
-          {t("البحث المتقدم", "Advanced Search")}
+          {"البحث المتقدم"}
         </h1>
 
         <form onSubmit={handleSearch} className="mb-8 space-y-4">
           <div className="flex gap-2">
             <Input
-              placeholder={t("ابحث عن خبر...", "Search for news...")}
+              placeholder={"ابحث عن خبر..."}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               className="flex-1"
             />
             <Button type="submit" className="gap-1">
               <Search className="w-4 h-4" />
-              {t("بحث", "Search")}
+              {"بحث"}
             </Button>
           </div>
           <div className="flex gap-3 flex-wrap items-center">
             <SlidersHorizontal className="w-4 h-4 text-muted-foreground" />
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
               <SelectTrigger className="w-48">
-                <SelectValue placeholder={t("كل الأقسام", "All Categories")} />
+                <SelectValue placeholder={"كل الأقسام"} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">{t("كل الأقسام", "All Categories")}</SelectItem>
+                <SelectItem value="all">{"كل الأقسام"}</SelectItem>
                 {categories.map((c: any) => (
                   <SelectItem key={c.id} value={c.id}>
-                    {language === "ar" ? c.name_ar : c.name_en}
+                    {c.name_ar
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -109,8 +107,8 @@ const SearchPage = () => {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="date">{t("الأحدث", "Newest")}</SelectItem>
-                <SelectItem value="views">{t("الأكثر مشاهدة", "Most Viewed")}</SelectItem>
+                <SelectItem value="date">{"الأحدث"}</SelectItem>
+                <SelectItem value="views">{"الأكثر مشاهدة"}</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -123,8 +121,8 @@ const SearchPage = () => {
         ) : (
           <>
             <p className="text-sm text-muted-foreground mb-4">
-              {articles.length} {t("نتيجة", "results")}
-              {query && ` ${t("عن", "for")} "${query}"`}
+              {articles.length} {"نتيجة"}
+              {query && ` ${"عن"} "${query}"`}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               {articles.map((article) => (
@@ -140,7 +138,7 @@ const SearchPage = () => {
               ))}
             </div>
             {articles.length === 0 && (
-              <p className="text-center py-12 text-muted-foreground">{t("لا توجد نتائج", "No results found")}</p>
+              <p className="text-center py-12 text-muted-foreground">{"لا توجد نتائج"}</p>
             )}
           </>
         )}
