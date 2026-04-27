@@ -136,13 +136,9 @@ const AdminSidebar = ({ open, onClose }: { open?:boolean; onClose?:()=>void }) =
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-4">
           {groups.map(group => {
-            // Always show group if at least 1 item has always=true or user has perm
+            // Hide entire group if no items are visible
             const hasVisible = group.items.some(item => item.always || (item.perm && can(item.perm)));
-            if (!hasVisible) {
-              // Show group header with lock if super_admin can see but user can't
-              const hasSomeItems = group.items.some(item => item.perm);
-              if (!hasSomeItems) return null;
-            }
+            if (!hasVisible) return null;
             return (
               <div key={group.label}>
                 <p className="text-[10px] font-black text-muted-foreground/60 uppercase tracking-wider px-3 mb-1">{group.label}</p>
@@ -165,16 +161,9 @@ const AdminSidebar = ({ open, onClose }: { open?:boolean; onClose?:()=>void }) =
                           {item.accent && <Plus className="w-3 h-3 opacity-60"/>}
                         </NavLink>
                       );
-                    } else if (item.perm) {
-                      // Show locked item
-                      return (
-                        <NavLink key={item.url} to={item.url} end={item.end} onClick={onClose}
-                          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted-foreground/40 cursor-pointer hover:bg-muted/30 transition-colors">
-                          <item.icon className="w-4 h-4 shrink-0 opacity-40"/>
-                          <span className="flex-1 truncate">{item.label}</span>
-                          <Lock className="w-3 h-3 opacity-40"/>
-                        </NavLink>
-                      );
+                    } else {
+                      // No permission — hide completely
+                      return null;
                     }
                     return null;
                   })}
