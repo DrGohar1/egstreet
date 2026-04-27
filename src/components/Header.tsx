@@ -49,6 +49,12 @@ export default function Header() {
       <div className="bg-primary text-white text-[10px] hidden md:block">
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between py-1.5">
           <span className="font-medium">{today}</span>
+          <div className="flex items-center gap-3">
+            {settings?.facebook_url  && <a href={settings.facebook_url}  target="_blank" rel="noopener noreferrer" className="hover:opacity-70 transition-opacity">فيسبوك</a>}
+            {settings?.twitter_url   && <a href={settings.twitter_url}   target="_blank" rel="noopener noreferrer" className="hover:opacity-70 transition-opacity">تويتر</a>}
+            {settings?.youtube_url   && <a href={settings.youtube_url}   target="_blank" rel="noopener noreferrer" className="hover:opacity-70 transition-opacity">يوتيوب</a>}
+            {settings?.instagram_url && <a href={settings.instagram_url} target="_blank" rel="noopener noreferrer" className="hover:opacity-70 transition-opacity">إنستغرام</a>}
+          </div>
         </div>
       </div>
 
@@ -68,20 +74,25 @@ export default function Header() {
             </button>
 
             {/* Logo — dynamic from site_settings */}
-            <Link to="/" className="flex items-center gap-2.5 shrink-0">
-              <motion.div whileHover={{scale:1.05}} whileTap={{scale:0.95}}>
+            <Link to="/" className="flex items-center gap-2 shrink-0 group">
+              <motion.div whileHover={{scale:1.05}} whileTap={{scale:0.95}} className="shrink-0">
                 {logoUrl
-                  ? <img src={logoUrl} alt={siteName} className="h-12 w-12 rounded-xl object-cover shadow-md"/>
-                  : <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center shadow-md shadow-primary/25">
-                      <span className="text-white font-black text-lg">ش</span>
+                  ? <img src={logoUrl} alt={siteName}
+                      className="h-11 w-11 rounded-xl object-cover shadow-md shadow-primary/20"
+                      onError={e => { (e.target as HTMLImageElement).style.display="none"; }}/>
+                  : <div className="w-11 h-11 bg-primary rounded-xl flex items-center justify-center shadow-md shadow-primary/25">
+                      <span className="text-white font-black text-xl">ش</span>
                     </div>
                 }
               </motion.div>
-              <div>
-                <div className="font-black text-base leading-none tracking-tight">{siteName}</div>
-                {settings?.newspaper_slogan && (
-                  <div className="text-[9px] text-muted-foreground font-medium">{settings.newspaper_slogan}</div>
-                )}
+              <div className="min-w-0">
+                <div className="text-[9px] text-muted-foreground font-medium leading-none mb-0.5">جريدة</div>
+                <div className="font-black text-base leading-tight tracking-tight group-hover:text-primary transition-colors">
+                  {siteName.replace("جريدة ","").replace("جريدة","") || "الشارع المصري"}
+                </div>
+                <div className="text-[9px] text-muted-foreground/70 font-medium leading-none mt-0.5 hidden sm:block">
+                  {settings?.newspaper_slogan || "صحافة تضرم عقلك"}
+                </div>
               </div>
             </Link>
 
