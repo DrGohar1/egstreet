@@ -13,7 +13,7 @@ interface LogoUploaderProps {
 }
 
 export default function LogoUploader({
-  currentUrl, settingKey = "site_logo", label = "لوجو الموقع", onUploaded
+  currentUrl, settingKey = "logo_url", label = "لوجو الموقع", onUploaded
 }: LogoUploaderProps) {
   const [preview,  setPreview]  = useState<string>(currentUrl || "");
   const [loading,  setLoading]  = useState(false);
