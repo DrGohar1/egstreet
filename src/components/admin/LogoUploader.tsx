@@ -1,85 +1,92 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Upload, X } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import { Upload, X, Check, Loader2, Image } from "lucide-react";
+import { toast } from "sonner";
+
+const SUPA = "https://neojditfucitnovcfspw.supabase.co";
 
 interface LogoUploaderProps {
-  label: string;
-  currentUrl: string;
-  settingKey: string;
-  onUploaded: (url: string) => void;
+  currentUrl?: string;
+  settingKey?: string;
+  label?: string;
+  onUploaded?: (url: string) => void;
 }
 
-const LogoUploader = ({ label, currentUrl, settingKey, onUploaded }: LogoUploaderProps) => {
-  const { t } = useLanguage();
-  const { toast } = useToast();
-  const [uploading, setUploading] = useState(false);
+export default function LogoUploader({
+  currentUrl, settingKey = "site_logo", label = "لوجو الموقع", onUploaded
+}: LogoUploaderProps) {
+  const [preview,  setPreview]  = useState<string>(currentUrl || "");
+  const [loading,  setLoading]  = useState(false);
+  const [success,  setSuccess]  = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const handleFile = async (file: File) => {
+    if (!file.type.startsWith("image/")) { toast.error("الملف يجب أن يكون صورة"); return; }
+    if (file.size > 5 * 1024 * 1024)     { toast.error("الحجم الأقصى 5 MB");       return; }
+    setLoading(true); setSuccess(false);
+    try {
+      const ext  = file.name.split(".").pop() || "jpg";
+      const name = `${settingKey}.${ext}`;
+      // Upload to site-assets bucket
+      const { error: upErr } = await supabase.storage
+        .from("site-assets").upload(name, file, { upsert: true, contentType: file.type });
+      if (upErr) throw upErr;
 
-    if (!file.type.startsWith("image/")) {
-      toast({ title: t("يجب رفع صورة", "Must upload an image"), variant: "destructive" });
-      return;
-    }
+      const { data: urlData } = supabase.storage.from("site-assets").getPublicUrl(name);
+      const publicUrl = urlData.publicUrl + "?t=" + Date.now();
 
-    setUploading(true);
-    const ext = file.name.split(".").pop();
-    const filePath = `${settingKey}.${ext}`;
+      // Save to site_settings
+      await supabase.from("site_settings").upsert({ key: settingKey, value: publicUrl }, { onConflict: "key" });
 
-    // Delete old file if exists
-    await supabase.storage.from("site-assets").remove([filePath]);
+      setPreview(publicUrl);
+      setSuccess(true);
+      onUploaded?.(publicUrl);
+      toast.success(`✅ تم رفع ${label} بنجاح`);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (e: any) {
+      toast.error(e.message || "فشل الرفع");
+    } finally { setLoading(false); }
+  };
 
-    const { error } = await supabase.storage.from("site-assets").upload(filePath, file, { upsert: true });
-
-    if (error) {
-      toast({ title: t("فشل الرفع", "Upload failed"), variant: "destructive" });
-      setUploading(false);
-      return;
-    }
-
-    const { data: urlData } = supabase.storage.from("site-assets").getPublicUrl(filePath);
-    onUploaded(urlData.publicUrl);
-    setUploading(false);
-    toast({ title: t("تم الرفع بنجاح", "Uploaded successfully") });
+  const onDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files?.[0];
+    if (file) handleFile(file);
   };
 
   return (
-    <div>
-      <Label className="text-xs">{label}</Label>
-      <div className="mt-1 space-y-2">
-        {currentUrl && (
-          <div className="relative inline-block p-2 bg-muted rounded border border-border">
-            <img src={currentUrl} alt="" className="max-h-16 object-contain" />
-            <button
-              type="button"
-              onClick={() => onUploaded("")}
-              className="absolute -top-2 -left-2 bg-destructive text-destructive-foreground rounded-full p-0.5"
-            >
-              <X className="w-3 h-3" />
-            </button>
-          </div>
-        )}
-        <div className="flex items-center gap-2">
-          <Input
-            type="file"
-            accept="image/*"
-            onChange={handleFileUpload}
-            disabled={uploading}
-            className="text-xs"
-          />
-          {uploading && (
-            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary shrink-0" />
-          )}
+    <div className="space-y-3">
+      <label className="text-sm font-bold text-muted-foreground">{label}</label>
+
+      {/* Preview */}
+      {preview && (
+        <div className="relative inline-block">
+          <img src={preview} alt={label} className="h-20 w-20 rounded-2xl object-cover border-2 border-border shadow"/>
+          <button onClick={() => { setPreview(""); supabase.from("site_settings").update({ value: "" }).eq("key", settingKey); }}
+            className="absolute -top-2 -end-2 w-6 h-6 bg-destructive text-white rounded-full flex items-center justify-center hover:bg-destructive/80 transition-colors shadow">
+            <X className="w-3 h-3"/>
+          </button>
         </div>
+      )}
+
+      {/* Drop zone */}
+      <div
+        onDragOver={e=>e.preventDefault()} onDrop={onDrop}
+        onClick={() => inputRef.current?.click()}
+        className="border-2 border-dashed border-border rounded-2xl p-6 text-center cursor-pointer hover:border-primary/50 hover:bg-primary/5 transition-all group">
+        <input ref={inputRef} type="file" accept="image/*" className="hidden"
+          onChange={e => { const f = e.target.files?.[0]; if (f) handleFile(f); e.target.value = ""; }}/>
+        {loading
+          ? <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto"/>
+          : success
+            ? <Check className="w-8 h-8 text-green-500 mx-auto"/>
+            : <Image className="w-8 h-8 text-muted-foreground group-hover:text-primary mx-auto transition-colors"/>
+        }
+        <p className="text-xs text-muted-foreground mt-2">
+          {loading ? "جارٍ الرفع..." : success ? "تم الرفع ✅" : "اسحب الصورة هنا أو اضغط للاختيار"}
+        </p>
+        <p className="text-[10px] text-muted-foreground/50 mt-1">PNG, JPG, WebP — حجم أقصى 5 MB</p>
       </div>
     </div>
   );
-};
-
-export default LogoUploader;
+}
