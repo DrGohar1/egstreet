@@ -13,9 +13,9 @@ const Footer = () => {
   const [subLoading, setSubLoading] = useState(false);
 
   useEffect(() => {
-    supabase.from("categories").select("id,name_ar,slug").order("sort_order").limit(8)
+    supabase.from("categories").select("id,name_ar,slug").order("sort_order")
       .then(({ data }) => setCategories(data || []));
-    supabase.from("pages").select("id,title_ar,slug").eq("is_active", true).limit(5)
+    supabase.from("pages").select("id,title_ar,slug").eq("status","published").order("id").limit(10)
       .then(({ data }) => setPages(data || []));
   }, []);
 
@@ -48,10 +48,8 @@ const Footer = () => {
   ];
 
   const quickLinks = [
-    { label:"الرئيسية",     to:"/" },
-    { label:"تواصل معنا",   to:"/contact" },
-    { label:"سياسة الخصوصية", to:"/page/privacy-policy" },
-    { label:"الشروط",       to:"/page/terms" },
+    { label:"الرئيسية",        to:"/" },
+    { label:"الأرشيف",          to:"/archive" },
     ...(pages || []).map(p => ({ label: p.title_ar, to: `/page/${p.slug}` })),
   ];
 
