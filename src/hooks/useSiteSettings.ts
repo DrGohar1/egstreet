@@ -18,11 +18,8 @@ export const useSiteSettings = () => {
   useEffect(() => {
     fetch();
     // Realtime — logo/settings update instantly on all pages
-    const ch = supabase
-      .channel("site_settings_rt")
-      .on("postgres_changes", { event: "*", schema: "public", table: "site_settings" }, fetch)
-      .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    const interval = setInterval(fetch, 60_000);
+return () => clearInterval(interval);
   }, []);
 
   return { settings, loading, refetch: fetch };
