@@ -19,6 +19,7 @@ export default function Header() {
   const [menuOpen,   setMenuOpen]   = useState(false);
   const [searchQ,    setSearchQ]    = useState("");
   const [scrolled,   setScrolled]   = useState(false);
+  const [staffList, setStaffList] = useState<{display_name:string;role:string}[]>([]);
   const [clock,      setClock]      = useState("");
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -34,6 +35,15 @@ export default function Header() {
   }, []);
 
   useEffect(() => {
+    // Load staff by role for top bar
+    supabase.from("profiles").select("display_name, user_roles!inner(role)")
+      .in("user_roles.role", ["super_admin","editor_in_chief","journalist","analyst","ads_manager"])
+      .then(({ data }) => {
+        if (data) setStaffList(data.map((p:any) => ({
+          display_name: p.display_name,
+          role: p.user_roles?.[0]?.role || "journalist",
+        })));
+      });
     supabase.from("categories").select("id,name_ar,slug").order("sort_order")
       .then(({ data }) => setCategories(data || []));
     const onScroll = () => setScrolled(window.scrollY > 10);
@@ -53,6 +63,15 @@ export default function Header() {
     }
   };
 
+  const ROLE_META: Record<string,{label:string;color:string}> = {
+    super_admin:     { label:"مدير عام",     color:"text-red-300" },
+    editor_in_chief: { label:"رئيس تحرير",   color:"text-yellow-300" },
+    journalist:      { label:"صحفي",          color:"text-blue-300" },
+    analyst:         { label:"محلل",          color:"text-green-300" },
+    ads_manager:     { label:"مدير إعلانات", color:"text-purple-300" },
+  };
+  const ROLE_ORDER = ["super_admin","editor_in_chief","journalist","analyst","ads_manager"];
+  const sortedStaff = [...staffList].sort((a,b)=>ROLE_ORDER.indexOf(a.role)-ROLE_ORDER.indexOf(b.role));
   const logoUrl  = settings?.logo_url || settings?.site_logo || "";
   const siteName = settings?.site_name_ar || "الشارع المصري";
   const slogan   = settings?.newspaper_slogan || "من قلب الحدث";
@@ -103,6 +122,24 @@ export default function Header() {
           </div>
         </div>
       </div>
+
+      {/* ══ Staff Bar (newspaper style) ══ */}
+      {sortedStaff.length > 0 && (
+        <div className="bg-foreground/5 border-b border-border/30 hidden md:block text-[9px]">
+          <div className="max-w-7xl mx-auto px-4 flex items-center gap-4 h-6 overflow-hidden">
+            <span className="text-muted-foreground/60 font-bold shrink-0">الفريق التحريري:</span>
+            {sortedStaff.map((s, i) => {
+              const meta = ROLE_META[s.role] || { label: s.role, color: "text-muted-foreground" };
+              return (
+                <span key={i} className="flex items-center gap-1 shrink-0">
+                  <span className={`font-bold ${meta.color}`}>{meta.label}</span>
+                  <span className="text-foreground font-black">{s.display_name}</span>
+                </span>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ══ Main Header ══ */}
       <header className={`sticky top-0 z-40 bg-card border-b border-border transition-all duration-300 ${scrolled ? "shadow-lg shadow-black/10" : ""}`} dir="rtl">
@@ -242,18 +279,14 @@ export default function Header() {
                     </Link>
                   ))}
                 </div>
-                <div className="flex items-center gap-2 pt-2 border-t border-border/50">
-                  {user
-                    ? <Link to="/G63-admin" onClick={() => setMenuOpen(false)}
-                        className="flex-1 flex items-center justify-center gap-1.5 text-xs font-black py-2.5 rounded-xl bg-primary text-white">
-                        <LayoutDashboard className="w-3.5 h-3.5"/> لوحة التحكم
-                      </Link>
-                    : <Link to="/G63-admin/login" onClick={() => setMenuOpen(false)}
-                        className="flex-1 flex items-center justify-center gap-1.5 text-xs font-black py-2.5 rounded-xl bg-primary text-white">
-                        تسجيل الدخول
-                      </Link>
-                  }
-                </div>
+                {user && (
+                  <div className="flex items-center gap-2 pt-2 border-t border-border/50">
+                    <Link to="/G63-admin" onClick={() => setMenuOpen(false)}
+                      className="flex-1 flex items-center justify-center gap-1.5 text-xs font-black py-2.5 rounded-xl bg-primary text-white">
+                      <LayoutDashboard className="w-3.5 h-3.5"/> لوحة التحكم
+                    </Link>
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
