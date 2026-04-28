@@ -1,7 +1,6 @@
 -- ══════════════════════════════════════════════════════════════════
---  FINAL_ALL_IN_ONE.sql
---  الصق كل ده في SQL Editor وشغّله مرة واحدة
---  هيعمل كل حاجة ويقولك تمام في الآخر
+--  FINAL_ALL_IN_ONE.sql  (v3 — FIXED)
+--  profiles جدول عنده id (PK خاص) و user_id (FK → auth.users)
 -- ══════════════════════════════════════════════════════════════════
 
 -- ════════════════════════════════
@@ -11,18 +10,20 @@ DELETE FROM public.user_roles
 WHERE user_id NOT IN (SELECT id FROM auth.users);
 
 -- ════════════════════════════════
---  STEP 2 — مزامنة profiles
+--  STEP 2 — مزامنة profiles (الصح)
+--  id = UUID جديد، user_id = id من auth.users
 -- ════════════════════════════════
-INSERT INTO public.profiles (id, username, display_name, email, is_active)
+INSERT INTO public.profiles (id, user_id, username, display_name, email, is_active)
 SELECT
+  gen_random_uuid(),
   u.id,
   split_part(u.email, '@', 1),
   COALESCE(u.raw_user_meta_data->>'display_name', split_part(u.email,'@',1)),
   u.email,
   true
 FROM auth.users u
-WHERE u.id NOT IN (SELECT id FROM public.profiles)
-ON CONFLICT (id) DO NOTHING;
+WHERE u.id NOT IN (SELECT user_id FROM public.profiles WHERE user_id IS NOT NULL)
+ON CONFLICT DO NOTHING;
 
 -- ════════════════════════════════
 --  STEP 3 — كل يوزر ياخد دور
@@ -60,30 +61,25 @@ ON CONFLICT (key) DO NOTHING;
 -- ════════════════════════════════
 INSERT INTO public.pages (title_ar, title_en, slug, content_ar, is_active) VALUES
   ('من نحن',           'About',     'about',
-   '<h2>جريدة الشارع المصري</h2><p>جريدة إلكترونية مصرية متخصصة في تقديم أخبار مصر والعالم لحظة بلحظة.</p>',
-   true),
+   '<h2>جريدة الشارع المصري</h2><p>جريدة إلكترونية متخصصة في أخبار مصر والعالم.</p>', true),
   ('اتصل بنا',         'Contact',   'contact',
-   '<h2>تواصل معنا</h2><p>البريد: info@egstreetnews.com</p><p>للإعلانات: ads@egstreetnews.com</p>',
-   true),
+   '<h2>تواصل معنا</h2><p>البريد: info@egstreetnews.com</p>', true),
   ('أعلن معنا',        'Advertise', 'advertise',
-   '<h2>إعلن معنا</h2><p>للإعلانات تواصل معنا عبر: ads@egstreetnews.com</p>',
-   true),
+   '<h2>إعلن معنا</h2><p>ads@egstreetnews.com</p>', true),
   ('سياسة الخصوصية',  'Privacy',   'privacy',
-   '<h2>سياسة الخصوصية</h2><p>نحن نلتزم بحماية خصوصية بياناتك.</p>',
-   true),
+   '<h2>سياسة الخصوصية</h2><p>نحن نلتزم بحماية خصوصيتك.</p>', true),
   ('الشروط والأحكام', 'Terms',     'terms',
-   '<h2>الشروط والأحكام</h2><p>باستخدامك للموقع توافق على شروط الاستخدام.</p>',
-   true)
+   '<h2>الشروط والأحكام</h2><p>باستخدامك للموقع توافق على الشروط.</p>', true)
 ON CONFLICT (slug) DO NOTHING;
 
 -- ════════════════════════════════
 --  STEP 6 — أقسام إضافية
 -- ════════════════════════════════
 INSERT INTO public.categories (name_ar, name_en, slug, sort_order, is_active) VALUES
-  ('حوادث',   'Accidents', 'accidents',  8,  true),
-  ('صحة',     'Health',    'health',     9,  true),
-  ('منوعات',  'Misc',      'misc',       10, true),
-  ('محليات',  'Local',     'local',      11, true)
+  ('حوادث',  'Accidents', 'accidents',  8,  true),
+  ('صحة',    'Health',    'health',     9,  true),
+  ('منوعات', 'Misc',      'misc',       10, true),
+  ('محليات', 'Local',     'local',      11, true)
 ON CONFLICT (slug) DO NOTHING;
 
 -- ════════════════════════════════
@@ -127,8 +123,8 @@ BEGIN
     COALESCE(r.role, 'journalist')::text                 AS role,
     COALESCE(p.articles_count, 0)::bigint                AS articles_count
   FROM auth.users       u
-  LEFT JOIN public.profiles   p ON p.id      = u.id
-  LEFT JOIN public.user_roles r ON r.user_id = u.id
+  LEFT JOIN public.profiles   p ON p.user_id  = u.id
+  LEFT JOIN public.user_roles r ON r.user_id  = u.id
   ORDER BY u.created_at ASC;
 END;
 $$;
@@ -158,7 +154,7 @@ BEGIN
     is_active            = COALESCE(p_is_active,       is_active),
     must_change_password = COALESCE(p_must_change_pw,  must_change_password),
     updated_at           = now()
-  WHERE id = p_user_id;
+  WHERE user_id = p_user_id;
 
   IF p_role IS NOT NULL THEN
     INSERT INTO public.user_roles (user_id, role)
@@ -190,7 +186,7 @@ BEGIN
   END IF;
 
   DELETE FROM public.user_roles WHERE user_id = p_user_id;
-  DELETE FROM public.profiles   WHERE id      = p_user_id;
+  DELETE FROM public.profiles   WHERE user_id = p_user_id;
   DELETE FROM auth.users        WHERE id      = p_user_id;
 
   RETURN json_build_object('success', true);
@@ -209,7 +205,7 @@ BEGIN
 
   UPDATE public.profiles
   SET is_active = p_active
-  WHERE id = p_user_id;
+  WHERE user_id = p_user_id;
 
   UPDATE auth.users
   SET banned_until = CASE WHEN p_active THEN NULL ELSE 'infinity'::timestamptz END
@@ -228,32 +224,22 @@ GRANT EXECUTE ON FUNCTION public.admin_delete_user(uuid)           TO authentica
 GRANT EXECUTE ON FUNCTION public.admin_toggle_active(uuid,boolean) TO authenticated;
 
 -- ════════════════════════════════
---  ✅ FINAL CHECK — نتيجة شاملة
+--  ✅ FINAL CHECK — تقرير شامل
 -- ════════════════════════════════
-SELECT
-  '✅ auth.users'   AS جدول, count(*)::text AS عدد FROM auth.users
-UNION ALL SELECT
-  '✅ profiles',             count(*)::text FROM public.profiles
-UNION ALL SELECT
-  '✅ user_roles',           count(*)::text FROM public.user_roles
-UNION ALL SELECT
-  '✅ categories',           count(*)::text FROM public.categories
-UNION ALL SELECT
-  '✅ pages',                count(*)::text FROM public.pages
-UNION ALL SELECT
-  '✅ site_settings',        count(*)::text FROM public.site_settings
-UNION ALL SELECT
-  '✅ articles',             count(*)::text FROM public.articles
-UNION ALL SELECT
-  '✅ admin_get_users RPC',
-  CASE WHEN EXISTS (
-    SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-    WHERE n.nspname='public' AND p.proname='admin_get_users'
-  ) THEN 'موجودة ✅' ELSE 'مش موجودة ❌' END
-UNION ALL SELECT
-  '✅ admin_delete_user RPC',
-  CASE WHEN EXISTS (
-    SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-    WHERE n.nspname='public' AND p.proname='admin_delete_user'
-  ) THEN 'موجودة ✅' ELSE 'مش موجودة ❌' END
+SELECT '✅ auth.users'    AS الجدول, count(*)::text AS العدد FROM auth.users
+UNION ALL SELECT '✅ profiles',              count(*)::text FROM public.profiles
+UNION ALL SELECT '✅ user_roles',            count(*)::text FROM public.user_roles
+UNION ALL SELECT '✅ categories',            count(*)::text FROM public.categories
+UNION ALL SELECT '✅ pages',                 count(*)::text FROM public.pages
+UNION ALL SELECT '✅ site_settings',         count(*)::text FROM public.site_settings
+UNION ALL SELECT '✅ articles',              count(*)::text FROM public.articles
+UNION ALL SELECT '✅ RPC admin_get_users',
+  CASE WHEN EXISTS(SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname='admin_get_users')
+  THEN 'موجودة ✅' ELSE 'مش موجودة ❌' END
+UNION ALL SELECT '✅ RPC admin_delete_user',
+  CASE WHEN EXISTS(SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname='admin_delete_user')
+  THEN 'موجودة ✅' ELSE 'مش موجودة ❌' END
+UNION ALL SELECT '✅ RPC admin_update_user',
+  CASE WHEN EXISTS(SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname='admin_update_user')
+  THEN 'موجودة ✅' ELSE 'مش موجودة ❌' END
 ORDER BY 1;
