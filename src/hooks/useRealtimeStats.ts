@@ -64,17 +64,9 @@ export const useRealtimeStats = () => {
 
   useEffect(() => {
     fetchStats();
-
-    // Subscribe to realtime changes for live updates
-    const channel = supabase
-      .channel("dashboard-stats")
-      .on("postgres_changes", { event: "*", schema: "public", table: "articles" }, () => fetchStats())
-      .on("postgres_changes", { event: "*", schema: "public", table: "comments" }, () => fetchStats())
-      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, () => fetchStats())
-      .on("postgres_changes", { event: "*", schema: "public", table: "subscribers" }, () => fetchStats())
-      .subscribe();
-
-    return () => { supabase.removeChannel(channel); };
+    // Poll every 60 seconds instead of realtime to avoid errors
+    const interval = setInterval(fetchStats, 60_000);
+    return () => clearInterval(interval);
   }, []);
 
   return { stats, loading, refetch: fetchStats };
