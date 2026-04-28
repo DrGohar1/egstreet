@@ -1,7 +1,6 @@
 -- ══════════════════════════════════════════════════════════════════
---  FINAL_ALL_IN_ONE.sql  (v4 — FINAL CORRECT)
---  categories: لا يوجد is_active
---  profiles: user_id هو الـ FK
+--  FINAL_ALL_IN_ONE.sql  — v5  (آخر تحديث: 28 أبريل 2026)
+--  شغّله من أول وجديد — هيعمل كل حاجة ويقولك تمام في الآخر
 -- ══════════════════════════════════════════════════════════════════
 
 -- ════════════════════════════════
@@ -12,6 +11,7 @@ WHERE user_id NOT IN (SELECT id FROM auth.users);
 
 -- ════════════════════════════════
 --  STEP 2 — مزامنة profiles
+--  (profiles.user_id هو FK → auth.users.id)
 -- ════════════════════════════════
 INSERT INTO public.profiles (id, user_id, username, display_name, email, is_active)
 SELECT
@@ -29,6 +29,7 @@ ON CONFLICT DO NOTHING;
 
 -- ════════════════════════════════
 --  STEP 3 — كل يوزر ياخد دور
+--  (user_roles = 5 بس auth.users = 8 → هيضيف الـ 3 الباقين)
 -- ════════════════════════════════
 INSERT INTO public.user_roles (user_id, role)
 SELECT id, 'journalist'
@@ -37,7 +38,7 @@ WHERE id NOT IN (SELECT user_id FROM public.user_roles)
 ON CONFLICT (user_id) DO NOTHING;
 
 -- ════════════════════════════════
---  STEP 4 — site_settings
+--  STEP 4 — site_settings الأساسية
 -- ════════════════════════════════
 INSERT INTO public.site_settings (key, value) VALUES
   ('chief_editor_name',  'محمد جوهر'),
@@ -59,7 +60,18 @@ INSERT INTO public.site_settings (key, value) VALUES
 ON CONFLICT (key) DO NOTHING;
 
 -- ════════════════════════════════
---  STEP 5 — صفحات ثابتة
+--  STEP 5 — إعدادات الراعي/الشريك (جديد)
+-- ════════════════════════════════
+INSERT INTO public.site_settings (key, value) VALUES
+  ('sponsor_show', 'true'),
+  ('sponsor_text', 'برعاية'),
+  ('sponsor_name', 'شركة الكينج للإنتاج الفني — كابتن سعيد الدمرداش'),
+  ('sponsor_logo', ''),
+  ('sponsor_url',  '')
+ON CONFLICT (key) DO NOTHING;
+
+-- ════════════════════════════════
+--  STEP 6 — صفحات ثابتة
 -- ════════════════════════════════
 INSERT INTO public.pages (title_ar, title_en, slug, content_ar, is_active) VALUES
   ('من نحن',           'About',     'about',
@@ -75,8 +87,8 @@ INSERT INTO public.pages (title_ar, title_en, slug, content_ar, is_active) VALUE
 ON CONFLICT (slug) DO NOTHING;
 
 -- ════════════════════════════════
---  STEP 6 — أقسام إضافية
---  categories ليس فيها is_active
+--  STEP 7 — أقسام إضافية
+--  (categories ليس فيها is_active)
 -- ════════════════════════════════
 INSERT INTO public.categories (name_ar, name_en, slug, sort_order) VALUES
   ('حوادث',  'Accidents', 'accidents',  8),
@@ -86,7 +98,7 @@ INSERT INTO public.categories (name_ar, name_en, slug, sort_order) VALUES
 ON CONFLICT (slug) DO NOTHING;
 
 -- ════════════════════════════════
---  STEP 7 — RPC: admin_get_users
+--  STEP 8 — RPC: admin_get_users
 -- ════════════════════════════════
 CREATE OR REPLACE FUNCTION public.admin_get_users()
 RETURNS TABLE (
@@ -133,7 +145,7 @@ END;
 $$;
 
 -- ════════════════════════════════
---  STEP 8 — RPC: admin_update_user
+--  STEP 9 — RPC: admin_update_user
 -- ════════════════════════════════
 CREATE OR REPLACE FUNCTION public.admin_update_user(
   p_user_id        uuid,
@@ -176,7 +188,7 @@ END;
 $$;
 
 -- ════════════════════════════════
---  STEP 9 — RPC: admin_delete_user
+--  STEP 10 — RPC: admin_delete_user
 -- ════════════════════════════════
 CREATE OR REPLACE FUNCTION public.admin_delete_user(p_user_id uuid)
 RETURNS json SECURITY DEFINER LANGUAGE plpgsql AS $$
@@ -197,7 +209,7 @@ END;
 $$;
 
 -- ════════════════════════════════
---  STEP 10 — RPC: admin_toggle_active
+--  STEP 11 — RPC: admin_toggle_active
 -- ════════════════════════════════
 CREATE OR REPLACE FUNCTION public.admin_toggle_active(p_user_id uuid, p_active boolean)
 RETURNS json SECURITY DEFINER LANGUAGE plpgsql AS $$
@@ -217,41 +229,52 @@ END;
 $$;
 
 -- ════════════════════════════════
---  STEP 11 — Grant execute
+--  STEP 12 — Grant execute
 -- ════════════════════════════════
 GRANT EXECUTE ON FUNCTION public.admin_get_users()    TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_update_user(uuid,text,text,text,text,text,boolean,boolean) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_delete_user(uuid)           TO authenticated;
 GRANT EXECUTE ON FUNCTION public.admin_toggle_active(uuid,boolean) TO authenticated;
 
--- ════════════════════════════════
---  ✅ FINAL CHECK — تقرير شامل
--- ════════════════════════════════
-SELECT '01 - auth.users'     AS الخطوة, count(*)::text AS النتيجة FROM auth.users
-UNION ALL SELECT '02 - profiles',        count(*)::text FROM public.profiles
-UNION ALL SELECT '03 - user_roles',      count(*)::text FROM public.user_roles
-UNION ALL SELECT '04 - categories',      count(*)::text FROM public.categories
-UNION ALL SELECT '05 - pages',           count(*)::text FROM public.pages
-UNION ALL SELECT '06 - site_settings',   count(*)::text FROM public.site_settings
-UNION ALL SELECT '07 - articles',        count(*)::text FROM public.articles
-UNION ALL
-  SELECT '08 - RPC admin_get_users',
-    CASE WHEN EXISTS(SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
-         WHERE n.nspname='public' AND p.proname='admin_get_users')
-    THEN 'موجودة ✅' ELSE 'مش موجودة ❌' END
-UNION ALL
-  SELECT '09 - RPC admin_update_user',
-    CASE WHEN EXISTS(SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
-         WHERE n.nspname='public' AND p.proname='admin_update_user')
-    THEN 'موجودة ✅' ELSE 'مش موجودة ❌' END
-UNION ALL
-  SELECT '10 - RPC admin_delete_user',
-    CASE WHEN EXISTS(SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
-         WHERE n.nspname='public' AND p.proname='admin_delete_user')
-    THEN 'موجودة ✅' ELSE 'مش موجودة ❌' END
-UNION ALL
-  SELECT '11 - RPC admin_toggle_active',
-    CASE WHEN EXISTS(SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
-         WHERE n.nspname='public' AND p.proname='admin_toggle_active')
-    THEN 'موجودة ✅' ELSE 'مش موجودة ❌' END
+-- ══════════════════════════════════════════════════════════════
+--  ✅ FINAL CHECK — تقرير شامل بعد التشغيل
+--  المتوقع: user_roles = auth.users (كل يوزر عنده دور)
+-- ══════════════════════════════════════════════════════════════
+SELECT '01 auth.users'       AS الخطوة, count(*)::text AS العدد FROM auth.users
+UNION ALL SELECT '02 profiles',          count(*)::text FROM public.profiles
+UNION ALL SELECT '03 user_roles',        count(*)::text FROM public.user_roles
+UNION ALL SELECT '04 categories',        count(*)::text FROM public.categories
+UNION ALL SELECT '05 pages',             count(*)::text FROM public.pages
+UNION ALL SELECT '06 site_settings',     count(*)::text FROM public.site_settings
+UNION ALL SELECT '07 articles',          count(*)::text FROM public.articles
+UNION ALL SELECT
+  '08 sponsor settings',
+  count(*)::text
+  FROM public.site_settings
+  WHERE key IN ('sponsor_show','sponsor_text','sponsor_name','sponsor_logo','sponsor_url')
+UNION ALL SELECT
+  '09 users_without_roles ❗',
+  count(*)::text
+  FROM auth.users
+  WHERE id NOT IN (SELECT user_id FROM public.user_roles)
+UNION ALL SELECT
+  '10 RPC admin_get_users',
+  CASE WHEN EXISTS(SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+       WHERE n.nspname='public' AND p.proname='admin_get_users')
+  THEN 'موجودة ✅' ELSE 'مش موجودة ❌' END
+UNION ALL SELECT
+  '11 RPC admin_update_user',
+  CASE WHEN EXISTS(SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+       WHERE n.nspname='public' AND p.proname='admin_update_user')
+  THEN 'موجودة ✅' ELSE 'مش موجودة ❌' END
+UNION ALL SELECT
+  '12 RPC admin_delete_user',
+  CASE WHEN EXISTS(SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+       WHERE n.nspname='public' AND p.proname='admin_delete_user')
+  THEN 'موجودة ✅' ELSE 'مش موجودة ❌' END
+UNION ALL SELECT
+  '13 RPC admin_toggle_active',
+  CASE WHEN EXISTS(SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+       WHERE n.nspname='public' AND p.proname='admin_toggle_active')
+  THEN 'موجودة ✅' ELSE 'مش موجودة ❌' END
 ORDER BY 1;
