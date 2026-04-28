@@ -52,6 +52,8 @@ export default function UserManagement() {
   const [saving,     setSaving]     = useState(false);
   const [deletingId, setDeletingId] = useState<string|null>(null);
   const [confirmDel, setConfirmDel] = useState<string|null>(null);
+  const [roleDropdown, setRoleDropdown] = useState<string|null>(null);  // userId with open dropdown
+  const [savingRole, setSavingRole]     = useState<string|null>(null);  // userId being saved
 
   // ── Fetch all users via RPC ──
   const fetchUsers = useCallback(async () => {
@@ -206,6 +208,26 @@ export default function UserManagement() {
     }
     setDeletingId(null); setConfirmDel(null);
     fetchUsers();
+  };
+
+  // ── Inline Quick Role Change (direct in table) ──
+  const handleInlineRole = async (userId: string, newRole: RoleKey) => {
+    setSavingRole(userId);
+    setRoleDropdown(null);
+
+    // Direct DB write — always works regardless of RPC
+    const { error } = await supabase
+      .from("user_roles")
+      .upsert({ user_id: userId, role: newRole }, { onConflict: "user_id" });
+
+    if (error) {
+      toast.error("❌ فشل تغيير الدور — " + error.message);
+    } else {
+      // Update local state immediately
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
+      toast.success("✅ تم تغيير الدور إلى: " + getRoleInfo(newRole).label);
+    }
+    setSavingRole(null);
   };
 
   const openEdit = (user: User) => {
