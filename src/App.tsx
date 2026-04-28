@@ -37,6 +37,7 @@ import PermissionManagement from "./pages/admin/PermissionManagement";
 import NewsScraperPage from "./pages/admin/NewsScraperPage";
 import AIToolsPage from "./pages/admin/AIToolsPage";
 import BackupRestore from "./pages/admin/BackupRestore";
+import MediaManagement from "./pages/admin/MediaManagement";
 import AutomationPage from "./pages/admin/AutomationPage";
 import ArticleEditor from "./pages/admin/ArticleEditor";
 import SavedArticlesPage from "./pages/SavedArticlesPage";
@@ -96,6 +97,7 @@ const AppContent = () => {
         <Route path={`${ADMIN}/ai/tools`} element={<AdminLayout><AdminGuard permission="ai_tools"><AIToolsPage /></AdminGuard></AdminLayout>} />
         <Route path={`${ADMIN}/automation`} element={<AdminLayout><AdminGuard permission="automation"><AutomationPage /></AdminGuard></AdminLayout>} />
         <Route path={`${ADMIN}/backup`} element={<AdminLayout><AdminGuard permission="backup"><BackupRestore /></AdminGuard></AdminLayout>} />
+        <Route path={`${ADMIN}/media`} element={<AdminLayout><AdminGuard permission="media.upload"><MediaManagement /></AdminGuard></AdminLayout>} />
 
         <Route path="*" element={<NotFound />} />
       </Routes>
