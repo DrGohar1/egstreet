@@ -69,7 +69,6 @@ const GROUPS: SidebarGroup[] = [
     title: "الإدارة",
     items: [
       { label: "المستخدمون", icon: <Users className="w-4 h-4"/>, to: `${ADMIN}/users`, permission: "users" },
-      { label: "الصلاحيات", icon: <Shield className="w-4 h-4"/>, to: `${ADMIN}/permissions`, permission: "permissions" },
       { label: "الإعدادات", icon: <Settings className="w-4 h-4"/>, to: `${ADMIN}/settings`, permission: "settings" },
       { label: "النسخ الاحتياطي", icon: <HardDrive className="w-4 h-4"/>, to: `${ADMIN}/backup`, permission: "backup" },
     ]
