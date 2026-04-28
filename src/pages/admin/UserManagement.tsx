@@ -5,8 +5,9 @@ import {
   Users, Plus, Pencil, Trash2, Shield, Eye, EyeOff,
   ToggleLeft, ToggleRight, RefreshCw, Loader2, Check,
   X, Search, UserCheck, UserX, Key, ChevronDown,
-  Crown, PenLine, BarChart, Megaphone
+  Crown, PenLine, BarChart, Megaphone, ChevronUp, SlidersHorizontal
 } from "lucide-react";
+import UserPermissionsPanel from "@/components/admin/UserPermissionsPanel";
 
 // ── Role config ──
 const ROLES = [
@@ -54,6 +55,7 @@ export default function UserManagement() {
   const [confirmDel, setConfirmDel] = useState<string|null>(null);
   const [roleDropdown, setRoleDropdown] = useState<string|null>(null);  // userId with open dropdown
   const [savingRole, setSavingRole]     = useState<string|null>(null);  // userId being saved
+  const [openPermsId, setOpenPermsId]   = useState<string|null>(null);  // userId with open permissions panel
 
   // ── Fetch all users via RPC ──
   const fetchUsers = useCallback(async () => {
@@ -412,6 +414,17 @@ export default function UserManagement() {
                           </div>
                         </td>
                       </tr>
+                      {openPermsId === user.id && (
+                        <tr key={`perms-${user.id}`}>
+                          <td colSpan={6} className="p-0">
+                            <UserPermissionsPanel
+                              userId={user.id}
+                              userRole={user.role}
+                              userName={user.display_name || user.email}
+                            />
+                          </td>
+                        </tr>
+                      )}
                     );
                   })}
                   {filtered.length === 0 && (
