@@ -3,24 +3,34 @@ import { supabase } from "@/integrations/supabase/client";
 
 export const useSiteSettings = () => {
   const [settings, setSettings] = useState<Record<string, string>>({});
-  const [loading,  setLoading]  = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   const fetch = async () => {
-    const { data } = await supabase.from("site_settings").select("key, value");
-    if (data) {
-      const map: Record<string, string> = {};
-      data.forEach(s => (map[s.key] = s.value));
-      setSettings(map);
+    try {
+      const { data, error: dbError } = await supabase
+        .from("site_settings")
+        .select("key, value");
+      if (dbError) throw dbError;
+      if (data) {
+        const map: Record<string, string> = {};
+        data.forEach(s => (map[s.key] = s.value));
+        setSettings(map);
+      }
+      setError(null);
+    } catch (err: any) {
+      console.error("useSiteSettings error:", err);
+      setError(err.message || "خطأ في تحميل الإعدادات");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
     fetch();
-    // Realtime — logo/settings update instantly on all pages
     const interval = setInterval(fetch, 60_000);
-return () => clearInterval(interval);
+    return () => clearInterval(interval);
   }, []);
 
-  return { settings, loading, refetch: fetch };
+  return { settings, loading, error, refetch: fetch };
 };
