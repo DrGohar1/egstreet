@@ -97,7 +97,7 @@ const SearchPage = () => {
                 <SelectItem value="all">{"كل الأقسام"}</SelectItem>
                 {categories.map((c: any) => (
                   <SelectItem key={c.id} value={c.id}>
-                    {c.name_ar
+                    {c.name_ar}
                   </SelectItem>
                 ))}
               </SelectContent>
