@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
-import { Facebook, X as XIcon, Youtube, Instagram, Send, Rss, ArrowUp, MapPin, Phone, Mail, Radio } from "lucide-react";
+import { Facebook, X as XIcon, Youtube, Instagram, Send, Rss, ArrowUp, MapPin, Phone, Mail, Radio, Star } from "lucide-react";
 
 const Footer = () => {
   const { settings } = useSiteSettings();
@@ -26,18 +26,25 @@ const Footer = () => {
     setSubDone(true); setSubLoading(false);
   };
 
-  const siteName   = settings?.site_name_ar || "جريدة الشارع المصري";
-  const slogan     = settings?.newspaper_slogan || "من قلب الحدث";
-  const siteDesc   = settings?.site_description_ar || "أخبار مصر والعالم العربي لحظة بلحظة";
-  const logoUrl    = settings?.logo_url || settings?.site_logo || "";
-  const copyright  = settings?.footer_text_ar || `© ${new Date().getFullYear()} ${siteName} — جميع الحقوق محفوظة`;
-  const devName    = settings?.developer_name || "GoharTech";
-  const devUrl     = settings?.developer_url || "#";
-  const editorName = settings?.chief_editor_name || "";
-  const editorTitle= settings?.chief_editor_title || "رئيس التحرير";
-  const address    = settings?.newspaper_address || "";
-  const phone      = settings?.newspaper_phone || "";
-  const newsEmail  = settings?.newspaper_email || "";
+  const siteName    = settings?.site_name_ar   || "جريدة الشارع المصري";
+  const slogan      = settings?.newspaper_slogan || "من قلب الحدث";
+  const siteDesc    = settings?.site_description_ar || "أخبار مصر والعالم العربي لحظة بلحظة";
+  const logoUrl     = settings?.logo_url || settings?.site_logo || "";
+  const copyright   = settings?.footer_text_ar || `© ${new Date().getFullYear()} ${siteName} — جميع الحقوق محفوظة`;
+  const devName     = settings?.developer_name  || "GoharTech";
+  const devUrl      = settings?.developer_url   || "#";
+  const editorName  = settings?.chief_editor_name  || "";
+  const editorTitle = settings?.chief_editor_title || "رئيس التحرير";
+  const address     = settings?.newspaper_address  || "";
+  const phone       = settings?.newspaper_phone    || "";
+  const newsEmail   = settings?.newspaper_email    || "";
+
+  // ── Sponsor ──
+  const sponsorShow = settings?.sponsor_show !== "false";
+  const sponsorText = settings?.sponsor_text || "برعاية";
+  const sponsorName = settings?.sponsor_name || "شركة الكينج للإنتاج الفني — كابتن سعيد الدمرداش";
+  const sponsorLogo = settings?.sponsor_logo || "";
+  const sponsorUrl  = settings?.sponsor_url  || "#";
 
   const socials = [
     { key:"facebook_url",  Icon: Facebook,  label:"Facebook",  bg:"bg-[#1877F2]" },
@@ -76,7 +83,6 @@ const Footer = () => {
 
             <p className="text-sm text-muted-foreground leading-relaxed">{siteDesc}</p>
 
-            {/* Editor name */}
             {editorName && (
               <div className="flex items-center gap-2 text-sm font-bold text-primary border border-primary/20 rounded-xl px-3 py-2 bg-primary/5 w-fit">
                 <Radio className="w-3.5 h-3.5"/>
@@ -84,14 +90,12 @@ const Footer = () => {
               </div>
             )}
 
-            {/* Contact info */}
             <div className="space-y-1.5 text-xs text-muted-foreground">
-              {address && <div className="flex items-center gap-1.5"><MapPin className="w-3 h-3 text-primary shrink-0"/>{address}</div>}
-              {phone   && <div className="flex items-center gap-1.5"><Phone   className="w-3 h-3 text-primary shrink-0"/>{phone}</div>}
-              {newsEmail && <div className="flex items-center gap-1.5"><Mail   className="w-3 h-3 text-primary shrink-0"/>{newsEmail}</div>}
+              {address   && <div className="flex items-center gap-1.5"><MapPin className="w-3 h-3 text-primary shrink-0"/>{address}</div>}
+              {phone     && <div className="flex items-center gap-1.5"><Phone   className="w-3 h-3 text-primary shrink-0"/>{phone}</div>}
+              {newsEmail && <div className="flex items-center gap-1.5"><Mail    className="w-3 h-3 text-primary shrink-0"/>{newsEmail}</div>}
             </div>
 
-            {/* Social icons */}
             <div className="flex gap-2 flex-wrap">
               {socials.map(({ key, Icon, label, bg }) => {
                 const url = settings?.[key];
@@ -185,6 +189,34 @@ const Footer = () => {
           </div>
         </div>
       </div>
+
+      {/* ══ Sponsor Bar ══ */}
+      {sponsorShow && (
+        <div className="border-t border-amber-200/50 bg-gradient-to-r from-amber-50/80 via-yellow-50/60 to-amber-50/80 dark:from-amber-900/20 dark:via-yellow-900/10 dark:to-amber-900/20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2.5">
+            <a
+              href={sponsorUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-3 group w-fit mx-auto"
+            >
+              <Star className="w-3.5 h-3.5 text-amber-500 shrink-0"/>
+              <span className="text-xs text-amber-700 dark:text-amber-400 font-bold">{sponsorText}</span>
+              {sponsorLogo && (
+                <img
+                  src={sponsorLogo}
+                  alt={sponsorName}
+                  className="h-7 w-auto max-w-[80px] object-contain rounded-md shadow-sm"
+                />
+              )}
+              <span className="text-xs font-black text-amber-800 dark:text-amber-300 group-hover:text-amber-600 transition-colors">
+                {sponsorName}
+              </span>
+              <Star className="w-3.5 h-3.5 text-amber-500 shrink-0"/>
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* ══ Bottom Bar ══ */}
       <div className="border-t border-border bg-muted/30">
