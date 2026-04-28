@@ -328,11 +328,40 @@ export default function UserManagement() {
                             </div>
                           </div>
                         </td>
-                        {/* Role */}
-                        <td className="py-3 px-4">
-                          <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full border ${role.color}`}>
-                            {role.icon}{role.label}
-                          </span>
+                        {/* Role — inline dropdown */}
+                        <td className="py-3 px-4 relative">
+                          {savingRole === user.id ? (
+                            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                              <Loader2 className="w-3 h-3 animate-spin"/> جارٍ...
+                            </span>
+                          ) : (
+                            <div className="relative inline-block">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setRoleDropdown(roleDropdown === user.id ? null : user.id); }}
+                                className={`inline-flex items-center gap-1.5 text-xs font-bold px-2.5 py-1 rounded-full border transition-all hover:shadow-md cursor-pointer ${role.color}`}
+                              >
+                                {role.icon}{role.label}
+                                <ChevronDown className="w-3 h-3 opacity-70"/>
+                              </button>
+                              {roleDropdown === user.id && (
+                                <div className="absolute top-full mt-1 right-0 z-50 bg-card border border-border rounded-xl shadow-2xl overflow-hidden min-w-[170px]">
+                                  <div className="px-3 py-2 text-[10px] font-black text-muted-foreground border-b border-border">اختر الدور</div>
+                                  {ROLES.map(r => (
+                                    <button
+                                      key={r.key}
+                                      onClick={(e) => { e.stopPropagation(); handleInlineRole(user.id, r.key as RoleKey); }}
+                                      className={`w-full flex items-center gap-2 px-3 py-2.5 text-xs font-bold hover:bg-muted/80 transition-colors
+                                        ${user.role === r.key ? "bg-primary/10 text-primary" : "text-foreground"}`}
+                                    >
+                                      {r.icon}
+                                      <span className="flex-1 text-right">{r.label}</span>
+                                      {user.role === r.key && <Check className="w-3 h-3 text-primary shrink-0"/>}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </td>
                         {/* Articles */}
                         <td className="py-3 px-4 hidden md:table-cell">
