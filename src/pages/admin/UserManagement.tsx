@@ -15,7 +15,7 @@ const ROLES = [
   { key:"journalist",      label:"صحفي",              icon: <PenLine  className="w-3.5 h-3.5"/>, color:"bg-blue-100 text-blue-700 border-blue-200"  },
   { key:"analyst",         label:"محلل",              icon: <BarChart className="w-3.5 h-3.5"/>, color:"bg-green-100 text-green-700 border-green-200" },
   { key:"ads_manager",     label:"مدير إعلانات",      icon: <Megaphone className="w-3.5 h-3.5"/>, color:"bg-amber-100 text-amber-700 border-amber-200" },
-] as const;
+];
 
 type RoleKey = typeof ROLES[number]["key"];
 
