@@ -15,7 +15,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import {
   Save, Globe, Palette, Mail, Share2, FileText, Image, Shield,
-  Layout, Bell, Code, Eye, ChevronRight, Sparkles, Check, ToggleLeft, Power, Users
+  Layout, Bell, Code, Eye, ChevronRight, Sparkles, Check, ToggleLeft, Power, Users, Star, Upload
 } from "lucide-react";
 import LogoUploader from "@/components/admin/LogoUploader";
 import { motion } from "framer-motion";
@@ -148,7 +148,9 @@ const SiteSettings = () => {
               <Power className="h-3.5 w-3.5" />
               {t("التحكم", "Kill Switch")}
             </TabsTrigger>
-          </TabsList>
+          
+          <TabsTrigger value="sponsor" className="flex items-center gap-1.5 text-xs"><Star className="w-3.5 h-3.5"/>الراعي</TabsTrigger>
+        </TabsList>
         </motion.div>
 
         {/* Branding Tab */}
@@ -576,6 +578,141 @@ const SiteSettings = () => {
                   <Label>ترخيص الجريدة / رقم القيد</Label>
                   <Input value={settings.press_license || ""} onChange={e => u("press_license", e.target.value)} placeholder="رقم الترخيص"/>
                 </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </TabsContent>
+
+
+        {/* ══════════════ TAB: الراعي ══════════════ */}
+        <TabsContent value="sponsor" className="mt-0">
+          <motion.div variants={fadeIn} initial="hidden" animate="visible" className="space-y-4">
+            <Card className="border-amber-200">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-amber-700">
+                  <Star className="h-5 w-5 text-amber-500"/>
+                  إعدادات الراعي / الشريك
+                </CardTitle>
+                <CardDescription>
+                  يظهر شريط الراعي في أسفل كل صفحات الموقع
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-5">
+
+                {/* Toggle */}
+                <div className="flex items-center justify-between p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-100">
+                  <div>
+                    <div className="font-bold text-sm">إظهار شريط الراعي</div>
+                    <div className="text-xs text-muted-foreground">يظهر في أسفل الموقع بين الفوتر والكوبيرايت</div>
+                  </div>
+                  <Switch
+                    checked={settings.sponsor_show !== "false"}
+                    onCheckedChange={v => u("sponsor_show", String(v))}
+                  />
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>نص البداية (مثال: برعاية)</Label>
+                    <Input
+                      value={settings.sponsor_text || "برعاية"}
+                      onChange={e => u("sponsor_text", e.target.value)}
+                      placeholder="برعاية"
+                      dir="rtl"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>رابط الراعي (اختياري)</Label>
+                    <Input
+                      value={settings.sponsor_url || ""}
+                      onChange={e => u("sponsor_url", e.target.value)}
+                      placeholder="https://..."
+                      dir="ltr"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>اسم الراعي / الشركة</Label>
+                  <Input
+                    value={settings.sponsor_name || "شركة الكينج للإنتاج الفني — كابتن سعيد الدمرداش"}
+                    onChange={e => u("sponsor_name", e.target.value)}
+                    placeholder="شركة الكينج للإنتاج الفني — كابتن سعيد الدمرداش"
+                    dir="rtl"
+                  />
+                </div>
+
+                {/* Logo Upload */}
+                <div className="space-y-2">
+                  <Label>لوجو الراعي (PNG شفاف مقترح)</Label>
+                  <div className="flex items-center gap-4 flex-wrap mt-2">
+                    {settings.sponsor_logo ? (
+                      <div className="relative group">
+                        <img
+                          src={settings.sponsor_logo}
+                          alt="sponsor logo"
+                          className="h-16 w-auto max-w-[140px] object-contain rounded-xl border border-amber-200 bg-amber-50/50 p-2 shadow-sm"
+                        />
+                        <button
+                          onClick={() => u("sponsor_logo", "")}
+                          className="absolute -top-2 -left-2 w-6 h-6 rounded-full bg-red-500 text-white text-sm font-bold flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow"
+                        >×</button>
+                      </div>
+                    ) : (
+                      <div className="w-16 h-16 rounded-xl border-2 border-dashed border-amber-300 flex items-center justify-center text-amber-400 bg-amber-50">
+                        <Image className="w-6 h-6"/>
+                      </div>
+                    )}
+                    <label className="cursor-pointer flex items-center gap-2 px-5 py-3 rounded-xl border-2 border-dashed border-amber-300 hover:border-amber-500 hover:bg-amber-50 transition-all text-sm font-bold text-amber-700">
+                      <Upload className="w-4 h-4"/>
+                      {settings.sponsor_logo ? "تغيير اللوجو" : "رفع لوجو الراعي"}
+                      <input
+                        type="file"
+                        className="hidden"
+                        accept="image/png,image/jpeg,image/svg+xml,image/webp"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          const ext  = file.name.split(".").pop();
+                          const path = `sponsor/logo_${Date.now()}.${ext}`;
+                          const { error } = await supabase.storage.from("media").upload(path, file, { upsert: true });
+                          if (error) { toast({ title:"فشل رفع اللوجو", variant:"destructive" }); return; }
+                          const { data } = supabase.storage.from("media").getPublicUrl(path);
+                          u("sponsor_logo", data.publicUrl);
+                          toast({ title:"✅ تم رفع لوجو الراعي" });
+                        }}
+                      />
+                    </label>
+                  </div>
+                  <p className="text-[10px] text-muted-foreground">
+                    يظهر صغيراً جنب اسم الراعي في أسفل الموقع — PNG شفاف بخلفية شفافة هو الأفضل
+                  </p>
+                </div>
+
+                {/* Live Preview */}
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">معاينة حية</Label>
+                  <div className="border border-amber-200 rounded-xl p-3 bg-gradient-to-r from-amber-50 via-yellow-50 to-amber-50">
+                    <div className="flex items-center justify-center gap-2.5">
+                      <Star className="w-4 h-4 text-amber-500"/>
+                      <span className="text-sm text-amber-700 font-bold">
+                        {settings.sponsor_text || "برعاية"}
+                      </span>
+                      {settings.sponsor_logo && (
+                        <img
+                          src={settings.sponsor_logo}
+                          alt=""
+                          className="h-7 w-auto max-w-[80px] object-contain rounded"
+                        />
+                      )}
+                      <span className="text-sm font-black text-amber-800">
+                        {settings.sponsor_name || "شركة الكينج للإنتاج الفني — كابتن سعيد الدمرداش"}
+                      </span>
+                      <Star className="w-4 h-4 text-amber-500"/>
+                    </div>
+                  </div>
+                </div>
+
               </CardContent>
             </Card>
           </motion.div>
