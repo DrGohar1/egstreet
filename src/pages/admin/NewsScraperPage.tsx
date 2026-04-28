@@ -1,446 +1,534 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 import { toast } from "sonner";
-import { motion, AnimatePresence } from "framer-motion";
 import {
-  Rss, RefreshCw, Plus, Check, X, Globe, Newspaper,
-  ExternalLink, Loader2, Trash2, Download, CheckSquare,
-  Square, Search, Filter, Clock, Star, ChevronDown, ChevronUp,
-  Image as ImgIcon, AlertCircle, Settings2, Save
+  Rss, RefreshCw, Globe, Newspaper, ExternalLink, Loader2,
+  Trash2, Download, CheckSquare, Square, Settings2, Save,
+  Key, Play, Pause, Clock, Tag, Plus, X, Check, AlertCircle, Zap
 } from "lucide-react";
 
-const PROXY = "https://api.allorigins.win/get?url=";
-const PROXY2 = "https://corsproxy.io/?";
-
-interface Feed {
-  id: string; name: string; url: string;
-  category_id: string; icon: string; active: boolean; lastFetched?: string;
-}
-interface RssItem {
-  title: string; link: string; description: string;
-  pubDate: string; image?: string; source: string; guid: string;
-  selected: boolean; duplicate: boolean;
-}
-
-const DEFAULT_FEEDS: Feed[] = [
-  { id:"youm7",    name:"اليوم السابع",     url:"https://www.youm7.com/rss",              category_id:"", icon:"🗞️", active:true },
-  { id:"masry",    name:"المصري اليوم",      url:"https://www.almasryalyoum.com/rss",      category_id:"", icon:"📰", active:true },
-  { id:"ahram",    name:"الأهرام",           url:"https://www.ahram.org.eg/rss",           category_id:"", icon:"📜", active:true },
-  { id:"shorouk",  name:"الشروق",            url:"https://www.shorouknews.com/rss",        category_id:"", icon:"🌅", active:true },
-  { id:"vetogate", name:"فيتو جيت",          url:"https://www.vetogate.com/rss",           category_id:"", icon:"📡", active:true },
-  { id:"elwatan",  name:"الوطن",             url:"https://www.elwatannews.com/rss",        category_id:"", icon:"🌍", active:true },
-  { id:"bbc_ar",   name:"بي بي سي عربي",    url:"https://feeds.bbci.co.uk/arabic/rss.xml",category_id:"", icon:"🌐", active:true },
-  { id:"skynews",  name:"سكاي نيوز عربية",  url:"https://www.skynewsarabia.com/rss.xml",  category_id:"", icon:"📺", active:true },
+// ═══════════════════════════════════════════════
+//  NEWS SOURCES CONFIG
+// ═══════════════════════════════════════════════
+const NEWS_APIS = [
+  {
+    id: "newsapi",
+    name: "NewsAPI.org",
+    logo: "https://newsapi.org/favicon.ico",
+    description: "100 طلب/يوم مجاناً — عالمي",
+    url: "https://newsapi.org",
+    freeLimit: "100/day",
+    settingKey: "newsapi_key",
+    color: "bg-blue-600",
+    endpoints: [
+      { label: "أخبار مصر",        q: "egypt",          lang: "ar" },
+      { label: "أخبار عالمية",     q: "world",          lang: "ar" },
+      { label: "سياسة",            q: "politics egypt", lang: "ar" },
+      { label: "اقتصاد",           q: "economy egypt",  lang: "ar" },
+      { label: "رياضة",            q: "sports egypt",   lang: "ar" },
+      { label: "تكنولوجيا",        q: "technology",     lang: "ar" },
+      { label: "الأخبار العاجلة",  q: "breaking",       lang: "ar" },
+    ],
+  },
+  {
+    id: "gnews",
+    name: "GNews.io",
+    logo: "https://gnews.io/favicon.ico",
+    description: "100 طلب/يوم مجاناً — عربي ممتاز",
+    url: "https://gnews.io",
+    freeLimit: "100/day",
+    settingKey: "gnews_key",
+    color: "bg-green-600",
+    endpoints: [
+      { label: "أخبار مصر",        q: "مصر",     lang: "ar", country: "eg" },
+      { label: "أخبار عالمية",     q: "العالم",  lang: "ar" },
+      { label: "رياضة",            q: "رياضة",   lang: "ar" },
+      { label: "اقتصاد",           q: "اقتصاد",  lang: "ar" },
+      { label: "تكنولوجيا",        q: "تكنولوجيا", lang: "ar" },
+    ],
+  },
+  {
+    id: "mediastack",
+    name: "Mediastack",
+    logo: "https://mediastack.com/favicon.ico",
+    description: "500 طلب/شهر مجاناً",
+    url: "https://mediastack.com",
+    freeLimit: "500/month",
+    settingKey: "mediastack_key",
+    color: "bg-purple-600",
+    endpoints: [
+      { label: "أخبار مصر",    q: "egypt",   lang: "ar" },
+      { label: "أخبار عربية",  q: "",        lang: "ar" },
+    ],
+  },
 ];
 
-/* Generate clean Arabic slug */
-const toSlug = (title: string) => {
-  const cleaned = title.trim().slice(0, 60)
-    .replace(/[^؀-ۿa-zA-Z0-9\s]/g, "")
-    .replace(/\s+/g, "-").toLowerCase();
-  return `${cleaned}-${Date.now().toString(36)}`;
+// RSS Sources (no API key needed)
+const RSS_SOURCES = [
+  { id: "ahram",       name: "الأهرام",          url: "https://www.ahram.org.eg/rss/",                  cat: "أخبار مصر"    },
+  { id: "youm7",       name: "اليوم السابع",      url: "https://api.youm7.com/api/Feed/rss",             cat: "أخبار مصر"    },
+  { id: "masrawy",     name: "مصراوي",            url: "https://www.masrawy.com/news/rss",               cat: "أخبار مصر"    },
+  { id: "bbc_ar",      name: "BBC عربي",          url: "https://feeds.bbci.co.uk/arabic/rss.xml",        cat: "أخبار العالم" },
+  { id: "aljazeera",   name: "الجزيرة",           url: "https://www.aljazeera.net/rss-feeds/",           cat: "أخبار العالم" },
+  { id: "skynews_ar",  name: "سكاي نيوز عربية",  url: "https://www.skynewsarabia.com/feeds/rss/egypt",  cat: "أخبار مصر"    },
+  { id: "rt_ar",       name: "RT عربي",           url: "https://arabic.rt.com/rss/",                    cat: "أخبار العالم" },
+  { id: "cnn_ar",      name: "CNN عربي",          url: "https://arabic.cnn.com/rss/all",                cat: "أخبار العالم" },
+  { id: "kooora",      name: "كورة",              url: "https://www.kooora.com/?feed",                  cat: "رياضة"        },
+  { id: "filgoal",     name: "فيلجول",            url: "https://www.filgoal.com/feed/",                 cat: "رياضة"        },
+];
+
+// ═══════════════════════════════════════════════
+//  CATEGORY MAP (name → id)
+// ═══════════════════════════════════════════════
+type ScrapedArticle = {
+  title: string;
+  excerpt: string;
+  content: string;
+  featured_image: string;
+  source: string;
+  source_url: string;
+  published_at: string;
+  catLabel: string;
+  selected?: boolean;
 };
 
+const PROXY = "https://api.allorigins.win/raw?url=";
+
 export default function NewsScraperPage() {
-  const [feeds, setFeeds]       = useState<Feed[]>([]);
-  const [cats, setCats]         = useState<any[]>([]);
-  const [items, setItems]       = useState<RssItem[]>([]);
-  const [loading, setLoading]   = useState(false);
-  const [importing, setImporting] = useState(false);
-  const [activeFeed, setActiveFeed] = useState<Feed|null>(null);
-  const [targetCatId, setTargetCatId] = useState("");
-  const [status, setStatus]     = useState<"draft"|"published">("draft");
-  const [searchQ, setSearchQ]   = useState("");
-  const [showAddFeed, setShowAddFeed] = useState(false);
-  const [newFeed, setNewFeed]   = useState({ name:"", url:"", icon:"📰" });
-  const [existingSlugs, setExistingSlugs] = useState<Set<string>>(new Set());
-  const [stats, setStats]       = useState({ total:0, imported:0, today:0 });
+  const { settings, refetch } = useSiteSettings();
 
-  useEffect(()=>{
-    loadFeeds();
-    loadCats();
-    loadStats();
-  },[]);
+  // State
+  const [tab,          setTab]          = useState<"rss"|"api">("rss");
+  const [apiKeys,      setApiKeys]      = useState<Record<string,string>>({});
+  const [showKeys,     setShowKeys]     = useState(false);
+  const [loading,      setLoading]      = useState(false);
+  const [importing,    setImporting]    = useState(false);
+  const [scraped,      setScraped]      = useState<ScrapedArticle[]>([]);
+  const [selected,     setSelected]     = useState<Set<number>>(new Set());
+  const [categories,   setCategories]   = useState<{id:string;name_ar:string;slug:string}[]>([]);
+  const [catMap,       setCatMap]       = useState<Record<string,string>>({});
+  const [selectedRss,  setSelectedRss]  = useState<Set<string>>(new Set());
+  const [selApiSrc,    setSelApiSrc]    = useState("newsapi");
+  const [selEndpoint,  setSelEndpoint]  = useState(0);
+  const [savedKeys,    setSavedKeys]    = useState(false);
+  const [autoImport,   setAutoImport]   = useState(false);
 
-  const loadFeeds = async () => {
-    const { data } = await supabase.from("site_settings").select("value").eq("key","rss_feeds").single();
-    if (data?.value) {
-      try {
-        const parsed = JSON.parse(data.value);
-        setFeeds(Array.isArray(parsed) && parsed.length ? parsed : DEFAULT_FEEDS);
-      } catch { setFeeds(DEFAULT_FEEDS); }
-    } else {
-      setFeeds(DEFAULT_FEEDS);
-      await supabase.from("site_settings").upsert({ key:"rss_feeds", value: JSON.stringify(DEFAULT_FEEDS) });
-    }
-  };
-
-  const saveFeeds = async (updated: Feed[]) => {
-    setFeeds(updated);
-    await supabase.from("site_settings").upsert({ key:"rss_feeds", value: JSON.stringify(updated) });
-  };
-
-  const loadCats = async () => {
-    const { data } = await supabase.from("categories").select("id,name_ar,slug").eq("is_active",true).order("sort_order");
-    if (data) { setCats(data); setTargetCatId(data[0]?.id||""); }
-  };
-
-  const loadStats = async () => {
-    const [total, today] = await Promise.all([
-      supabase.from("articles").select("id",{count:"exact",head:true}),
-      supabase.from("articles").select("id",{count:"exact",head:true})
-        .gte("created_at", new Date(Date.now()-86400000).toISOString()),
-    ]);
-    setStats(s=>({ ...s, total: total.count||0, today: today.count||0 }));
-  };
-
-  const fetchFeed = async (feed: Feed) => {
-    setActiveFeed(feed);
-    setLoading(true);
-    setItems([]);
-
-    // Load existing slugs to detect duplicates
-    const { data: slugData } = await supabase.from("articles").select("slug,source_url").limit(500);
-    const slugSet = new Set((slugData||[]).map((a:any)=>a.slug));
-    const urlSet  = new Set((slugData||[]).map((a:any)=>a.source_url).filter(Boolean));
-    setExistingSlugs(slugSet);
-
-    try {
-      let xml: Document | null = null;
-
-      // Try proxy 1
-      try {
-        const r1 = await fetch(`${PROXY}${encodeURIComponent(feed.url)}`, { signal: AbortSignal.timeout(8000) });
-        const d1 = await r1.json();
-        xml = new DOMParser().parseFromString(d1.contents, "text/xml");
-        if (!xml.querySelector("item, entry")) throw new Error("empty");
-      } catch {
-        // Try proxy 2
-        try {
-          const r2 = await fetch(`${PROXY2}${encodeURIComponent(feed.url)}`, { signal: AbortSignal.timeout(8000) });
-          const text = await r2.text();
-          xml = new DOMParser().parseFromString(text, "text/xml");
-        } catch {
-          // Try rss2json as last resort
-          const r3 = await fetch(`https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(feed.url)}&count=20`);
-          const d3 = await r3.json();
-          if (d3.items?.length) {
-            const parsed: RssItem[] = d3.items.map((item:any) => {
-              const link = item.link || item.guid || "";
-              const isDup = urlSet.has(link);
-              return {
-                title: item.title || "",
-                link,
-                description: (item.description||item.content||"").replace(/<[^>]*>/g,"").slice(0,250),
-                pubDate: item.pubDate || new Date().toISOString(),
-                image: item.enclosure?.link || item.thumbnail || "",
-                source: feed.name,
-                guid: link,
-                selected: !isDup,
-                duplicate: isDup,
-              };
-            }).filter((i:RssItem)=>i.title);
-            setItems(parsed);
-            toast.success(`✅ جلب ${parsed.length} خبر من ${feed.name}`);
-            setLoading(false);
-            return;
-          }
-          throw new Error("All proxies failed");
+  // Load cats
+  useEffect(() => {
+    supabase.from("categories").select("id,name_ar,slug").order("sort_order")
+      .then(({ data }) => {
+        if (data) {
+          setCategories(data);
+          const m: Record<string,string> = {};
+          data.forEach(c => { m[c.name_ar] = c.id; m[c.slug] = c.id; });
+          setCatMap(m);
         }
+      });
+    // Load saved API keys from settings
+    const keys: Record<string,string> = {};
+    NEWS_APIS.forEach(api => {
+      if (settings?.[api.settingKey]) keys[api.id] = settings[api.settingKey];
+    });
+    if (Object.keys(keys).length > 0) setApiKeys(keys);
+  }, [settings]);
+
+  // ── Save API keys to site_settings ──
+  const saveKeys = async () => {
+    for (const api of NEWS_APIS) {
+      const val = apiKeys[api.id] || "";
+      await supabase.from("site_settings").upsert({ key: api.settingKey, value: val }, { onConflict: "key" });
+    }
+    await refetch();
+    setSavedKeys(true);
+    toast.success("✅ تم حفظ مفاتيح API");
+    setTimeout(() => setSavedKeys(false), 2000);
+  };
+
+  // ── Parse RSS Feed ──
+  const parseRss = async (url: string): Promise<ScrapedArticle[]> => {
+    const res = await fetch(`${PROXY}${encodeURIComponent(url)}`, { signal: AbortSignal.timeout(10000) });
+    const txt = await res.text();
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(txt, "text/xml");
+    const items = Array.from(doc.querySelectorAll("item")).slice(0, 15);
+    return items.map(item => {
+      const title   = item.querySelector("title")?.textContent?.trim() || "";
+      const desc    = item.querySelector("description")?.textContent?.replace(/<[^>]+>/g, "").trim() || "";
+      const link    = item.querySelector("link")?.textContent?.trim() || "";
+      const pubDate = item.querySelector("pubDate")?.textContent?.trim() || "";
+      const imgEl   = item.querySelector("enclosure[type^='image'], media\\:thumbnail, media\\:content");
+      const img     = imgEl?.getAttribute("url") || imgEl?.getAttribute("src") || "";
+      return {
+        title, excerpt: desc.slice(0, 300), content: desc,
+        featured_image: img, source: url,
+        source_url: link, published_at: pubDate || new Date().toISOString(),
+        catLabel: "",
+      };
+    }).filter(a => a.title.length > 5);
+  };
+
+  // ── Fetch from NewsAPI ──
+  const fetchNewsAPI = async (q: string, lang: string): Promise<ScrapedArticle[]> => {
+    const key = apiKeys["newsapi"];
+    if (!key) { toast.error("أدخل NewsAPI Key أولاً"); return []; }
+    // Use proxy to avoid CORS
+    const apiUrl = `https://newsapi.org/v2/everything?q=${encodeURIComponent(q)}&language=${lang}&pageSize=20&apiKey=${key}`;
+    const res = await fetch(`${PROXY}${encodeURIComponent(apiUrl)}`);
+    const data = await res.json();
+    if (data.status !== "ok") { toast.error(data.message || "خطأ في NewsAPI"); return []; }
+    return (data.articles || []).map((a: Record<string,string>) => ({
+      title: a.title || "", excerpt: a.description || "",
+      content: a.content || a.description || "",
+      featured_image: a.urlToImage || "",
+      source: a.source?.name || "NewsAPI",
+      source_url: a.url || "",
+      published_at: a.publishedAt || new Date().toISOString(),
+      catLabel: "",
+    })).filter((a:ScrapedArticle) => a.title && !a.title.includes("[Removed]"));
+  };
+
+  // ── Fetch from GNews ──
+  const fetchGNews = async (q: string, lang: string): Promise<ScrapedArticle[]> => {
+    const key = apiKeys["gnews"];
+    if (!key) { toast.error("أدخل GNews Key أولاً"); return []; }
+    const apiUrl = `https://gnews.io/api/v4/search?q=${encodeURIComponent(q)}&lang=${lang}&max=20&apikey=${key}`;
+    const res = await fetch(`${PROXY}${encodeURIComponent(apiUrl)}`);
+    const data = await res.json();
+    return (data.articles || []).map((a: Record<string,string>) => ({
+      title: a.title || "", excerpt: a.description || "",
+      content: a.content || a.description || "",
+      featured_image: a.image || "",
+      source: a.source?.name || "GNews",
+      source_url: a.url || "",
+      published_at: a.publishedAt || new Date().toISOString(),
+      catLabel: "",
+    }));
+  };
+
+  // ── Fetch from Mediastack ──
+  const fetchMediastack = async (q: string, lang: string): Promise<ScrapedArticle[]> => {
+    const key = apiKeys["mediastack"];
+    if (!key) { toast.error("أدخل Mediastack Key أولاً"); return []; }
+    const apiUrl = `http://api.mediastack.com/v1/news?access_key=${key}&languages=${lang}&keywords=${encodeURIComponent(q)}&limit=20`;
+    const res = await fetch(`${PROXY}${encodeURIComponent(apiUrl)}`);
+    const data = await res.json();
+    return (data.data || []).map((a: Record<string,string>) => ({
+      title: a.title || "", excerpt: a.description || "",
+      content: a.description || "",
+      featured_image: a.image || "",
+      source: a.source || "Mediastack",
+      source_url: a.url || "",
+      published_at: a.published_at || new Date().toISOString(),
+      catLabel: "",
+    }));
+  };
+
+  // ── Main fetch action ──
+  const fetchNews = useCallback(async () => {
+    setLoading(true); setScraped([]); setSelected(new Set());
+    try {
+      let articles: ScrapedArticle[] = [];
+
+      if (tab === "rss") {
+        if (selectedRss.size === 0) { toast.error("اختر مصدر RSS واحد على الأقل"); setLoading(false); return; }
+        for (const srcId of selectedRss) {
+          const src = RSS_SOURCES.find(s => s.id === srcId);
+          if (!src) continue;
+          try {
+            const arts = await parseRss(src.url);
+            articles.push(...arts.map(a => ({ ...a, catLabel: src.cat, source: src.name })));
+          } catch { toast.error(`فشل تحميل ${src.name}`); }
+        }
+      } else {
+        const api = NEWS_APIS.find(a => a.id === selApiSrc);
+        if (!api) { setLoading(false); return; }
+        const ep = api.endpoints[selEndpoint];
+        if (selApiSrc === "newsapi")    articles = await fetchNewsAPI(ep.q, ep.lang);
+        else if (selApiSrc === "gnews") articles = await fetchGNews(ep.q, ep.lang);
+        else                            articles = await fetchMediastack(ep.q, ep.lang);
+        articles = articles.map(a => ({ ...a, catLabel: ep.label }));
       }
 
-      if (!xml) throw new Error("No XML");
-      const entries = Array.from(xml.querySelectorAll("item, entry")).slice(0, 25);
-      const parsed: RssItem[] = entries.map(el => {
-        const get = (selectors: string) => {
-          for (const s of selectors.split(",")) {
-            const v = el.querySelector(s.trim())?.textContent?.trim();
-            if (v) return v;
-          }
-          return "";
-        };
-        const link = get("link") || el.querySelector("link")?.getAttribute("href") || "";
-        const mediaImg = el.querySelector("media\\:content, enclosure, media\\:thumbnail")?.getAttribute("url") ||
-          el.querySelector("[url]")?.getAttribute("url") || "";
-        // Also try to find image in description
-        const descHtml = get("description, summary, content");
-        const imgMatch = descHtml.match(/<img[^>]+src=["']([^"']+)["']/i);
-        const image = mediaImg || imgMatch?.[1] || "";
-        const isDup = urlSet.has(link);
-        return {
-          title: get("title"),
-          link,
-          description: descHtml.replace(/<[^>]*>/g,"").slice(0, 250),
-          pubDate: get("pubDate, published, updated"),
-          image,
-          source: feed.name,
-          guid: link || get("guid"),
-          selected: !isDup,
-          duplicate: isDup,
-        };
-      }).filter(i => i.title);
+      if (!articles.length) { toast.error("لا توجد أخبار — جرب مصدراً آخر"); setLoading(false); return; }
 
-      setItems(parsed);
-      toast.success(`✅ جلب ${parsed.length} خبر من ${feed.name}`);
+      // Auto-assign category from catLabel
+      const withCats = articles.map(a => ({ ...a, catLabel: a.catLabel || "أخبار مصر" }));
+      setScraped(withCats);
+      setSelected(new Set(withCats.map((_, i) => i)));
+      toast.success(`✅ تم جلب ${withCats.length} خبر`);
     } catch (e) {
-      toast.error(`❌ فشل جلب ${feed.name} — تأكد من الرابط`);
-      console.error(e);
+      toast.error("خطأ في الاتصال — تحقق من مفاتيح API");
     }
     setLoading(false);
-  };
+  }, [tab, selectedRss, selApiSrc, selEndpoint, apiKeys]);
 
-  const importSelected = async () => {
-    const selected = items.filter(i=>i.selected && !i.duplicate);
-    if (!selected.length) { toast.error("اختر أخباراً للاستيراد"); return; }
-    if (!targetCatId) { toast.error("اختر قسماً أولاً"); return; }
+  // ── Import selected articles to Supabase ──
+  const importArticles = async () => {
+    if (selected.size === 0) { toast.error("اختر أخباراً للاستيراد"); return; }
     setImporting(true);
-    let ok = 0; let fail = 0;
-    for (const item of selected) {
-      const slug = toSlug(item.title);
-      const { error } = await supabase.from("articles").insert({
-        title: item.title,
+    let ok = 0, skip = 0;
+
+    const { data: { user } } = await supabase.auth.getUser();
+
+    for (const idx of selected) {
+      const a = scraped[idx];
+      const catId = catMap[a.catLabel] || catMap["أخبار مصر"] || categories[0]?.id;
+      if (!catId) continue;
+
+      // Generate unique slug
+      const slug = a.title.slice(0, 60)
+        .replace(/\s+/g, "-").replace(/[^a-zA-Z0-9\u0600-\u06FF-]/g, "")
+        .toLowerCase() + "-" + Date.now().toString(36);
+
+      const payload = {
+        title: a.title,
         slug,
-        excerpt: item.description,
-        content: `<p>${item.description}</p>`,
-        featured_image: item.image || null,
-        status,
-        category_id: targetCatId || null,
-        source_url: item.link,
-        source_name: item.source,
-        custom_author_name: item.source,
-        published_at: status==="published" ? (item.pubDate ? new Date(item.pubDate).toISOString() : new Date().toISOString()) : null,
-      });
-      if (!error) ok++; else fail++;
+        excerpt: a.excerpt?.slice(0, 500) || a.title,
+        content: `<p>${(a.content || a.excerpt || a.title).replace(/\n/g, "</p><p>")}</p>`,
+        featured_image: a.featured_image || null,
+        category_id: catId,
+        author_id: user?.id || null,
+        custom_author_name: a.source,
+        status: "published",
+        published_at: new Date(a.published_at).toISOString(),
+        reading_time: Math.ceil((a.content?.split(" ").length || 50) / 200),
+      };
+
+      const { error } = await supabase.from("articles").insert(payload);
+      if (error) {
+        if (error.code === "23505") skip++; // duplicate
+        else console.error(error);
+      } else ok++;
     }
-    // Log
-    await supabase.from("automation_logs").insert({
-      type:"rss_import", status: fail>0?"partial":"success",
-      message:`استيراد من ${activeFeed?.name}: ${ok} ناجح, ${fail} فشل`,
-      articles_processed: ok,
-    });
-    toast.success(`✅ تم استيراد ${ok} خبر بنجاح${fail>0?` (${fail} فشل)`:""}`);
-    setStats(s=>({...s, today: s.today+ok, total: s.total+ok, imported: s.imported+ok}));
-    // Mark imported items
-    setItems(prev=>prev.map(i=>i.selected ? {...i, selected:false, duplicate:true} : i));
+
     setImporting(false);
+    if (ok > 0)   toast.success(`✅ تم نشر ${ok} خبر على الموقع!`);
+    if (skip > 0) toast.info(`${skip} خبر موجود مسبقاً، تم تخطيه`);
+
+    // Clear imported
+    const newScraped = scraped.filter((_, i) => !selected.has(i));
+    setScraped(newScraped);
+    setSelected(new Set());
   };
 
-  const toggleAll = (val:boolean) => setItems(prev=>prev.map(i=>i.duplicate?i:{...i,selected:val}));
-  const allSelected = items.length > 0 && items.filter(i=>!i.duplicate).every(i=>i.selected);
-  const selectedCount = items.filter(i=>i.selected).length;
-  const filtered = items.filter(i=>!searchQ || i.title.includes(searchQ) || i.description.includes(searchQ));
+  const toggleSelect = (i: number) =>
+    setSelected(s => { const n = new Set(s); n.has(i) ? n.delete(i) : n.add(i); return n; });
+
+  const selectAll   = () => setSelected(new Set(scraped.map((_, i) => i)));
+  const deselectAll = () => setSelected(new Set());
+
+  const curApi = NEWS_APIS.find(a => a.id === selApiSrc);
 
   return (
-    <div className="space-y-4 p-4 max-w-7xl mx-auto" dir="rtl">
-      {/* Header */}
+    <div className="space-y-6 max-w-6xl mx-auto" dir="rtl">
+
+      {/* ── Page Title ── */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-black flex items-center gap-2"><Rss className="w-6 h-6 text-primary"/>سحب الأخبار RSS</h1>
-          <p className="text-sm text-muted-foreground mt-0.5">استيراد الأخبار من المصادر الخارجية تلقائياً</p>
+          <h1 className="text-2xl font-black flex items-center gap-2">
+            <Rss className="w-7 h-7 text-primary"/>
+            سحب الأخبار تلقائياً
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            اختر مصدرك واسحب الأخبار مباشرةً إلى الموقع
+          </p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <div className="bg-card border border-border rounded-xl px-3 py-2 text-center min-w-[70px]">
-            <div className="text-lg font-black text-primary">{stats.total.toLocaleString("ar-EG")}</div>
-            <div className="text-[10px] text-muted-foreground">إجمالي المقالات</div>
-          </div>
-          <div className="bg-card border border-border rounded-xl px-3 py-2 text-center min-w-[70px]">
-            <div className="text-lg font-black text-green-500">{stats.today}</div>
-            <div className="text-[10px] text-muted-foreground">اليوم</div>
-          </div>
-        </div>
+        <button onClick={() => setShowKeys(k => !k)}
+          className="flex items-center gap-2 text-xs font-bold px-4 py-2 rounded-xl border border-border hover:bg-muted transition-colors">
+          <Key className="w-3.5 h-3.5"/>
+          إعدادات API Keys
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        {/* ─── Left: Feed List ─── */}
-        <div className="space-y-3">
-          <div className="bg-card border border-border rounded-2xl p-4 space-y-2">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="font-black text-sm">المصادر ({feeds.length})</h3>
-              <button onClick={()=>setShowAddFeed(s=>!s)}
-                className="w-7 h-7 bg-primary/10 hover:bg-primary/20 rounded-lg flex items-center justify-center transition-colors">
-                <Plus className="w-4 h-4 text-primary"/>
-              </button>
-            </div>
-
-            {/* Add feed form */}
-            <AnimatePresence>
-            {showAddFeed && (
-              <motion.div initial={{height:0,opacity:0}} animate={{height:"auto",opacity:1}} exit={{height:0,opacity:0}}
-                className="overflow-hidden">
-                <div className="bg-muted rounded-xl p-3 space-y-2 mb-2">
-                  <input value={newFeed.name} onChange={e=>setNewFeed(s=>({...s,name:e.target.value}))}
-                    placeholder="اسم المصدر" className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50"/>
-                  <input value={newFeed.url} onChange={e=>setNewFeed(s=>({...s,url:e.target.value}))}
-                    placeholder="https://...rss" dir="ltr"
-                    className="w-full bg-background border border-border rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50"/>
-                  <div className="flex gap-2">
-                    <input value={newFeed.icon} onChange={e=>setNewFeed(s=>({...s,icon:e.target.value}))}
-                      className="w-12 bg-background border border-border rounded-lg px-2 py-1.5 text-xs text-center"/>
-                    <button onClick={()=>{
-                      if(!newFeed.name||!newFeed.url) return;
-                      const updated=[...feeds,{id:`custom_${Date.now()}`,name:newFeed.name,url:newFeed.url,category_id:"",icon:newFeed.icon,active:true}];
-                      saveFeeds(updated); setNewFeed({name:"",url:"",icon:"📰"}); setShowAddFeed(false);
-                      toast.success("تم إضافة المصدر");
-                    }} className="flex-1 bg-primary text-white rounded-lg text-xs font-bold py-1.5 hover:bg-primary/85 transition-colors">
-                      <Save className="w-3 h-3 inline ml-1"/>حفظ
-                    </button>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-            </AnimatePresence>
-
-            {/* Feed list */}
-            <div className="space-y-1">
-              {feeds.map(feed=>(
-                <div key={feed.id} className={`flex items-center gap-2 p-2 rounded-xl cursor-pointer transition-all group
-                  ${activeFeed?.id===feed.id?"bg-primary/10 border border-primary/30":"hover:bg-muted border border-transparent"}`}
-                  onClick={()=>fetchFeed(feed)}>
-                  <span className="text-base shrink-0">{feed.icon}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold truncate">{feed.name}</p>
-                    <p className="text-[9px] text-muted-foreground truncate" dir="ltr">{feed.url.replace("https://","").slice(0,30)}</p>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    {activeFeed?.id===feed.id && loading && <Loader2 className="w-3 h-3 animate-spin text-primary"/>}
-                    <button onClick={e=>{e.stopPropagation(); const u=feeds.map(f=>f.id===feed.id?{...f,active:!f.active}:f); saveFeeds(u);}}
-                      className={`w-5 h-5 rounded-full transition-colors ${feed.active?"bg-green-500":"bg-muted-foreground/30"}`}/>
-                    <button onClick={e=>{e.stopPropagation(); saveFeeds(feeds.filter(f=>f.id!==feed.id)); toast.success("حُذف المصدر");}}
-                      className="opacity-0 group-hover:opacity-100 transition-opacity w-5 h-5 hover:text-red-500">
-                      <X className="w-3 h-3"/>
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
+      {/* ── API Keys Panel ── */}
+      {showKeys && (
+        <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
+          <h3 className="font-bold flex items-center gap-2 text-sm">
+            <Settings2 className="w-4 h-4 text-primary"/> مفاتيح API
+          </h3>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {NEWS_APIS.map(api => (
+              <div key={api.id} className="space-y-1.5">
+                <label className="text-xs font-bold flex items-center gap-2">
+                  <span className={`w-2 h-2 rounded-full ${api.color}`}/>
+                  {api.name}
+                  <span className="text-muted-foreground font-normal">— {api.freeLimit}</span>
+                  <a href={api.url} target="_blank" rel="noopener noreferrer" className="text-primary hover:opacity-70">
+                    <ExternalLink className="w-3 h-3"/>
+                  </a>
+                </label>
+                <input type="password"
+                  value={apiKeys[api.id] || ""}
+                  onChange={e => setApiKeys(k => ({ ...k, [api.id]: e.target.value }))}
+                  placeholder={`أدخل ${api.name} Key`}
+                  className="w-full text-xs px-3 py-2 rounded-xl bg-muted border border-border focus:border-primary focus:outline-none transition-colors font-mono"/>
+              </div>
+            ))}
           </div>
+          <button onClick={saveKeys}
+            className="flex items-center gap-2 bg-primary text-white text-sm font-bold px-5 py-2 rounded-xl hover:bg-primary/85 transition-colors">
+            {savedKeys ? <Check className="w-4 h-4"/> : <Save className="w-4 h-4"/>}
+            {savedKeys ? "تم الحفظ!" : "حفظ المفاتيح"}
+          </button>
+        </div>
+      )}
 
-          {/* Import settings */}
-          {activeFeed && items.length > 0 && (
-            <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
-              <h3 className="font-black text-sm flex items-center gap-2"><Settings2 className="w-4 h-4 text-primary"/>إعدادات الاستيراد</h3>
-              <div>
-                <label className="text-xs font-bold text-muted-foreground mb-1 block">القسم المستهدف</label>
-                <select value={targetCatId} onChange={e=>setTargetCatId(e.target.value)}
-                  className="w-full bg-muted border border-border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/30">
-                  {cats.map(c=><option key={c.id} value={c.id}>{c.name_ar}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="text-xs font-bold text-muted-foreground mb-1 block">حالة المقال</label>
-                <div className="flex gap-2">
-                  {(["draft","published"] as const).map(s=>(
-                    <button key={s} onClick={()=>setStatus(s)}
-                      className={`flex-1 py-1.5 rounded-xl text-xs font-bold border transition-all
-                        ${status===s?"border-primary bg-primary/10 text-primary":"border-border text-muted-foreground hover:bg-muted"}`}>
-                      {s==="draft"?"📝 مسودة":"🚀 نشر مباشر"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <button onClick={importSelected} disabled={importing||selectedCount===0}
-                className="w-full flex items-center justify-center gap-2 bg-primary text-white py-2.5 rounded-xl font-black text-sm hover:bg-primary/85 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                {importing ? <Loader2 className="w-4 h-4 animate-spin"/> : <Download className="w-4 h-4"/>}
-                {importing ? "جارٍ الاستيراد..." : `استيراد ${selectedCount} خبر`}
-              </button>
-            </div>
-          )}
+      {/* ── Source Tabs ── */}
+      <div className="bg-card border border-border rounded-2xl overflow-hidden">
+        {/* Tab switcher */}
+        <div className="flex border-b border-border">
+          {([
+            { id:"rss", label:"مصادر RSS", icon:<Rss className="w-4 h-4"/> },
+            { id:"api", label:"News API",  icon:<Globe className="w-4 h-4"/> },
+          ] as const).map(t => (
+            <button key={t.id} onClick={() => { setTab(t.id); setScraped([]); setSelected(new Set()); }}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 text-sm font-bold transition-colors
+                ${tab === t.id ? "bg-primary text-white" : "hover:bg-muted text-muted-foreground"}`}>
+              {t.icon}{t.label}
+            </button>
+          ))}
         </div>
 
-        {/* ─── Right: Items grid ─── */}
-        <div className="lg:col-span-2 space-y-3">
-          {/* Toolbar */}
-          {items.length > 0 && (
-            <div className="bg-card border border-border rounded-2xl p-3 flex flex-wrap items-center gap-2">
-              <button onClick={()=>toggleAll(!allSelected)}
-                className="flex items-center gap-1.5 text-xs font-bold hover:text-primary transition-colors">
-                {allSelected ? <CheckSquare className="w-4 h-4 text-primary"/> : <Square className="w-4 h-4"/>}
-                {allSelected ? "إلغاء الكل" : "تحديد الكل"}
-              </button>
-              <div className="flex-1 relative">
-                <Search className="absolute start-2.5 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground"/>
-                <input value={searchQ} onChange={e=>setSearchQ(e.target.value)}
-                  placeholder="بحث في النتائج..."
-                  className="w-full bg-muted rounded-xl ps-7 py-1.5 text-xs focus:outline-none focus:ring-1 focus:ring-primary/50 border border-transparent"/>
+        <div className="p-5">
+          {/* ── RSS Sources ── */}
+          {tab === "rss" && (
+            <div className="space-y-4">
+              <p className="text-xs text-muted-foreground">اختر مصدراً أو أكثر لسحب أحدث مقالاتهم:</p>
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+                {RSS_SOURCES.map(src => {
+                  const sel = selectedRss.has(src.id);
+                  return (
+                    <button key={src.id}
+                      onClick={() => setSelectedRss(s => { const n = new Set(s); sel ? n.delete(src.id) : n.add(src.id); return n; })}
+                      className={`relative p-3 rounded-xl border-2 text-center transition-all ${sel
+                        ? "border-primary bg-primary/10 text-primary"
+                        : "border-border hover:border-primary/40 text-muted-foreground hover:bg-muted"}`}>
+                      {sel && <Check className="w-3 h-3 absolute top-1.5 left-1.5 text-primary"/>}
+                      <Newspaper className="w-5 h-5 mx-auto mb-1"/>
+                      <div className="text-xs font-bold leading-tight">{src.name}</div>
+                      <div className="text-[9px] text-muted-foreground mt-0.5">{src.cat}</div>
+                    </button>
+                  );
+                })}
               </div>
-              <span className="text-xs text-muted-foreground">{selectedCount} محدد / {items.length} إجمالي</span>
             </div>
           )}
 
-          {loading ? (
-            <div className="bg-card border border-border rounded-2xl p-12 flex flex-col items-center gap-3">
-              <Loader2 className="w-8 h-8 animate-spin text-primary"/>
-              <p className="text-sm font-bold">جارٍ جلب الأخبار...</p>
-              <p className="text-xs text-muted-foreground">يستغرق هذا 5-10 ثواني</p>
-            </div>
-          ) : items.length === 0 && !activeFeed ? (
-            <div className="bg-card border border-border rounded-2xl p-12 text-center">
-              <Rss className="w-12 h-12 mx-auto mb-3 text-muted-foreground/20"/>
-              <p className="font-bold text-sm">اختر مصدراً من القائمة لجلب أخباره</p>
-              <p className="text-xs text-muted-foreground mt-1">أو أضف مصدر RSS جديد</p>
-            </div>
-          ) : items.length === 0 && activeFeed ? (
-            <div className="bg-card border border-border rounded-2xl p-8 text-center">
-              <AlertCircle className="w-8 h-8 mx-auto mb-2 text-amber-500"/>
-              <p className="font-bold text-sm">لم يتم جلب أخبار من هذا المصدر</p>
-              <p className="text-xs text-muted-foreground mt-1">قد يكون الرابط غير صحيح أو المصدر لا يدعم RSS</p>
-              <button onClick={()=>activeFeed && fetchFeed(activeFeed)}
-                className="mt-3 flex items-center gap-1.5 mx-auto text-xs font-bold text-primary hover:underline">
-                <RefreshCw className="w-3 h-3"/>إعادة المحاولة
-              </button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {filtered.map((item, idx) => (
-                <motion.div key={idx} initial={{opacity:0,y:10}} animate={{opacity:1,y:0,transition:{delay:idx*0.03}}}
-                  onClick={()=>!item.duplicate && setItems(prev=>prev.map((p,i)=>i===prev.indexOf(item)?{...p,selected:!p.selected}:p))}
-                  className={`relative bg-card border rounded-2xl overflow-hidden transition-all cursor-pointer
-                    ${item.duplicate?"opacity-50 cursor-not-allowed border-muted":
-                      item.selected?"border-primary bg-primary/5 ring-1 ring-primary/30 shadow-md":"border-border hover:border-primary/40 hover:shadow-sm"}`}>
-                  {/* Image */}
-                  {item.image ? (
-                    <div className="aspect-video overflow-hidden">
-                      <img src={item.image} alt={item.title}
-                        className="w-full h-full object-cover"
-                        onError={e=>(e.currentTarget.style.display="none")}/>
-                    </div>
-                  ) : (
-                    <div className="aspect-video bg-muted flex items-center justify-center">
-                      <ImgIcon className="w-6 h-6 text-muted-foreground/20"/>
+          {/* ── API Sources ── */}
+          {tab === "api" && (
+            <div className="space-y-4">
+              {/* API picker */}
+              <div className="flex gap-3 flex-wrap">
+                {NEWS_APIS.map(api => (
+                  <button key={api.id} onClick={() => { setSelApiSrc(api.id); setSelEndpoint(0); }}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold border-2 transition-all
+                      ${selApiSrc === api.id ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/40"}`}>
+                    <span className={`w-2 h-2 rounded-full ${api.color}`}/>
+                    {api.name}
+                    <span className="text-muted-foreground font-normal text-[10px]">{api.freeLimit}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Endpoint picker */}
+              {curApi && (
+                <div className="space-y-2">
+                  <p className="text-xs font-bold text-muted-foreground">اختر موضوع الأخبار:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {curApi.endpoints.map((ep, i) => (
+                      <button key={i} onClick={() => setSelEndpoint(i)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all
+                          ${selEndpoint === i ? "bg-primary text-white" : "bg-muted hover:bg-primary/20"}`}>
+                        {ep.label}
+                      </button>
+                    ))}
+                  </div>
+                  {!apiKeys[selApiSrc] && (
+                    <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 rounded-xl px-3 py-2">
+                      <AlertCircle className="w-4 h-4 shrink-0"/>
+                      <span>أضف <strong>{curApi.name} API Key</strong> من إعدادات API Keys أعلاه</span>
+                      <a href={curApi.url} target="_blank" rel="noopener noreferrer" className="underline font-bold">سجّل مجاناً</a>
                     </div>
                   )}
-                  <div className="p-3 space-y-1.5">
-                    <div className="flex items-start gap-2">
-                      <div className={`w-4 h-4 rounded border-2 shrink-0 mt-0.5 flex items-center justify-center transition-all
-                        ${item.selected&&!item.duplicate?"bg-primary border-primary":"border-muted-foreground/30"}`}>
-                        {item.selected && !item.duplicate && <Check className="w-2.5 h-2.5 text-white"/>}
-                      </div>
-                      <h4 className="text-xs font-bold leading-snug line-clamp-2 flex-1">{item.title}</h4>
-                    </div>
-                    <p className="text-[10px] text-muted-foreground line-clamp-2 pe-6">{item.description}</p>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        <span className="text-[9px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded-full">{item.source}</span>
-                        {item.pubDate && (
-                          <span className="text-[9px] text-muted-foreground flex items-center gap-0.5">
-                            <Clock className="w-2.5 h-2.5"/>
-                            {new Date(item.pubDate).toLocaleDateString("ar-EG",{month:"short",day:"numeric"})}
-                          </span>
-                        )}
-                      </div>
-                      {item.duplicate && <span className="text-[9px] font-bold text-amber-500 bg-amber-500/10 px-1.5 py-0.5 rounded-full">مكرر</span>}
-                      <a href={item.link} target="_blank" rel="noreferrer" onClick={e=>e.stopPropagation()}
-                        className="text-[9px] text-muted-foreground hover:text-primary transition-colors">
-                        <ExternalLink className="w-3 h-3"/>
-                      </a>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
+                </div>
+              )}
             </div>
           )}
+
+          {/* ── Fetch Button ── */}
+          <button onClick={fetchNews} disabled={loading}
+            className="mt-5 w-full flex items-center justify-center gap-2 bg-primary text-white font-black py-3 rounded-xl hover:bg-primary/85 transition-colors disabled:opacity-60 text-sm shadow-sm">
+            {loading ? <Loader2 className="w-5 h-5 animate-spin"/> : <Zap className="w-5 h-5"/>}
+            {loading ? "جارٍ جلب الأخبار..." : "🚀 اسحب الأخبار الآن"}
+          </button>
         </div>
       </div>
+
+      {/* ── Results ── */}
+      {scraped.length > 0 && (
+        <div className="bg-card border border-border rounded-2xl overflow-hidden">
+          {/* Toolbar */}
+          <div className="flex items-center justify-between px-5 py-3 border-b border-border bg-muted/30 flex-wrap gap-3">
+            <div className="flex items-center gap-3">
+              <span className="font-black text-sm">{scraped.length} خبر</span>
+              <span className="text-xs text-muted-foreground">— {selected.size} محدد</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button onClick={selectAll}
+                className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-muted hover:bg-primary/20 transition-colors">
+                <CheckSquare className="w-3.5 h-3.5"/> تحديد الكل
+              </button>
+              <button onClick={deselectAll}
+                className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-xl bg-muted hover:bg-muted/70 transition-colors">
+                <Square className="w-3.5 h-3.5"/> إلغاء الكل
+              </button>
+              <button onClick={importArticles} disabled={importing || selected.size === 0}
+                className="flex items-center gap-1.5 text-xs font-black px-4 py-1.5 rounded-xl bg-green-600 text-white hover:bg-green-700 transition-colors disabled:opacity-50 shadow-sm">
+                {importing ? <Loader2 className="w-3.5 h-3.5 animate-spin"/> : <Download className="w-3.5 h-3.5"/>}
+                {importing ? "جارٍ النشر..." : `نشر ${selected.size} خبر`}
+              </button>
+            </div>
+          </div>
+
+          {/* Article list */}
+          <div className="divide-y divide-border max-h-[60vh] overflow-y-auto">
+            {scraped.map((a, i) => (
+              <div key={i} onClick={() => toggleSelect(i)}
+                className={`flex items-start gap-3 p-4 cursor-pointer transition-colors hover:bg-muted/40
+                  ${selected.has(i) ? "bg-primary/5" : ""}`}>
+                <div className={`mt-0.5 w-5 h-5 rounded-lg border-2 flex items-center justify-center shrink-0 transition-colors
+                  ${selected.has(i) ? "bg-primary border-primary text-white" : "border-border"}`}>
+                  {selected.has(i) && <Check className="w-3 h-3"/>}
+                </div>
+                {a.featured_image && (
+                  <img src={a.featured_image} alt="" className="w-16 h-12 rounded-lg object-cover shrink-0 border border-border"/>
+                )}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold leading-snug line-clamp-2">{a.title}</p>
+                  <div className="flex items-center gap-3 mt-1 flex-wrap">
+                    <span className="text-[10px] text-primary font-bold bg-primary/10 px-2 py-0.5 rounded-full">{a.catLabel}</span>
+                    <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                      <Globe className="w-3 h-3"/> {a.source}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground flex items-center gap-1">
+                      <Clock className="w-3 h-3"/>
+                      {new Date(a.published_at).toLocaleDateString("ar-EG")}
+                    </span>
+                    {a.source_url && (
+                      <a href={a.source_url} target="_blank" rel="noopener noreferrer"
+                        onClick={e => e.stopPropagation()}
+                        className="text-[10px] text-primary hover:underline flex items-center gap-1">
+                        <ExternalLink className="w-3 h-3"/> المصدر الأصلي
+                      </a>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
