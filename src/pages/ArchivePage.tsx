@@ -198,6 +198,7 @@ export default function ArchivePage() {
         )}
       </main>
       
+      <Footer />
     </div>
   );
 }
