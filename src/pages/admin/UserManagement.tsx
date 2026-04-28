@@ -5,15 +5,15 @@ import {
   Users, Plus, Pencil, Trash2, Shield, Eye, EyeOff,
   ToggleLeft, ToggleRight, RefreshCw, Loader2, Check,
   X, Search, UserCheck, UserX, Key, ChevronDown,
-  Crown, Feather, BarChart2, Megaphone
+  Crown, PenLine, BarChart, Megaphone
 } from "lucide-react";
 
 // ── Role config ──
 const ROLES = [
   { key:"super_admin",     label:"مدير عام",         icon: <Crown    className="w-3.5 h-3.5"/>, color:"bg-red-100 text-red-700 border-red-200"    },
   { key:"editor_in_chief", label:"رئيس تحرير",        icon: <Shield   className="w-3.5 h-3.5"/>, color:"bg-purple-100 text-purple-700 border-purple-200" },
-  { key:"journalist",      label:"صحفي",              icon: <Feather  className="w-3.5 h-3.5"/>, color:"bg-blue-100 text-blue-700 border-blue-200"  },
-  { key:"analyst",         label:"محلل",              icon: <BarChart2 className="w-3.5 h-3.5"/>, color:"bg-green-100 text-green-700 border-green-200" },
+  { key:"journalist",      label:"صحفي",              icon: <PenLine  className="w-3.5 h-3.5"/>, color:"bg-blue-100 text-blue-700 border-blue-200"  },
+  { key:"analyst",         label:"محلل",              icon: <BarChart className="w-3.5 h-3.5"/>, color:"bg-green-100 text-green-700 border-green-200" },
   { key:"ads_manager",     label:"مدير إعلانات",      icon: <Megaphone className="w-3.5 h-3.5"/>, color:"bg-amber-100 text-amber-700 border-amber-200" },
 ] as const;
 
