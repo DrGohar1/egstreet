@@ -1,4 +1,4 @@
-import { Shield, Crown, Feather, BarChart2, Megaphone, Check, X } from "lucide-react";
+import { Shield, Crown, PenLine, BarChart, Megaphone, Check, X } from "lucide-react";
 
 type Perm = { label: string; desc: string };
 type Section = { title: string; perms: Perm[] };
@@ -57,8 +57,8 @@ const MATRIX: Record<string, (boolean|string)[]> = {
 const ROLES = [
   { key:"super_admin",     label:"مدير عام",      icon: <Crown     className="w-4 h-4"/>, color:"text-red-600 bg-red-50 border-red-200"       },
   { key:"editor_in_chief", label:"رئيس تحرير",    icon: <Shield    className="w-4 h-4"/>, color:"text-purple-600 bg-purple-50 border-purple-200" },
-  { key:"journalist",      label:"صحفي",           icon: <Feather   className="w-4 h-4"/>, color:"text-blue-600 bg-blue-50 border-blue-200"     },
-  { key:"analyst",         label:"محلل",           icon: <BarChart2 className="w-4 h-4"/>, color:"text-green-600 bg-green-50 border-green-200"  },
+  { key:"journalist",      label:"صحفي",           icon: <PenLine   className="w-4 h-4"/>, color:"text-blue-600 bg-blue-50 border-blue-200"     },
+  { key:"analyst",         label:"محلل",           icon: <BarChart className="w-4 h-4"/>, color:"text-green-600 bg-green-50 border-green-200"  },
   { key:"ads_manager",     label:"مدير إعلانات",   icon: <Megaphone className="w-4 h-4"/>, color:"text-amber-600 bg-amber-50 border-amber-200"  },
 ];
 
