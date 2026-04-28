@@ -182,11 +182,16 @@ export default function Header() {
                   {siteName.replace("جريدة ", "")}
                 </div>
                 <div className="text-[9px] text-muted-foreground/70 font-medium leading-none">{slogan}</div>
-                {editorName && (
-                  <div className="text-[9px] text-primary/80 font-bold leading-none mt-0.5">
-                    رئيس التحرير: {editorName}
+                <div className="flex flex-col gap-0.5 mt-0.5">
+                  <div className="text-[8px] font-bold text-red-600/90 leading-none">
+                    رئيس مجلس الإدارة: <span className="text-foreground">د/محمود عليوة</span>
                   </div>
-                )}
+                  <div className="text-[8px] font-bold text-primary/90 leading-none">
+                    رئيس التحرير: <span className="text-foreground">ممدوح القعيد</span>
+                    <span className="mx-1 text-muted-foreground/40">|</span>
+                    مدير التحرير: <span className="text-foreground">محمد عنبر</span>
+                  </div>
+                </div>
               </div>
             </Link>
 
