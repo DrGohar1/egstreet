@@ -1,4 +1,5 @@
 import { Helmet } from "react-helmet-async";
+import { useSiteSettings } from "@/hooks/useSiteSettings";
 
 interface Props {
   title?: string;
@@ -16,17 +17,24 @@ interface Props {
 
 const SITE_NAME = "الشارع المصري";
 const SITE_URL  = import.meta.env.VITE_SITE_URL || "https://egstreetnews.com";
-const DEFAULT_IMAGE = "https://neojditfucitnovcfspw.supabase.co/storage/v1/object/public/site-assets/og-default.jpg.png";
+const FALLBACK_IMAGE = "/pwa-192.png";
 
 export default function SEOHead({
   title, description, image, url, type = "website",
   publishedAt, updatedAt, authorName, categoryName, keywords = [], noIndex = false,
 }: Props) {
-  const fullTitle   = title ? `${title} | ${SITE_NAME}` : `${SITE_NAME} — أخبار مصر والعالم`;
-  const desc        = description || "جريدة الشارع المصري — أخبار مصر والعالم العربي لحظة بلحظة";
-  const img         = image || DEFAULT_IMAGE;
-  const canonical   = url ? (url.startsWith("http") ? url : `${SITE_URL}${url}`) : SITE_URL;
-  const kw          = keywords.join(", ") || "أخبار مصر, الشارع المصري, أخبار عاجلة, مصر";
+  const { settings } = useSiteSettings();
+
+  const defaultOgImage = settings?.og_default_image || settings?.logo_url || FALLBACK_IMAGE;
+  const siteDesc = settings?.site_description_ar || "جريدة الشارع المصري — أخبار مصر والعالم العربي لحظة بلحظة";
+  const siteKw   = settings?.meta_keywords || "أخبار مصر, الشارع المصري, أخبار عاجلة, مصر";
+  const twitterHandle = settings?.twitter_url?.split("/").pop() ? `@${settings.twitter_url?.split("/").pop()}` : "@egstreet";
+
+  const fullTitle = title ? `${title} | ${SITE_NAME}` : `${SITE_NAME} — أخبار مصر والعالم`;
+  const desc      = description || siteDesc;
+  const img       = image || defaultOgImage;
+  const canonical = url ? (url.startsWith("http") ? url : `${SITE_URL}${url}`) : SITE_URL;
+  const kw        = keywords.length ? keywords.join(", ") : siteKw;
 
   const articleSchema = type === "article" ? JSON.stringify({
     "@context": "https://schema.org",
@@ -66,9 +74,8 @@ export default function SEOHead({
       <meta name="description" content={desc}/>
       <meta name="keywords" content={kw}/>
       <link rel="canonical" href={canonical}/>
-      {noIndex && <meta name="robots" content="noindex,nofollow"/>}
+      {noIndex  && <meta name="robots" content="noindex,nofollow"/>}
       {!noIndex && <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1"/>}
-      <meta name="google-site-verification" content=""/>
 
       {/* OpenGraph */}
       <meta property="og:type" content={type}/>
@@ -88,24 +95,15 @@ export default function SEOHead({
 
       {/* Twitter/X Card */}
       <meta name="twitter:card" content="summary_large_image"/>
-      <meta name="twitter:site" content="@egstreet"/>
+      <meta name="twitter:site" content={twitterHandle}/>
       <meta name="twitter:title" content={fullTitle}/>
       <meta name="twitter:description" content={desc}/>
       <meta name="twitter:image" content={img}/>
       <meta name="twitter:image:alt" content={title || SITE_NAME}/>
 
-      {/* Mobile / PWA */}
-      <meta name="theme-color" content="#c41e2a"/>
-      <meta name="mobile-web-app-capable" content="yes"/>
-      <meta name="apple-mobile-web-app-capable" content="yes"/>
-      <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
-      <meta name="apple-mobile-web-app-title" content={SITE_NAME}/>
-      <link rel="apple-touch-icon" href="/pwa-192.png"/>
-      <link rel="manifest" href="/manifest.json"/>
-
-      {/* JSON-LD Structured Data */}
-      {articleSchema && <script type="application/ld+json">{articleSchema}</script>}
+      {/* Schema.org */}
       <script type="application/ld+json">{websiteSchema}</script>
+      {articleSchema && <script type="application/ld+json">{articleSchema}</script>}
     </Helmet>
   );
 }
