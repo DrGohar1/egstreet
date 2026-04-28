@@ -1,6 +1,7 @@
 -- ══════════════════════════════════════════════════════════════════
---  FINAL_ALL_IN_ONE.sql  (v3 — FIXED)
---  profiles جدول عنده id (PK خاص) و user_id (FK → auth.users)
+--  FINAL_ALL_IN_ONE.sql  (v4 — FINAL CORRECT)
+--  categories: لا يوجد is_active
+--  profiles: user_id هو الـ FK
 -- ══════════════════════════════════════════════════════════════════
 
 -- ════════════════════════════════
@@ -10,8 +11,7 @@ DELETE FROM public.user_roles
 WHERE user_id NOT IN (SELECT id FROM auth.users);
 
 -- ════════════════════════════════
---  STEP 2 — مزامنة profiles (الصح)
---  id = UUID جديد، user_id = id من auth.users
+--  STEP 2 — مزامنة profiles
 -- ════════════════════════════════
 INSERT INTO public.profiles (id, user_id, username, display_name, email, is_active)
 SELECT
@@ -22,7 +22,9 @@ SELECT
   u.email,
   true
 FROM auth.users u
-WHERE u.id NOT IN (SELECT user_id FROM public.profiles WHERE user_id IS NOT NULL)
+WHERE u.id NOT IN (
+  SELECT user_id FROM public.profiles WHERE user_id IS NOT NULL
+)
 ON CONFLICT DO NOTHING;
 
 -- ════════════════════════════════
@@ -38,22 +40,22 @@ ON CONFLICT (user_id) DO NOTHING;
 --  STEP 4 — site_settings
 -- ════════════════════════════════
 INSERT INTO public.site_settings (key, value) VALUES
-  ('chief_editor_name',   'محمد جوهر'),
-  ('chief_editor_title',  'رئيس التحرير'),
-  ('newspaper_address',   'القاهرة، جمهورية مصر العربية'),
-  ('newspaper_phone',     '+20 10 0000 0000'),
-  ('newspaper_email',     'info@egstreetnews.com'),
-  ('ads_email',           'ads@egstreetnews.com'),
-  ('newsletter_text',     'اشترك واحصل على أبرز الأخبار يومياً'),
-  ('weather_city',        'القاهرة'),
-  ('newsapi_key',         ''),
-  ('gnews_key',           ''),
-  ('mediastack_key',      ''),
-  ('facebook_url',        ''),
-  ('twitter_url',         ''),
-  ('instagram_url',       ''),
-  ('youtube_url',         ''),
-  ('live_url',            '')
+  ('chief_editor_name',  'محمد جوهر'),
+  ('chief_editor_title', 'رئيس التحرير'),
+  ('newspaper_address',  'القاهرة، جمهورية مصر العربية'),
+  ('newspaper_phone',    '+20 10 0000 0000'),
+  ('newspaper_email',    'info@egstreetnews.com'),
+  ('ads_email',          'ads@egstreetnews.com'),
+  ('newsletter_text',    'اشترك واحصل على أبرز الأخبار يومياً'),
+  ('weather_city',       'القاهرة'),
+  ('newsapi_key',        ''),
+  ('gnews_key',          ''),
+  ('mediastack_key',     ''),
+  ('facebook_url',       ''),
+  ('twitter_url',        ''),
+  ('instagram_url',      ''),
+  ('youtube_url',        ''),
+  ('live_url',           '')
 ON CONFLICT (key) DO NOTHING;
 
 -- ════════════════════════════════
@@ -74,12 +76,13 @@ ON CONFLICT (slug) DO NOTHING;
 
 -- ════════════════════════════════
 --  STEP 6 — أقسام إضافية
+--  categories ليس فيها is_active
 -- ════════════════════════════════
-INSERT INTO public.categories (name_ar, name_en, slug, sort_order, is_active) VALUES
-  ('حوادث',  'Accidents', 'accidents',  8,  true),
-  ('صحة',    'Health',    'health',     9,  true),
-  ('منوعات', 'Misc',      'misc',       10, true),
-  ('محليات', 'Local',     'local',      11, true)
+INSERT INTO public.categories (name_ar, name_en, slug, sort_order) VALUES
+  ('حوادث',  'Accidents', 'accidents',  8),
+  ('صحة',    'Health',    'health',     9),
+  ('منوعات', 'Misc',      'misc',       10),
+  ('محليات', 'Local',     'local',      11)
 ON CONFLICT (slug) DO NOTHING;
 
 -- ════════════════════════════════
@@ -112,19 +115,19 @@ BEGIN
   SELECT
     u.id,
     u.email::text,
-    COALESCE(p.display_name, split_part(u.email,'@',1))  AS display_name,
-    COALESCE(p.username,     split_part(u.email,'@',1))  AS username,
+    COALESCE(p.display_name, split_part(u.email,'@',1)),
+    COALESCE(p.username,     split_part(u.email,'@',1)),
     p.avatar_url,
     p.phone,
-    COALESCE(p.is_active,            true)               AS is_active,
-    COALESCE(p.must_change_password, false)              AS must_change_password,
+    COALESCE(p.is_active,            true),
+    COALESCE(p.must_change_password, false),
     u.created_at,
-    u.last_sign_in_at                                    AS last_sign_in,
-    COALESCE(r.role, 'journalist')::text                 AS role,
-    COALESCE(p.articles_count, 0)::bigint                AS articles_count
+    u.last_sign_in_at,
+    COALESCE(r.role, 'journalist')::text,
+    COALESCE(p.articles_count, 0)::bigint
   FROM auth.users       u
-  LEFT JOIN public.profiles   p ON p.user_id  = u.id
-  LEFT JOIN public.user_roles r ON r.user_id  = u.id
+  LEFT JOIN public.profiles   p ON p.user_id = u.id
+  LEFT JOIN public.user_roles r ON r.user_id = u.id
   ORDER BY u.created_at ASC;
 END;
 $$;
@@ -168,7 +171,7 @@ BEGIN
     WHERE id = p_user_id;
   END IF;
 
-  RETURN json_build_object('success', true, 'user_id', p_user_id::text);
+  RETURN json_build_object('success', true);
 END;
 $$;
 
@@ -203,9 +206,7 @@ BEGIN
     RAISE EXCEPTION 'Unauthorized';
   END IF;
 
-  UPDATE public.profiles
-  SET is_active = p_active
-  WHERE user_id = p_user_id;
+  UPDATE public.profiles SET is_active = p_active WHERE user_id = p_user_id;
 
   UPDATE auth.users
   SET banned_until = CASE WHEN p_active THEN NULL ELSE 'infinity'::timestamptz END
@@ -226,20 +227,31 @@ GRANT EXECUTE ON FUNCTION public.admin_toggle_active(uuid,boolean) TO authentica
 -- ════════════════════════════════
 --  ✅ FINAL CHECK — تقرير شامل
 -- ════════════════════════════════
-SELECT '✅ auth.users'    AS الجدول, count(*)::text AS العدد FROM auth.users
-UNION ALL SELECT '✅ profiles',              count(*)::text FROM public.profiles
-UNION ALL SELECT '✅ user_roles',            count(*)::text FROM public.user_roles
-UNION ALL SELECT '✅ categories',            count(*)::text FROM public.categories
-UNION ALL SELECT '✅ pages',                 count(*)::text FROM public.pages
-UNION ALL SELECT '✅ site_settings',         count(*)::text FROM public.site_settings
-UNION ALL SELECT '✅ articles',              count(*)::text FROM public.articles
-UNION ALL SELECT '✅ RPC admin_get_users',
-  CASE WHEN EXISTS(SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname='admin_get_users')
-  THEN 'موجودة ✅' ELSE 'مش موجودة ❌' END
-UNION ALL SELECT '✅ RPC admin_delete_user',
-  CASE WHEN EXISTS(SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname='admin_delete_user')
-  THEN 'موجودة ✅' ELSE 'مش موجودة ❌' END
-UNION ALL SELECT '✅ RPC admin_update_user',
-  CASE WHEN EXISTS(SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='public' AND p.proname='admin_update_user')
-  THEN 'موجودة ✅' ELSE 'مش موجودة ❌' END
+SELECT '01 - auth.users'     AS الخطوة, count(*)::text AS النتيجة FROM auth.users
+UNION ALL SELECT '02 - profiles',        count(*)::text FROM public.profiles
+UNION ALL SELECT '03 - user_roles',      count(*)::text FROM public.user_roles
+UNION ALL SELECT '04 - categories',      count(*)::text FROM public.categories
+UNION ALL SELECT '05 - pages',           count(*)::text FROM public.pages
+UNION ALL SELECT '06 - site_settings',   count(*)::text FROM public.site_settings
+UNION ALL SELECT '07 - articles',        count(*)::text FROM public.articles
+UNION ALL
+  SELECT '08 - RPC admin_get_users',
+    CASE WHEN EXISTS(SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+         WHERE n.nspname='public' AND p.proname='admin_get_users')
+    THEN 'موجودة ✅' ELSE 'مش موجودة ❌' END
+UNION ALL
+  SELECT '09 - RPC admin_update_user',
+    CASE WHEN EXISTS(SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+         WHERE n.nspname='public' AND p.proname='admin_update_user')
+    THEN 'موجودة ✅' ELSE 'مش موجودة ❌' END
+UNION ALL
+  SELECT '10 - RPC admin_delete_user',
+    CASE WHEN EXISTS(SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+         WHERE n.nspname='public' AND p.proname='admin_delete_user')
+    THEN 'موجودة ✅' ELSE 'مش موجودة ❌' END
+UNION ALL
+  SELECT '11 - RPC admin_toggle_active',
+    CASE WHEN EXISTS(SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+         WHERE n.nspname='public' AND p.proname='admin_toggle_active')
+    THEN 'موجودة ✅' ELSE 'مش موجودة ❌' END
 ORDER BY 1;
