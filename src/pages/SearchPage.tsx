@@ -88,7 +88,7 @@ const SearchPage = () => {
             </Button>
           </div>
           <div className="flex gap-3 flex-wrap items-center">
-            <Sliders className="w-4 h-4 text-muted-foreground" />
+            <SlidersHorizontal className="w-4 h-4 text-muted-foreground" />
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
               <SelectTrigger className="w-48">
                 <SelectValue placeholder={"كل الأقسام"} />
