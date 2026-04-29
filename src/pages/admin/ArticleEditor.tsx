@@ -348,6 +348,52 @@ const ArticleEditor = () => {
     }
   },[id]);
 
+  const [genSeoLoading, setGenSeoLoading] = useState(false);
+
+  // ── AI SEO Generator (smart local — no API key needed) ───
+  const generateSEO = async () => {
+    if (!form.title && !form.content) { return; }
+    setGenSeoLoading(true);
+    await new Promise(r => setTimeout(r, 600)); // UX delay
+
+    // Clean content: remove HTML, markdown, extra spaces
+    const cleanContent = (form.content || "")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/[#*_`>\-]/g, " ")
+      .replace(/\s+/g, " ")
+      .trim();
+
+    const title = form.title.trim();
+
+    // Meta title: 50-60 chars — title + site name
+    const siteName = "الشارع المصري";
+    const rawMeta = title.length > 45 ? title.slice(0, 45) + "..." : title;
+    const metaTitle = `${rawMeta} | ${siteName}`.slice(0, 60);
+
+    // Meta description: first 150 chars from excerpt or content
+    const source = (form.excerpt || cleanContent).trim();
+    const sentences = source.split(/[.،!؟]/);
+    let desc = "";
+    for (const s of sentences) {
+      const t = s.trim();
+      if (t.length > 20) { desc = t; break; }
+    }
+    if (!desc) desc = source;
+    const metaDesc = desc.slice(0, 155) + (desc.length > 155 ? "..." : "");
+
+    // Slug: from title, Arabic-friendly
+    const newSlug = genSlug(title).replace(/--+/g, "-");
+
+    setForm(f => ({
+      ...f,
+      meta_title: metaTitle,
+      meta_description: metaDesc,
+      slug: newSlug,
+    }));
+
+    setGenSeoLoading(false);
+  };
+
   const genSlug = (title:string) =>
     title.trim().toLowerCase()
       .replace(/[أإآا]/g,"a").replace(/[ة]/g,"h").replace(/[ى]/g,"y")
@@ -590,23 +636,83 @@ const ArticleEditor = () => {
 
           {/* SEO */}
           <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
-            <h3 className="font-black text-sm flex items-center gap-2">
-              <Search className="w-4 h-4 text-primary"/> SEO
-            </h3>
-            <div>
-              <label className="text-[10px] font-bold text-muted-foreground mb-1 block">عنوان SEO ({form.meta_title.length}/60)</label>
-              <input value={form.meta_title} onChange={e=>set("meta_title",e.target.value.slice(0,60))}
-                placeholder="عنوان للمحركات..."
-                className="w-full bg-muted border border-border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/30"/>
-              <div className={`h-0.5 rounded-full mt-1 transition-all ${form.meta_title.length>50?"bg-green-500":form.meta_title.length>30?"bg-yellow-500":"bg-muted"}`}
-                style={{width:`${(form.meta_title.length/60)*100}%`}}/>
+            <div className="flex items-center justify-between">
+              <h3 className="font-black text-sm flex items-center gap-2">
+                <Search className="w-4 h-4 text-primary"/> تهيئة محركات البحث
+              </h3>
+              <button onClick={generateSEO} disabled={genSeoLoading || (!form.title && !form.content)}
+                className="flex items-center gap-1.5 bg-gradient-to-l from-violet-600 to-purple-500 text-white text-[11px] font-black px-3 py-1.5 rounded-xl hover:opacity-90 disabled:opacity-40 transition-all shadow-sm">
+                {genSeoLoading
+                  ? <><Loader2 className="w-3 h-3 animate-spin"/> جاري التوليد...</>
+                  : <><Sparkles className="w-3 h-3"/> توليد تلقائي</>}
+              </button>
             </div>
+
+            {/* Google Preview */}
+            {(form.meta_title || form.title) && (
+              <div className="border border-border rounded-xl p-3 bg-muted/30">
+                <p className="text-[9px] text-muted-foreground mb-1 font-bold">معاينة نتيجة GOOGLE</p>
+                <p className="text-[13px] text-blue-600 font-bold leading-tight truncate">
+                  {form.meta_title || form.title}
+                </p>
+                <p className="text-[10px] text-green-700 truncate">
+                  egstreetnews.com/{form.slug || "slug-url"}
+                </p>
+                <p className="text-[10px] text-muted-foreground leading-snug mt-0.5 line-clamp-2">
+                  {form.meta_description || form.excerpt || "أضف وصفاً لتحسين ظهورك في نتائج البحث..."}
+                </p>
+              </div>
+            )}
+
             <div>
-              <label className="text-[10px] font-bold text-muted-foreground mb-1 block">وصف SEO ({form.meta_description.length}/160)</label>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[10px] font-bold text-muted-foreground">
+                  عنوان SEO ({form.meta_title.length}/60)
+                </label>
+                <span className={`text-[9px] font-bold ${form.meta_title.length>=50?"text-green-500":form.meta_title.length>=30?"text-amber-500":"text-red-400"}`}>
+                  {form.meta_title.length>=50?"ممتاز ✓":form.meta_title.length>=30?"جيد":"قصير جداً"}
+                </span>
+              </div>
+              <input value={form.meta_title} onChange={e=>set("meta_title",e.target.value.slice(0,60))}
+                placeholder="عنوان المقال | الشارع المصري"
+                className="w-full bg-muted border border-border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/30"/>
+              <div className="h-1 rounded-full bg-muted mt-1 overflow-hidden">
+                <div className={`h-full rounded-full transition-all ${form.meta_title.length>50?"bg-green-500":form.meta_title.length>30?"bg-amber-400":"bg-red-400"}`}
+                  style={{width:`${Math.min((form.meta_title.length/60)*100,100)}%`}}/>
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-[10px] font-bold text-muted-foreground">
+                  وصف SEO ({form.meta_description.length}/160)
+                </label>
+                <span className={`text-[9px] font-bold ${form.meta_description.length>=120?"text-green-500":form.meta_description.length>=70?"text-amber-500":"text-red-400"}`}>
+                  {form.meta_description.length>=120?"ممتاز ✓":form.meta_description.length>=70?"جيد":"قصير جداً"}
+                </span>
+              </div>
               <textarea value={form.meta_description} onChange={e=>set("meta_description",e.target.value.slice(0,160))}
-                placeholder="وصف قصير للمحركات..."
+                placeholder="وصف قصير يظهر في نتائج البحث..."
                 rows={3}
                 className="w-full bg-muted border border-border rounded-xl px-3 py-2 text-xs resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"/>
+              <div className="h-1 rounded-full bg-muted mt-1 overflow-hidden">
+                <div className={`h-full rounded-full transition-all ${form.meta_description.length>=120?"bg-green-500":form.meta_description.length>=70?"bg-amber-400":"bg-red-400"}`}
+                  style={{width:`${Math.min((form.meta_description.length/160)*100,100)}%`}}/>
+              </div>
+            </div>
+
+            {/* Slug */}
+            <div>
+              <label className="text-[10px] font-bold text-muted-foreground mb-1 block">Slug (URL)</label>
+              <div className="flex gap-1">
+                <input value={form.slug} onChange={e=>set("slug",e.target.value)}
+                  placeholder="slug-url" dir="ltr"
+                  className="flex-1 bg-muted border border-border rounded-xl px-3 py-2 text-[11px] focus:outline-none focus:ring-2 focus:ring-primary/30"/>
+                <button onClick={()=>set("slug", genSlug(form.title))}
+                  className="px-2.5 py-2 rounded-xl bg-muted border border-border hover:bg-primary/10 text-xs" title="توليد slug">
+                  <RotateCcw className="w-3 h-3"/>
+                </button>
+              </div>
             </div>
           </div>
 
