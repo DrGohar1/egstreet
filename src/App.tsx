@@ -21,28 +21,31 @@ import TagPage from "./pages/TagPage";
 import NotFound from "./pages/NotFound";
 import AdminLayout from "./components/admin/AdminLayout";
 import { AdminGuard } from "./components/admin/AdminGuard";
-import DashboardOverview from "./pages/admin/DashboardOverview";
-import UserManagement from "./pages/admin/UserManagement";
-import ArticleManagement from "./pages/admin/ArticleManagement";
-import CategoryManagement from "./pages/admin/CategoryManagement";
-import BreakingNewsManagement from "./pages/admin/BreakingNewsManagement";
-import SiteSettings from "./pages/admin/SiteSettings";
-import SubscriberManagement from "./pages/admin/SubscriberManagement";
-import CommentManagement from "./pages/admin/CommentManagement";
-import AnalyticsDashboard from "./pages/admin/AnalyticsDashboard";
-import PageManagement from "./pages/admin/PageManagement";
-import TagManagement from "./pages/admin/TagManagement";
-import Advertisements from "./pages/admin/Advertisements";
-import PermissionManagement from "./pages/admin/PermissionManagement";
-import NewsScraperPage from "./pages/admin/NewsScraperPage";
-import AIToolsPage from "./pages/admin/AIToolsPage";
-import BackupRestore from "./pages/admin/BackupRestore";
-import MediaManagement from "./pages/admin/MediaManagement";
-import AutomationPage from "./pages/admin/AutomationPage";
-import ArticleEditor from "./pages/admin/ArticleEditor";
+import { lazy, Suspense } from "react";
 import SavedArticlesPage from "./pages/SavedArticlesPage";
+
+// ── Lazy-loaded admin pages (code splitting — faster initial load) ──
+const DashboardOverview   = lazy(() => import("./pages/admin/DashboardOverview"));
+const UserManagement      = lazy(() => import("./pages/admin/UserManagement"));
+const ArticleManagement   = lazy(() => import("./pages/admin/ArticleManagement"));
+const CategoryManagement  = lazy(() => import("./pages/admin/CategoryManagement"));
+const BreakingNewsManagement = lazy(() => import("./pages/admin/BreakingNewsManagement"));
+const SiteSettings        = lazy(() => import("./pages/admin/SiteSettings"));
+const SubscriberManagement = lazy(() => import("./pages/admin/SubscriberManagement"));
+const CommentManagement   = lazy(() => import("./pages/admin/CommentManagement"));
+const AnalyticsDashboard  = lazy(() => import("./pages/admin/Analytics"));
+const PageManagement      = lazy(() => import("./pages/admin/PageManagement"));
+const TagManagement       = lazy(() => import("./pages/admin/TagManagement"));
+const Advertisements      = lazy(() => import("./pages/admin/Advertisements"));
+const PermissionManagement = lazy(() => import("./pages/admin/PermissionManagement"));
+const NewsScraperPage     = lazy(() => import("./pages/admin/NewsScraperPage"));
+const AIToolsPage         = lazy(() => import("./pages/admin/AIToolsPage"));
+const BackupRestore       = lazy(() => import("./pages/admin/BackupRestore"));
+const MediaManagement     = lazy(() => import("./pages/admin/MediaManagement"));
+const AutomationPage      = lazy(() => import("./pages/admin/AutomationPage"));
+const ArticleEditor       = lazy(() => import("./pages/admin/ArticleEditor"));
 import NewsletterPopup from "./components/NewsletterPopup";
-import ArchivePage from "./pages/ArchivePage";
+import Archive from "./pages/Archive";
 import ResetPassword from "./pages/ResetPassword";
 import UserProfile from "./pages/UserProfile";
 import Auth from "./pages/Auth";
@@ -61,7 +64,8 @@ const AppContent = () => {
   useVisitorTracking(); // Track page visits & IP
   return (
     <>
-      <Routes>
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"/></div>}>
+          <Routes>
         {/* Public */}
         <Route path="/" element={<Index />} />
         <Route path="/article/:slug" element={<ArticlePage />} />
@@ -76,7 +80,7 @@ const AppContent = () => {
         {/* Reset password via Supabase email only */}
         <Route path="/profile" element={<UserProfile />} />
         <Route path="/saved" element={<SavedArticlesPage />} />
-        <Route path="/archive" element={<ArchivePage />} />
+        <Route path="/archive" element={<Archive />} />
         {/* Admin */}
         <Route path={ADMIN} element={<AdminLayout><DashboardOverview /></AdminLayout>} />
         <Route path={`${ADMIN}/users`} element={<AdminLayout><AdminGuard permission="users"><UserManagement /></AdminGuard></AdminLayout>} />
@@ -101,6 +105,7 @@ const AppContent = () => {
 
         <Route path="*" element={<NotFound />} />
       </Routes>
+          </Suspense>
       <NewsletterPopup />
     </>
   );
