@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
-  Facebook, Twitter, Send, MessageCircle, Mail, 
+  Facebook, Send, MessageCircle, Mail, 
   CheckCircle2, Clock, AlertCircle, Share2, ExternalLink
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -26,7 +26,7 @@ interface ArticleWorkflowProps {
 
 const PLATFORMS = [
   { id: "facebook", name: "Facebook", icon: Facebook, color: "text-[#1877f2]", bgColor: "bg-[#1877f2]/10" },
-  { id: "twitter", name: "Twitter / X", icon: Twitter, color: "text-foreground", bgColor: "bg-foreground/10" },
+  { id: "twitter", name: "Twitter / X", icon: color: "text-foreground", bgColor: "bg-foreground/10" },
   { id: "telegram", name: "Telegram", icon: Send, color: "text-[#0088cc]", bgColor: "bg-[#0088cc]/10" },
   { id: "whatsapp", name: "WhatsApp", icon: MessageCircle, color: "text-[#25d366]", bgColor: "bg-[#25d366]/10" },
   { id: "newsletter", name: "Newsletter", icon: Mail, color: "text-primary", bgColor: "bg-primary/10" },
