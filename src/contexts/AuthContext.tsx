@@ -31,19 +31,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   const loadProfile = async (userId: string) => {
-    const { data } = await supabase
-      .from("profiles")
-      .select("id, user_id, username, display_name, avatar_url, bio, must_change_password, email")
-      .eq("user_id", userId)
-      .maybeSingle();
-    if (data) {
-      // Get role
-      const { data: roleData } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", userId)
-        .maybeSingle();
-      setProfile({ ...data as Profile, role: roleData?.role || "reader" });
+    try {
+      // profiles.id = auth user id (NOT user_id column)
+      const [{ data }, { data: roleData }] = await Promise.all([
+        supabase
+          .from("profiles")
+          .select("id, username, display_name, avatar_url, bio, must_change_password, email")
+          .eq("id", userId)
+          .maybeSingle(),
+        supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", userId)
+          .maybeSingle(),
+      ]);
+      if (data) {
+        setProfile({ ...data as Profile, user_id: userId, role: roleData?.role || "reader" });
+      }
+    } catch (err) {
+      console.error("loadProfile error", err);
     }
   };
 
