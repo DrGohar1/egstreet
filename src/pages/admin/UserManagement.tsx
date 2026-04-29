@@ -107,16 +107,30 @@ export default function UserManagement() {
   };
 
   // ─── Create user ─────────────────────────────────────────
+  // IMPORTANT: supabase.auth.signUp() auto-logins the new user.
+  // We MUST save & restore the admin session to prevent logout.
   const createUser = async () => {
     if (!form.email || !form.display_name || !form.password) { toast.error("أكمل الحقول المطلوبة"); return; }
     if (form.password !== form.confirm_pw) { toast.error("كلمتا المرور غير متطابقتين"); return; }
     if (form.password.length < 6) { toast.error("كلمة المرور 6 أحرف على الأقل"); return; }
     setSaving(true);
     try {
+      // ── Save admin session BEFORE signUp ──
+      const { data: { session: adminSession } } = await supabase.auth.getSession();
+
       const { data: su, error: se } = await supabase.auth.signUp({
         email: form.email, password: form.password,
         options: { data: { display_name: form.display_name, username: form.username || form.display_name } }
       });
+
+      // ── Immediately restore admin session ──
+      if (adminSession?.access_token && adminSession?.refresh_token) {
+        await supabase.auth.setSession({
+          access_token:  adminSession.access_token,
+          refresh_token: adminSession.refresh_token,
+        });
+      }
+
       if (se) throw se;
       const uid = su?.user?.id;
       if (!uid) throw new Error("فشل إنشاء الحساب في النظام");
@@ -125,8 +139,7 @@ export default function UserManagement() {
         username: form.username || form.display_name, phone: form.phone || null,
         is_active: true, must_change_password: false,
       }, { onConflict: "id" });
-      // Set only "dashboard" by default — admin assigns rest manually
-      await supabase.from("user_permissions").insert([{ user_id: uid, permission: "dashboard" }]);
+      await supabase.from("user_permissions").insert([{ user_id: uid, permission: "dashboard" }]).maybeSingle();
       toast.success(`✅ تم إنشاء ${form.display_name} — حدد صلاحياته من قائمة الصلاحيات`);
       setModal(null); setForm({ ...BLANK }); load();
     } catch (e: any) { toast.error("خطأ: " + (e.message || "")); }
