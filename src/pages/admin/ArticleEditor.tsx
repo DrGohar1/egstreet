@@ -398,11 +398,12 @@ const ArticleEditor = () => {
     if (!form.content.trim()) return toast.error("أدخل محتوى المقال");
     setSaving(true);
     const finalStatus = statusOverride||form.status;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { scheduled_at: _sched, ...formData } = form;
     const payload = {
-      ...form,
+      ...formData,
       status: finalStatus,
       published_at: finalStatus==="published" ? new Date().toISOString() : null,
-      scheduled_at: form.scheduled_at ? new Date(form.scheduled_at).toISOString() : null,
       author_id: user?.id||null,
       slug: form.slug || genSlug(form.title),
       meta_description: form.meta_description || form.excerpt.slice(0,160),
