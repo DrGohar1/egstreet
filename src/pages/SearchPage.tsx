@@ -8,7 +8,7 @@ import ArticleCard from "@/components/ArticleCard";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, SlidersHorizontal } from "lucide-react";
+import { Search, Sliders } from "lucide-react";
 
 const SearchPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -88,7 +88,7 @@ const SearchPage = () => {
             </Button>
           </div>
           <div className="flex gap-3 flex-wrap items-center">
-            <SlidersHorizontal className="w-4 h-4 text-muted-foreground" />
+            <Sliders className="w-4 h-4 text-muted-foreground" />
             <Select value={categoryFilter} onValueChange={setCategoryFilter}>
               <SelectTrigger className="w-48">
                 <SelectValue placeholder={"كل الأقسام"} />
