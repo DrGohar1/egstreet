@@ -11,10 +11,9 @@ import { useState, useRef } from "react";
 import {
   Bold, Italic, Underline as UnderlineIcon, Strikethrough,
   Heading1, Heading2, Heading3, List, ListOrdered,
-  AlignLeft, AlignCenter, AlignRight,
+  AlignLeft, AlignCenter, AlignRight, AlignJustify,
   ImageIcon, Link as LinkIcon, Quote, Undo, Redo,
-  Code, Minus, Upload, Copy, Check, AlignJustify,
-  MoveLeft, MoveRight, Maximize2,
+  Code, Minus, Upload, Copy, Check,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -37,7 +36,7 @@ const Btn = ({ onClick, active, children, title }: {
 
 const Sep = () => <div className="w-px h-5 bg-border mx-0.5 shrink-0"/>;
 
-export const RichTextEditor = ({ content, onChange, placeholder }: RichTextEditorProps) => {
+const RichTextEditor = ({ content, onChange, placeholder }: RichTextEditorProps) => {
   const { t } = useLanguage();
   const [imageUrl, setImageUrl] = useState("");
   const [linkUrl,  setLinkUrl]  = useState("");
