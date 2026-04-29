@@ -399,8 +399,13 @@ const SiteSettings = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 {[
-                  { key: "facebook_url", label: "Facebook", placeholder: "https://facebook.com/..." },
-                  { key: "twitter_url", label: "Twitter / X", placeholder: "https://x.com/..." },
+                  { key: "facebook_url",  label: "Facebook",   placeholder: "https://facebook.com/..." },
+                  { key: "twitter_url",   label: "X (Twitter)", placeholder: "https://x.com/..." },
+                  { key: "whatsapp_url",  label: "WhatsApp",    placeholder: "https://wa.me/2010XXXXXXXX" },
+                  { key: "telegram_url",  label: "Telegram",    placeholder: "https://t.me/egstreetnews" },
+                  { key: "youtube_url",   label: "YouTube",     placeholder: "https://youtube.com/@egstreetnews" },
+                  { key: "tiktok_url",    label: "TikTok",      placeholder: "https://tiktok.com/@egstreetnews" },
+                  { key: "instagram_url", label: "Instagram",   placeholder: "https://instagram.com/egstreetnews" },
                   { key: "youtube_url", label: "YouTube", placeholder: "https://youtube.com/..." },
                   { key: "instagram_url", label: "Instagram", placeholder: "https://instagram.com/..." },
                   { key: "tiktok_url", label: "TikTok", placeholder: "https://tiktok.com/..." },
