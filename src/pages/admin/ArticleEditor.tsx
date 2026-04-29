@@ -1,14 +1,13 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { useLanguage } from "@/contexts/LanguageContext";
-import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import {
   Save, Send, Eye, ArrowRight, ImagePlus, Search, X, Loader2,
   Upload, Link2, Bold, Italic, List, Heading2, Quote, AlignRight,
-  Hash, ChevronDown, Clock, Globe, Zap, Star, RotateCcw
+  Hash, ChevronDown, Clock, Globe, Zap, Star, RotateCcw,
+  CheckCircle
 } from "lucide-react";
 
 const UNSPLASH_KEY = "P8Dz4oGBSFgpfPgFKdWm9ZHAYijpqMiCj7d7E_B3Tic";
@@ -317,505 +316,340 @@ const ArticleEditor = () => {
   const navigate = useNavigate();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const [categories,      setCategories]      = useState<Category[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [showImagePicker, setShowImagePicker] = useState(false);
-  const [saving,          setSaving]          = useState(false);
-  const [previewMode,     setPreviewMode]     = useState(false);
-  const [wordCount,       setWordCount]       = useState(0);
-  const [readMin,         setReadMin]         = useState(0);
-  const [authorProfile,   setAuthorProfile]   = useState<{display_name:string;avatar_url:string|null}|null>(null);
-  const [articleNum,      setArticleNum]      = useState<number|null>(null);
-  const [activeTab,       setActiveTab]       = useState<"publish"|"seo"|"author">("publish");
+  const [saving, setSaving] = useState(false);
+  const [preview, setPreview] = useState(false);
+  const [wordCount, setWordCount] = useState(0);
 
   const [form, setForm] = useState({
     title: "", slug: "", excerpt: "", content: "",
-    featured_image: "", category_id: "", status: "draft" as "draft"|"pending"|"published",
+    featured_image: "", category_id: "", status: "draft" as "draft"|"published",
     is_featured: false, is_breaking: false,
     meta_title: "", meta_description: "",
     custom_author_name: "",
+    scheduled_at: "",
   });
 
-  // Load author profile
-  useEffect(() => {
-    if (!user?.id) return;
-    supabase.from("profiles").select("display_name,avatar_url").eq("id", user.id).maybeSingle()
-      .then(({ data }) => { if (data) setAuthorProfile(data); });
-  }, [user?.id]);
-
-  // Load article or init
-  useEffect(() => {
-    supabase.from("categories").select("*").order("sort_order").then(({ data }) => setCategories(data || []));
+  useEffect(()=>{
+    supabase.from("categories").select("*").order("sort_order").then(({data})=>setCategories(data||[]));
     if (id) {
-      supabase.from("articles").select("*").eq("id", id).maybeSingle().then(({ data }) => {
-        if (data) {
-          setForm({
-            title: data.title || "", slug: data.slug || "", excerpt: data.excerpt || "",
-            content: data.content || "", featured_image: data.featured_image || "",
-            category_id: data.category_id || "", status: data.status || "draft",
-            is_featured: data.is_featured || false, is_breaking: false,
-            meta_title: data.meta_title || "", meta_description: data.meta_description || "",
-            custom_author_name: data.custom_author_name || "",
-          });
-          if (data.article_number) setArticleNum(data.article_number);
-          const wc = (data.content || "").split(/\s+/).filter(Boolean).length;
-          setWordCount(wc); setReadMin(Math.ceil(wc / 200));
-        }
-      });
-    } else {
-      // Get next article number
-      supabase.from("articles").select("article_number").order("article_number", { ascending: false }).limit(1)
-        .then(({ data }) => {
-          const last = data?.[0]?.article_number || 10000;
-          setArticleNum(last + 1);
+      supabase.from("articles").select("*").eq("id",id).maybeSingle().then(({data})=>{
+        if (data) setForm({
+          title:data.title||"", slug:data.slug||"", excerpt:data.excerpt||"",
+          content:data.content||"", featured_image:data.featured_image||"",
+          category_id:data.category_id||"", status:data.status||"draft",
+          is_featured:data.is_featured||false, is_breaking:false,
+          meta_title:data.meta_title||"", meta_description:data.meta_description||"",
+          custom_author_name:data.custom_author_name||"",
+          scheduled_at: data.scheduled_at ? new Date(data.scheduled_at).toISOString().slice(0,16) : "",
         });
+      });
     }
-  }, [id]);
+  },[id]);
 
-  const genSlug = (title: string) =>
+  const genSlug = (title:string) =>
     title.trim().toLowerCase()
       .replace(/[أإآا]/g,"a").replace(/[ة]/g,"h").replace(/[ى]/g,"y")
       .replace(/\s+/g,"-").replace(/[^a-z0-9؀-ۿ-]/g,"")
       .slice(0,60) + "-" + Date.now().toString(36);
 
-  const set = (k: string, v: any) => setForm(f => ({ ...f, [k]: v }));
+  const set = (k:string, v:any) => setForm(f=>({...f,[k]:v}));
 
-  const handleTitleChange = (val: string) => {
-    set("title", val);
+  const handleTitleChange = (val:string) => {
+    set("title",val);
     if (!id) set("slug", genSlug(val));
-    set("meta_title", val.slice(0, 60));
+    const mt = val.slice(0,60);
+    set("meta_title",mt);
   };
 
-  const handleContentChange = (val: string) => {
-    set("content", val);
-    const wc = val.split(/\s+/).filter(Boolean).length;
-    setWordCount(wc); setReadMin(Math.ceil(wc / 200));
+  const handleContentChange = (val:string) => {
+    set("content",val);
+    setWordCount(val.split(/\s+/).filter(Boolean).length);
   };
 
-  const applyFormat = (cmd: string) => {
+  const applyFormat = (cmd:string) => {
     const ta = textareaRef.current;
     if (!ta) return;
     const s = ta.selectionStart, e = ta.selectionEnd;
-    const sel = ta.value.slice(s, e);
-    const before = ta.value.slice(0, s), after = ta.value.slice(e);
+    const sel = ta.value.slice(s,e);
+    const before = ta.value.slice(0,s), after = ta.value.slice(e);
     const formats: Record<string,string> = {
-      bold:    `**${sel||"نص عريض"}**`,
-      italic:  `_${sel||"نص مائل"}_`,
-      h2:      `\n## ${sel||"عنوان"}\n`,
-      h3:      `\n### ${sel||"عنوان فرعي"}\n`,
-      quote:   `\n> ${sel||"اقتباس"}\n`,
-      list:    `\n- ${sel||"عنصر"}\n`,
-      ol:      `\n1. ${sel||"عنصر"}\n`,
-      link:    `[${sel||"نص الرابط"}](https://)`,
-      hr:      `\n---\n`,
-      code:    `\`${sel||"code"}\``,
+      bold:`**${sel||"نص عريض"}**`, italic:`_${sel||"نص مائل"}_`,
+      h2:`
+## ${sel||"عنوان"}
+`, quote:`
+> ${sel||"اقتباس"}
+`,
+      list:`
+- ${sel||"عنصر"}
+`,
+      tag:`#${sel||"هاشتاق"}`,
+      rtl:`<div dir="rtl">${sel||"نص بالعربي"}</div>`,
     };
-    const insert = formats[cmd] || sel;
-    handleContentChange(before + insert + after);
-    setTimeout(() => { ta.focus(); ta.setSelectionRange(s + insert.length, s + insert.length); }, 10);
+    const insert = formats[cmd]||sel;
+    handleContentChange(before+insert+after);
   };
 
-  const save = async (statusOverride?: "draft"|"pending"|"published") => {
+  const save = async (statusOverride?:"draft"|"published") => {
     if (!form.title.trim()) return toast.error("أدخل عنوان المقال");
     if (!form.content.trim()) return toast.error("أدخل محتوى المقال");
     setSaving(true);
-    const finalStatus = statusOverride || form.status;
-    const payload: any = {
-      title:              form.title,
-      slug:               form.slug || genSlug(form.title),
-      excerpt:            form.excerpt,
-      content:            form.content,
-      featured_image:     form.featured_image || null,
-      category_id:        form.category_id || null,
-      status:             finalStatus,
-      is_featured:        form.is_featured,
-      meta_title:         form.meta_title || form.title.slice(0,60),
-      meta_description:   form.meta_description || form.excerpt.slice(0,160),
-      custom_author_name: form.custom_author_name || null,
-      author_id:          user?.id || null,
-      published_at:       finalStatus === "published" ? new Date().toISOString() : null,
+    const finalStatus = statusOverride||form.status;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { scheduled_at: _sched, ...formData } = form;
+    const payload = {
+      ...formData,
+      status: finalStatus,
+      published_at: finalStatus==="published" ? new Date().toISOString() : null,
+      author_id: user?.id||null,
+      slug: form.slug || genSlug(form.title),
+      meta_description: form.meta_description || form.excerpt.slice(0,160),
     };
-    // Include article_number on create
-    if (!id && articleNum) payload.article_number = articleNum;
-
     try {
       if (id) {
-        const { error } = await supabase.from("articles").update(payload).eq("id", id);
+        const { error } = await supabase.from("articles").update(payload).eq("id",id);
         if (error) throw error;
       } else {
         const { error } = await supabase.from("articles").insert(payload);
         if (error) throw error;
       }
-      const msgs = { draft:"✅ تم الحفظ كمسودة", pending:"📋 أُرسل للمراجعة", published:"🚀 تم النشر!" };
-      toast.success(msgs[finalStatus]);
+      toast.success(finalStatus==="published"?"✅ تم النشر!":"✅ تم الحفظ كمسودة");
       navigate("/G63-admin/articles");
-    } catch(e: any) { toast.error("خطأ: " + e.message); }
+    } catch(e:any) {
+      toast.error("خطأ: " + e.message);
+    }
     setSaving(false);
   };
 
-  const articleUrl = articleNum ? `egstreet.com/article/${articleNum}` : "";
-  const displayAuthor = form.custom_author_name || authorProfile?.display_name || "الكاتب";
+  const catName = (id:string) => {
+    const c = categories.find(c=>c.id===id);
+    return c ? c.name_ar : "";
+  };
 
-  // ─── RENDER ───────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-background" dir="rtl">
-      {/* ── Top Bar ── */}
-      <div className="sticky top-0 z-40 bg-card/95 backdrop-blur-sm border-b border-border px-4 py-2.5 flex items-center gap-3 shadow-sm">
-        <button onClick={() => navigate("/G63-admin/articles")}
-          className="w-8 h-8 rounded-xl hover:bg-muted flex items-center justify-center transition-colors">
-          <ArrowRight className="w-4 h-4"/>
-        </button>
-
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 flex-wrap">
-            <h1 className="font-black text-sm">{id ? "تعديل المقال" : "مقال جديد"}</h1>
-            {articleNum && (
-              <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full font-black">
-                #{articleNum}
-              </span>
-            )}
-            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold ${
-              form.status==="published" ? "bg-green-100 text-green-700"
-              : form.status==="pending"  ? "bg-amber-100 text-amber-700"
-              : "bg-muted text-muted-foreground"}`}>
-              {form.status==="published"?"منشور":form.status==="pending"?"في المراجعة":"مسودة"}
-            </span>
-          </div>
-          <p className="text-[10px] text-muted-foreground">{wordCount} كلمة · {readMin} دقيقة قراءة</p>
-        </div>
-
-        <div className="flex items-center gap-1.5">
-          <button onClick={() => setPreviewMode(p => !p)}
-            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl border transition-colors ${previewMode?"bg-primary text-white border-primary":"border-border hover:bg-muted"}`}>
-            <Eye className="w-3.5 h-3.5"/>
-            {previewMode ? "تعديل" : "معاينة"}
+      {/* Top bar */}
+      <div className="sticky top-0 z-40 bg-card border-b border-border px-4 py-3 flex items-center justify-between gap-3 shadow-sm">
+        <div className="flex items-center gap-2">
+          <button onClick={()=>navigate("/G63-admin/articles")}
+            className="w-8 h-8 rounded-lg hover:bg-muted flex items-center justify-center transition-colors">
+            <ArrowRight className="w-4 h-4"/>
           </button>
-          <button onClick={() => save("draft")} disabled={saving}
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl border border-border hover:bg-muted transition-colors disabled:opacity-50">
+          <div>
+            <h1 className="font-black text-sm">{id?"تعديل المقال":"مقال جديد"}</h1>
+            <p className="text-[10px] text-muted-foreground">{wordCount} كلمة</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button onClick={()=>setPreview(p=>!p)}
+            className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors ${preview?"bg-primary text-white border-primary":"border-border hover:bg-muted"}`}>
+            <Eye className="w-3.5 h-3.5"/> {preview?"تعديل":"معاينة"}
+          </button>
+          <button onClick={()=>save("draft")} disabled={saving}
+            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-border hover:bg-muted transition-colors disabled:opacity-50">
             <Save className="w-3.5 h-3.5"/> مسودة
           </button>
-          <button onClick={() => save("pending")} disabled={saving}
-            className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl border border-amber-400 bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors disabled:opacity-50 hidden sm:flex">
-            <Clock className="w-3.5 h-3.5"/> للمراجعة
-          </button>
-          <button onClick={() => save("published")} disabled={saving}
-            className="flex items-center gap-1.5 text-xs px-4 py-1.5 rounded-xl bg-primary text-white font-black hover:bg-primary/85 transition-colors disabled:opacity-50 shadow-sm shadow-primary/30">
-            {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin"/> : <Send className="w-3.5 h-3.5"/>}
+          <button onClick={()=>save("published")} disabled={saving}
+            className="flex items-center gap-1.5 bg-primary text-white text-xs px-4 py-1.5 rounded-lg font-bold hover:bg-primary/90 transition-colors disabled:opacity-50">
+            {saving?<Loader2 className="w-3.5 h-3.5 animate-spin"/>:<Send className="w-3.5 h-3.5"/>}
             نشر
           </button>
         </div>
       </div>
 
-      {/* ── Layout ── */}
       <div className="max-w-5xl mx-auto p-4 grid grid-cols-1 lg:grid-cols-3 gap-5">
-
-        {/* ══ Left: Main Writing Area ══ */}
+        {/* Main column */}
         <div className="lg:col-span-2 space-y-4">
-
           {/* Featured Image */}
           <div className="bg-card border border-border rounded-2xl overflow-hidden">
             {form.featured_image ? (
-              <div className="relative group">
-                <img src={form.featured_image} alt="" className="w-full h-52 object-cover"/>
-                <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent flex flex-col items-start justify-end p-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <div className="flex gap-2">
-                    <button onClick={() => setShowImagePicker(true)}
-                      className="text-white text-xs bg-white/25 backdrop-blur-sm px-3 py-1.5 rounded-xl font-bold hover:bg-white/35">
-                      تغيير
-                    </button>
-                    <button onClick={() => set("featured_image", "")}
-                      className="text-white text-xs bg-red-500/70 px-3 py-1.5 rounded-xl font-bold hover:bg-red-500/90">
-                      حذف
-                    </button>
-                  </div>
-                </div>
-                <div className="absolute top-3 right-3 bg-black/40 backdrop-blur-sm text-white text-[10px] px-2 py-1 rounded-lg font-bold">
-                  الصورة الرئيسية
+              <div className="relative">
+                <img src={form.featured_image} alt="" className="w-full h-48 object-cover"/>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 flex items-end p-3">
+                  <button onClick={()=>setShowImagePicker(true)}
+                    className="text-white text-xs bg-white/20 backdrop-blur-sm px-3 py-1.5 rounded-lg font-bold hover:bg-white/30 transition-colors me-2">
+                    تغيير الصورة
+                  </button>
+                  <button onClick={()=>set("featured_image","")}
+                    className="text-white text-xs bg-red-500/70 px-3 py-1.5 rounded-lg font-bold hover:bg-red-500/90 transition-colors">
+                    حذف
+                  </button>
                 </div>
               </div>
             ) : (
-              <button onClick={() => setShowImagePicker(true)}
-                className="w-full h-44 flex flex-col items-center justify-center gap-3 text-muted-foreground hover:bg-muted/20 transition-colors group">
-                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center group-hover:bg-primary/20 transition-colors">
-                  <ImagePlus className="w-7 h-7 text-primary"/>
+              <button onClick={()=>setShowImagePicker(true)}
+                className="w-full h-40 flex flex-col items-center justify-center gap-2 text-muted-foreground hover:bg-muted/30 transition-colors">
+                <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+                  <ImagePlus className="w-6 h-6 text-primary"/>
                 </div>
-                <div className="text-center">
-                  <p className="font-black text-sm">أضف الصورة الرئيسية</p>
-                  <p className="text-xs text-muted-foreground/60 mt-0.5">Unsplash · رفع ملف · رابط URL</p>
-                </div>
+                <p className="font-bold text-sm">اختر صورة رئيسية</p>
+                <p className="text-xs">ابحث في Unsplash أو ارفع من جهازك</p>
               </button>
             )}
           </div>
 
-          {/* Title + Slug */}
-          <div className="bg-card border border-border rounded-2xl p-5 space-y-3">
-            <textarea value={form.title} onChange={e => handleTitleChange(e.target.value)}
+          {/* Title */}
+          <div className="bg-card border border-border rounded-2xl p-4">
+            <textarea value={form.title} onChange={e=>handleTitleChange(e.target.value)}
               placeholder="عنوان المقال..." rows={2}
-              className="w-full bg-transparent text-2xl font-black resize-none focus:outline-none placeholder:text-muted-foreground/30 leading-relaxed"/>
-
-            {/* Author badge */}
-            <div className="flex items-center gap-2 pt-1 border-t border-border/50">
-              {authorProfile?.avatar_url
-                ? <img src={authorProfile.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover"/>
-                : <div className="w-6 h-6 rounded-full bg-primary/15 flex items-center justify-center text-[10px] font-black text-primary">
-                    {displayAuthor[0]?.toUpperCase()}
-                  </div>}
-              <span className="text-xs font-bold text-muted-foreground">{displayAuthor}</span>
-              {articleUrl && (
-                <span className="text-[10px] text-muted-foreground/50 font-mono mr-auto">🔗 {articleUrl}</span>
-              )}
-            </div>
-
-            {/* Slug */}
-            <div className="flex items-center gap-2 bg-muted rounded-xl px-3 py-2">
-              <span className="text-[10px] text-muted-foreground shrink-0 font-bold">Slug:</span>
-              <input value={form.slug} onChange={e => set("slug", e.target.value)}
-                placeholder="article-url-slug" dir="ltr"
-                className="flex-1 bg-transparent text-xs font-mono text-muted-foreground focus:outline-none focus:text-foreground"/>
-              <button onClick={() => set("slug", genSlug(form.title))}
-                className="text-[10px] text-primary font-bold hover:underline shrink-0">
-                توليد
-              </button>
+              className="w-full bg-transparent text-xl font-black resize-none focus:outline-none placeholder:text-muted-foreground/40 leading-relaxed"/>
+            <div className="mt-2 pt-2 border-t border-border/50">
+              <input value={form.slug} onChange={e=>set("slug",e.target.value)}
+                placeholder="slug-url" dir="ltr"
+                className="w-full bg-transparent text-xs text-muted-foreground font-mono focus:outline-none placeholder:text-muted-foreground/30"/>
             </div>
           </div>
 
           {/* Excerpt */}
-          <div className="bg-card border border-border rounded-2xl p-5">
-            <label className="flex items-center justify-between mb-2">
-              <span className="text-xs font-black text-foreground">المقتطف</span>
-              <span className="text-[10px] text-muted-foreground">{form.excerpt.length}/300 · يظهر في القوائم وبطاقات السوشيال</span>
-            </label>
-            <textarea value={form.excerpt} onChange={e => set("excerpt", e.target.value.slice(0, 300))}
-              placeholder="وصف مختصر يظهر في قوائم المقالات ومشاركات السوشيال ميديا..."
-              rows={3}
+          <div className="bg-card border border-border rounded-2xl p-4">
+            <label className="text-xs font-bold text-muted-foreground mb-2 block">المقتطف (يظهر في القوائم)</label>
+            <textarea value={form.excerpt} onChange={e=>set("excerpt",e.target.value)}
+              placeholder="وصف مختصر يظهر في القوائم وبطاقات المقال..." rows={3}
               className="w-full bg-transparent text-sm resize-none focus:outline-none placeholder:text-muted-foreground/40 leading-relaxed"/>
           </div>
 
           {/* Content Editor */}
           <div className="bg-card border border-border rounded-2xl overflow-hidden">
-            {/* Toolbar */}
-            <div className="p-2 bg-muted/40 border-b border-border flex flex-wrap gap-1" dir="rtl">
-              {[
-                { cmd:"bold",   label:"عريض",     icon:<Bold   className="w-3.5 h-3.5"/> },
-                { cmd:"italic", label:"مائل",      icon:<Italic className="w-3.5 h-3.5"/> },
-                { cmd:"h2",     label:"عنوان رئيسي",icon:<Heading2  className="w-3.5 h-3.5"/> },
-                { cmd:"h3",     label:"عنوان فرعي",icon:<Hash   className="w-3.5 h-3.5"/> },
-                { cmd:"quote",  label:"اقتباس",    icon:<Quote  className="w-3.5 h-3.5"/> },
-                { cmd:"list",   label:"قائمة",     icon:<List   className="w-3.5 h-3.5"/> },
-                { cmd:"ol",     label:"قائمة مرقّمة",icon:<span className="text-[10px] font-black">1.</span> },
-                { cmd:"link",   label:"رابط",      icon:<Link2  className="w-3.5 h-3.5"/> },
-                { cmd:"code",   label:"كود",       icon:<span className="font-mono text-[10px] font-black">{"`"}</span> },
-                { cmd:"hr",     label:"فاصل",      icon:<span className="text-[10px] font-black">—</span> },
-              ].map(b => (
-                <button key={b.cmd} title={b.label} onClick={() => applyFormat(b.cmd)}
-                  className="w-8 h-7 rounded-lg hover:bg-background flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors text-xs">
-                  {b.icon}
-                </button>
-              ))}
-              <div className="w-px bg-border mx-1 self-stretch"/>
-              <button onClick={() => setPreviewMode(p => !p)}
-                className={`flex items-center gap-1 px-2.5 h-7 rounded-lg text-[11px] font-bold transition-colors ${previewMode?"bg-primary text-white":"hover:bg-background text-muted-foreground"}`}>
-                <Eye className="w-3 h-3"/> {previewMode ? "تعديل" : "معاينة"}
-              </button>
-            </div>
-
-            {previewMode ? (
-              <div className="p-6 prose prose-sm max-w-none min-h-72 text-sm leading-relaxed whitespace-pre-wrap">
-                {form.content || <span className="text-muted-foreground italic">لا يوجد محتوى بعد...</span>}
+            <Toolbar onFormat={applyFormat}/>
+            {preview ? (
+              <div className="p-5 prose prose-sm max-w-none min-h-64 text-sm leading-relaxed whitespace-pre-wrap">
+                {form.content||<span className="text-muted-foreground">لا يوجد محتوى للمعاينة</span>}
               </div>
             ) : (
-              <textarea ref={textareaRef} value={form.content}
-                onChange={e => handleContentChange(e.target.value)}
-                placeholder="ابدأ الكتابة هنا... (يدعم Markdown)"
-                rows={22}
-                className="w-full bg-transparent p-5 text-sm resize-none focus:outline-none placeholder:text-muted-foreground/30 leading-[2] font-sans"/>
+              <textarea
+                ref={textareaRef}
+                value={form.content}
+                onChange={e=>handleContentChange(e.target.value)}
+                placeholder="اكتب محتوى المقال هنا... (يدعم Markdown)"
+                rows={18}
+                className="w-full bg-transparent p-5 text-sm resize-none focus:outline-none placeholder:text-muted-foreground/40 leading-relaxed font-mono"
+              />
             )}
-
-            <div className="px-4 py-2 border-t border-border/40 flex items-center justify-between bg-muted/20">
-              <div className="flex items-center gap-3 text-[10px] text-muted-foreground">
-                <span>{wordCount} كلمة</span>
-                <span>{form.content.length} حرف</span>
-                <span>~{readMin} د قراءة</span>
-              </div>
-              <span className="text-[10px] text-muted-foreground/50">Markdown مدعوم ✓</span>
+            <div className="px-4 py-2 border-t border-border/50 flex items-center justify-between">
+              <span className="text-[10px] text-muted-foreground">{wordCount} كلمة • {form.content.length} حرف</span>
+              <span className="text-[10px] text-muted-foreground">Markdown مدعوم</span>
             </div>
           </div>
         </div>
 
-        {/* ══ Right: Settings Panel ══ */}
+        {/* Sidebar */}
         <div className="space-y-4">
+          {/* Publish settings */}
+          <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
+            <h3 className="font-black text-sm flex items-center gap-2"><Globe className="w-4 h-4 text-primary"/> إعدادات النشر</h3>
 
-          {/* Tab switcher */}
-          <div className="bg-card border border-border rounded-2xl overflow-hidden">
-            <div className="grid grid-cols-3 border-b border-border">
-              {(["publish","seo","author"] as const).map(tab => (
-                <button key={tab} onClick={() => setActiveTab(tab)}
-                  className={`py-2.5 text-xs font-black transition-colors ${activeTab===tab?"border-b-2 border-primary text-primary":"text-muted-foreground hover:text-foreground"}`}>
-                  {tab==="publish"?"النشر":tab==="seo"?"SEO":"الكاتب"}
+            <div className="grid grid-cols-2 gap-2">
+              <button onClick={()=>set("status","draft")}
+                className={`py-2 rounded-xl text-xs font-bold border-2 transition-all flex items-center justify-center gap-1.5 ${form.status==="draft"?"border-yellow-400 bg-yellow-50 text-yellow-700 dark:bg-yellow-900/20 dark:text-yellow-400":"border-border hover:border-yellow-300"}`}>
+                <Clock className="w-3.5 h-3.5"/> مسودة
+              </button>
+              <button onClick={()=>set("status","published")}
+                className={`py-2 rounded-xl text-xs font-bold border-2 transition-all flex items-center justify-center gap-1.5 ${form.status==="published"?"border-green-400 bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400":"border-border hover:border-green-300"}`}>
+                <Globe className="w-3.5 h-3.5"/> منشور
+              </button>
+            </div>
+
+            <label className="flex items-center justify-between cursor-pointer">
+              <span className="text-sm font-bold flex items-center gap-1.5"><Star className="w-4 h-4 text-yellow-500"/> خبر مميز</span>
+              <button onClick={()=>set("is_featured",!form.is_featured)}
+                className={`w-11 h-6 rounded-full transition-colors relative ${form.is_featured?"bg-primary":"bg-muted"}`}>
+                <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${form.is_featured?"right-0.5":"left-0.5"}`}/>
+              </button>
+            </label>
+
+            <label className="flex items-center justify-between cursor-pointer">
+              <span className="text-sm font-bold flex items-center gap-1.5"><Zap className="w-4 h-4 text-red-500"/> خبر عاجل</span>
+              <button onClick={()=>set("is_breaking",!form.is_breaking)}
+                className={`w-11 h-6 rounded-full transition-colors relative ${form.is_breaking?"bg-red-500":"bg-muted"}`}>
+                <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${form.is_breaking?"right-0.5":"left-0.5"}`}/>
+              </button>
+            </label>
+          </div>
+
+          {/* Category */}
+          <div className="bg-card border border-border rounded-2xl p-4">
+            <h3 className="font-black text-sm mb-3">القسم</h3>
+            <div className="grid grid-cols-1 gap-1.5">
+              {categories.map(c=>(
+                <button key={c.id} onClick={()=>set("category_id",c.id)}
+                  className={`text-start text-xs px-3 py-2 rounded-xl border-2 transition-all font-bold ${form.category_id===c.id?"border-primary bg-primary/5 text-primary":"border-border hover:border-primary/30"}`}>
+                  {c.name_ar}
                 </button>
               ))}
             </div>
+          </div>
 
-            <div className="p-4 space-y-4">
+          {/* Author */}
+          <div className="bg-card border border-border rounded-2xl p-4">
+            <h3 className="font-black text-sm mb-3">الكاتب</h3>
+            <input value={form.custom_author_name} onChange={e=>set("custom_author_name",e.target.value)}
+              placeholder="اسم الكاتب (اختياري)"
+              className="w-full bg-muted border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"/>
+          </div>
 
-              {/* TAB: النشر */}
-              {activeTab === "publish" && <>
-                {/* Status */}
-                <div className="grid grid-cols-3 gap-1.5">
-                  {(["draft","pending","published"] as const).map(s => (
-                    <button key={s} onClick={() => set("status", s)}
-                      className={`py-2 rounded-xl text-[11px] font-black border-2 transition-all flex items-center justify-center gap-1 ${
-                        form.status===s
-                          ? s==="published" ? "border-green-400 bg-green-50 text-green-700 dark:bg-green-900/20 dark:text-green-400"
-                          : s==="pending"   ? "border-amber-400 bg-amber-50 text-amber-700"
-                          : "border-yellow-400 bg-yellow-50 text-yellow-700"
-                          : "border-border hover:border-primary/30"}`}>
-                      {s==="draft"?"مسودة":s==="pending"?"مراجعة":"نشر"}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Featured / Breaking toggles */}
-                <div className="space-y-2.5 pt-1">
-                  <label className="flex items-center justify-between cursor-pointer">
-                    <span className="text-sm font-bold flex items-center gap-1.5">
-                      <Star className="w-4 h-4 text-yellow-500"/> خبر مميز
-                    </span>
-                    <button onClick={() => set("is_featured", !form.is_featured)}
-                      className={`w-11 h-6 rounded-full transition-colors relative ${form.is_featured?"bg-primary":"bg-muted"}`}>
-                      <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${form.is_featured?"right-0.5":"left-0.5"}`}/>
-                    </button>
-                  </label>
-                  <label className="flex items-center justify-between cursor-pointer">
-                    <span className="text-sm font-bold flex items-center gap-1.5">
-                      <Zap className="w-4 h-4 text-red-500"/> خبر عاجل
-                    </span>
-                    <button onClick={() => set("is_breaking", !form.is_breaking)}
-                      className={`w-11 h-6 rounded-full transition-colors relative ${form.is_breaking?"bg-red-500":"bg-muted"}`}>
-                      <span className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-all ${form.is_breaking?"right-0.5":"left-0.5"}`}/>
-                    </button>
-                  </label>
-                </div>
-
-                {/* Category */}
-                <div>
-                  <p className="text-xs font-black mb-2">القسم</p>
-                  <div className="space-y-1">
-                    {categories.map(c => (
-                      <button key={c.id} onClick={() => set("category_id", c.id)}
-                        className={`w-full text-start text-xs px-3 py-2 rounded-xl border-2 transition-all font-bold ${form.category_id===c.id?"border-primary bg-primary/5 text-primary":"border-border hover:border-primary/30"}`}>
-                        {c.name_ar}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              </>}
-
-              {/* TAB: SEO */}
-              {activeTab === "seo" && <>
-                {/* Google preview */}
-                <div className="bg-white dark:bg-gray-900 border border-border rounded-xl p-3 space-y-0.5">
-                  <p className="text-[10px] text-muted-foreground font-bold mb-2">معاينة نتيجة Google</p>
-                  <p className="text-xs text-blue-600 dark:text-blue-400 font-bold leading-tight line-clamp-1">
-                    {form.meta_title || form.title || "عنوان المقال"}
-                  </p>
-                  <p className="text-[10px] text-green-700 dark:text-green-400 font-mono">
-                    {articleUrl || "egstreet.com/article/10001"}
-                  </p>
-                  <p className="text-[10px] text-muted-foreground leading-relaxed line-clamp-2">
-                    {form.meta_description || form.excerpt || "وصف مختصر يظهر في محركات البحث..."}
-                  </p>
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-muted-foreground block mb-1">
-                    عنوان SEO ({form.meta_title.length}/60)
-                  </label>
-                  <input value={form.meta_title} onChange={e => set("meta_title", e.target.value.slice(0,60))}
-                    placeholder="عنوان للمحركات..."
-                    className="w-full bg-muted border border-border rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-primary"/>
-                  <div className="h-1 rounded-full mt-1.5 bg-muted overflow-hidden">
-                    <div className={`h-full rounded-full transition-all ${form.meta_title.length>50?"bg-green-500":form.meta_title.length>30?"bg-yellow-400":"bg-red-400"}`}
-                      style={{width:`${(form.meta_title.length/60)*100}%`}}/>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-[10px] font-black text-muted-foreground block mb-1">
-                    وصف SEO ({form.meta_description.length}/160)
-                  </label>
-                  <textarea value={form.meta_description} onChange={e => set("meta_description", e.target.value.slice(0,160))}
-                    placeholder="وصف قصير للمحركات..." rows={4}
-                    className="w-full bg-muted border border-border rounded-xl px-3 py-2 text-xs resize-none focus:outline-none focus:border-primary"/>
-                </div>
-              </>}
-
-              {/* TAB: الكاتب */}
-              {activeTab === "author" && <>
-                {/* Current user info */}
-                <div className="flex items-center gap-3 p-3 bg-muted rounded-xl">
-                  {authorProfile?.avatar_url
-                    ? <img src={authorProfile.avatar_url} alt="" className="w-10 h-10 rounded-xl object-cover"/>
-                    : <div className="w-10 h-10 rounded-xl bg-primary/15 flex items-center justify-center text-sm font-black text-primary">
-                        {authorProfile?.display_name?.[0]?.toUpperCase() || "؟"}
-                      </div>}
-                  <div>
-                    <p className="font-black text-sm">{authorProfile?.display_name || "—"}</p>
-                    <p className="text-[10px] text-muted-foreground">الكاتب الرئيسي (من حسابك)</p>
-                  </div>
-                </div>
-                <div>
-                  <label className="text-xs font-black text-muted-foreground block mb-1">
-                    اسم بديل للكاتب <span className="font-normal">(اختياري)</span>
-                  </label>
-                  <input value={form.custom_author_name}
-                    onChange={e => set("custom_author_name", e.target.value)}
-                    placeholder="مثال: محرر الشارع المصري"
-                    className="w-full bg-muted border border-border rounded-xl px-3 py-2 text-sm focus:outline-none focus:border-primary"/>
-                  <p className="text-[10px] text-muted-foreground mt-1">
-                    لو كتبت اسم هنا سيظهر بدلاً من اسمك في المقال
-                  </p>
-                </div>
-                {/* Article number display */}
-                {articleNum && (
-                  <div className="bg-primary/5 border border-primary/20 rounded-xl p-3">
-                    <p className="text-[10px] font-black text-muted-foreground mb-1">رقم المقال</p>
-                    <p className="font-black text-lg text-primary">#{articleNum}</p>
-                    <p className="text-[10px] text-muted-foreground font-mono">
-                      egstreet.com/article/{articleNum}
-                    </p>
-                  </div>
-                )}
-              </>}
+          {/* SEO */}
+          <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
+            <h3 className="font-black text-sm flex items-center gap-2">
+              <Search className="w-4 h-4 text-primary"/> SEO
+            </h3>
+            <div>
+              <label className="text-[10px] font-bold text-muted-foreground mb-1 block">عنوان SEO ({form.meta_title.length}/60)</label>
+              <input value={form.meta_title} onChange={e=>set("meta_title",e.target.value.slice(0,60))}
+                placeholder="عنوان للمحركات..."
+                className="w-full bg-muted border border-border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/30"/>
+              <div className={`h-0.5 rounded-full mt-1 transition-all ${form.meta_title.length>50?"bg-green-500":form.meta_title.length>30?"bg-yellow-500":"bg-muted"}`}
+                style={{width:`${(form.meta_title.length/60)*100}%`}}/>
+            </div>
+            <div>
+              <label className="text-[10px] font-bold text-muted-foreground mb-1 block">وصف SEO ({form.meta_description.length}/160)</label>
+              <textarea value={form.meta_description} onChange={e=>set("meta_description",e.target.value.slice(0,160))}
+                placeholder="وصف قصير للمحركات..."
+                rows={3}
+                className="w-full bg-muted border border-border rounded-xl px-3 py-2 text-xs resize-none focus:outline-none focus:ring-2 focus:ring-primary/30"/>
             </div>
           </div>
 
-          {/* Save actions */}
+          {/* Save buttons */}
           <div className="space-y-2">
-            <button onClick={() => save("published")} disabled={saving}
-              className="w-full bg-primary text-white py-3 rounded-2xl font-black text-sm flex items-center justify-center gap-2 hover:bg-primary/85 disabled:opacity-50 transition-colors shadow-md shadow-primary/20">
-              {saving ? <Loader2 className="w-4 h-4 animate-spin"/> : <Send className="w-4 h-4"/>}
+            <button onClick={()=>save("published")} disabled={saving}
+              className="w-full bg-primary text-white py-3 rounded-xl font-black text-sm flex items-center justify-center gap-2 hover:bg-primary/90 disabled:opacity-50 transition-colors shadow-sm">
+              {saving?<Loader2 className="w-4 h-4 animate-spin"/>:<Send className="w-4 h-4"/>}
               نشر المقال الآن
             </button>
-            <div className="grid grid-cols-2 gap-2">
-              <button onClick={() => save("pending")} disabled={saving}
-                className="py-2.5 rounded-xl border-2 border-amber-300 bg-amber-50 text-amber-700 text-xs font-black flex items-center justify-center gap-1.5 hover:bg-amber-100 disabled:opacity-50 transition-colors">
-                <Clock className="w-3.5 h-3.5"/> للمراجعة
-              </button>
-              <button onClick={() => save("draft")} disabled={saving}
-                className="py-2.5 rounded-xl border border-border text-xs font-bold flex items-center justify-center gap-1.5 hover:bg-muted disabled:opacity-50 transition-colors">
-                <Save className="w-3.5 h-3.5"/> مسودة
-              </button>
+            {/* Scheduled publish */}
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-muted-foreground flex items-center gap-1">
+                <Clock className="w-3 h-3"/> جدولة النشر
+              </label>
+              <input
+                type="datetime-local"
+                value={form.scheduled_at}
+                onChange={e=>setForm(f=>({...f,scheduled_at:e.target.value}))}
+                className="w-full bg-muted border border-border rounded-xl px-3 py-2 text-xs focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
+              {form.scheduled_at && (
+                <button onClick={()=>save("draft")} disabled={saving}
+                  className="w-full bg-amber-500 text-white py-2.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-amber-600 disabled:opacity-50 transition-colors">
+                  <Clock className="w-4 h-4"/> جدولة النشر
+                </button>
+              )}
             </div>
+            <button onClick={()=>save("draft")} disabled={saving}
+              className="w-full border border-border py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-muted disabled:opacity-50 transition-colors">
+              <Save className="w-4 h-4"/> حفظ كمسودة
+            </button>
           </div>
         </div>
       </div>
 
-      {showImagePicker && (
-        <ImagePicker
-          onSelect={url => { set("featured_image", url); setShowImagePicker(false); }}
-          onClose={() => setShowImagePicker(false)}
-        />
-      )}
+      {/* Image Picker */}
+      <AnimatePresence>
+        {showImagePicker && (
+          <ImagePicker onSelect={url=>set("featured_image",url)} onClose={()=>setShowImagePicker(false)}/>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
-
 export default ArticleEditor;
