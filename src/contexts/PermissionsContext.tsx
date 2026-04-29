@@ -157,9 +157,31 @@ export function PermissionsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!user) { setPermissions([]); setRole(null); setLoading(false); setLastUid(null); return; }
+    if (!user) {
+      setPermissions([]); setRole(null); setLoading(false); setLastUid(null);
+      return;
+    }
     if (lastUid !== user.id) { setLoading(true); fetchPerms(user.id); }
   }, [user?.id]); // eslint-disable-line
+
+  // ── Realtime: re-fetch when user_permissions changes ──
+  useEffect(() => {
+    if (!user) return;
+    const channel = supabase
+      .channel(`perms:${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "user_permissions",
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => { fetchPerms(user.id); }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [user?.id, fetchPerms]); // eslint-disable-line
 
   const can = useCallback(
     (key: PermissionKey) => {
