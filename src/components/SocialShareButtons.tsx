@@ -16,7 +16,7 @@ const PLATFORMS = [
     href:(t:string,u:string)=>`https://api.whatsapp.com/send?text=${encodeURIComponent(t+" "+u)}` },
   { id:"facebook", label:"فيسبوك",  color:"bg-blue-600",   icon:Facebook,
     href:(t:string,u:string)=>`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(u)}` },
-  { id:"twitter",  label:"تويتر",   color:"bg-sky-500",    icon:
+  { id:"twitter",  label:"تويتر",   color:"bg-sky-500",    icon:Twitter,
     href:(t:string,u:string)=>`https://twitter.com/intent/tweet?text=${encodeURIComponent(t)}&url=${encodeURIComponent(u)}` },
   { id:"telegram", label:"تيليغرام",color:"bg-blue-400",   icon:Send,
     href:(t:string,u:string)=>`https://t.me/share/url?url=${encodeURIComponent(u)}&text=${encodeURIComponent(t)}` },
