@@ -5,7 +5,7 @@ import {
   Users, Plus, Pencil, Trash2, Shield, Eye, EyeOff,
   ToggleLeft, ToggleRight, RefreshCw, Loader2, Check,
   X, Search, UserCheck, UserX, Key, ChevronDown,
-  Crown, PenLine, BarChart, Megaphone, ChevronUp, SlidersHorizontal
+  Crown, PenLine, BarChart, Megaphone, ChevronUp, Sliders
 } from "lucide-react";
 import UserPermissionsPanel from "@/components/admin/UserPermissionsPanel";
 
