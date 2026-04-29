@@ -32,7 +32,7 @@ import CommentManagement from "./pages/admin/CommentManagement";
 import AnalyticsDashboard from "./pages/admin/AnalyticsDashboard";
 import PageManagement from "./pages/admin/PageManagement";
 import TagManagement from "./pages/admin/TagManagement";
-import AdvertisementManagement from "./pages/admin/AdvertisementManagement";
+import Advertisements from "./pages/admin/Advertisements";
 import PermissionManagement from "./pages/admin/PermissionManagement";
 import NewsScraperPage from "./pages/admin/NewsScraperPage";
 import AIToolsPage from "./pages/admin/AIToolsPage";
@@ -91,7 +91,7 @@ const AppContent = () => {
         <Route path={`${ADMIN}/analytics`} element={<AdminLayout><AdminGuard permission="analytics"><AnalyticsDashboard /></AdminGuard></AdminLayout>} />
         <Route path={`${ADMIN}/pages`} element={<AdminLayout><AdminGuard permission="pages"><PageManagement /></AdminGuard></AdminLayout>} />
         <Route path={`${ADMIN}/tags`} element={<AdminLayout><AdminGuard permission="tags"><TagManagement /></AdminGuard></AdminLayout>} />
-        <Route path={`${ADMIN}/advertisements`} element={<AdminLayout><AdminGuard permission="ads"><AdvertisementManagement /></AdminGuard></AdminLayout>} />
+        <Route path={`${ADMIN}/advertisements`} element={<AdminLayout><AdminGuard permission="ads"><Advertisements /></AdminGuard></AdminLayout>} />
         <Route path={`${ADMIN}/permissions`} element={<AdminLayout><AdminGuard permission="permissions"><PermissionManagement /></AdminGuard></AdminLayout>} />
         <Route path={`${ADMIN}/ai/scraper`} element={<AdminLayout><AdminGuard permission="scraper"><NewsScraperPage /></AdminGuard></AdminLayout>} />
         <Route path={`${ADMIN}/ai/tools`} element={<AdminLayout><AdminGuard permission="ai_tools"><AIToolsPage /></AdminGuard></AdminLayout>} />
