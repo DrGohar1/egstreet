@@ -13,9 +13,7 @@ import {
   Heading1, Heading2, Heading3, List, ListOrdered,
   AlignLeft, AlignCenter, AlignRight,
   ImageIcon, Link as LinkIcon, Quote, Undo, Redo,
-  Code, Minus, Upload, Copy, Check, AlignJustify,
-  Maximize,
-} from "lucide-react";
+  Code, Minus, Upload, Copy, Check, AlignJustify, Maximize} from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
